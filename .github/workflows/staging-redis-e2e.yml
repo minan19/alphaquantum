@@ -1,0 +1,38 @@
+name: Staging Redis E2E Smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  staging-redis-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    env:
+      AQ_STAGING_REDIS_URL: ${{ secrets.AQ_STAGING_REDIS_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Runtime
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate Staging Redis Secret
+        run: |
+          if [ -z "${AQ_STAGING_REDIS_URL}" ]; then
+            echo "AQ_STAGING_REDIS_URL is not set in staging environment secrets."
+            exit 1
+          fi
+
+      - name: Run Staging Redis E2E Smoke
+        run: |
+          python scripts/staging_redis_e2e_smoke.py --redis-url "${AQ_STAGING_REDIS_URL}"

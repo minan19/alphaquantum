@@ -1,0 +1,99 @@
+name: Security Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  pentest-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AQ_RUN_STAGING_REDIS_E2E: "true"
+      AQ_RUN_STAGING_REDIS_CHAOS: "true"
+      AQ_STAGING_REDIS_URL: redis://127.0.0.1:6379/0
+      AQ_TOXIPROXY_URL: http://127.0.0.1:8474
+      AQ_CHAOS_REDIS_PROXY_NAME: aq_redis
+      AQ_CHAOS_REDIS_PROXY_LISTEN: 0.0.0.0:8666
+      AQ_CHAOS_REDIS_UPSTREAM: redis:6379
+      AQ_CHAOS_REDIS_PROXY_URL: redis://127.0.0.1:8666/0
+      AQ_CHAOS_REDIS_SOCKET_TIMEOUT_SECONDS: "1.0"
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      toxiproxy:
+        image: shopify/toxiproxy:latest
+        ports:
+          - 8474:8474
+          - 8666:8666
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Runtime + Security Tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install bandit pip-audit
+
+      - name: Wait for Redis Service
+        run: |
+          python - <<'PY'
+          import os
+          import time
+          import redis
+          from urllib import error, request
+
+          url = os.environ["AQ_STAGING_REDIS_URL"]
+          deadline = time.time() + 30
+          last_error = None
+          while time.time() < deadline:
+              try:
+                  client = redis.Redis.from_url(url, decode_responses=True)
+                  client.ping()
+                  print("Redis is ready")
+                  break
+              except Exception as exc:
+                  last_error = exc
+                  time.sleep(1)
+          else:
+              raise SystemExit(f"Redis service not ready: {last_error}")
+
+          toxiproxy_url = os.environ["AQ_TOXIPROXY_URL"].rstrip("/")
+          toxiproxy_deadline = time.time() + 30
+          toxiproxy_error = None
+          while time.time() < toxiproxy_deadline:
+              try:
+                  req = request.Request(f"{toxiproxy_url}/version", method="GET")
+                  with request.urlopen(req, timeout=5) as response:
+                      if response.status == 200:
+                          print("Toxiproxy is ready")
+                          break
+              except Exception as exc:
+                  toxiproxy_error = exc
+                  time.sleep(1)
+          else:
+              raise SystemExit(f"Toxiproxy service not ready: {toxiproxy_error}")
+          PY
+
+      - name: Unified Security Gate
+        run: |
+          chmod +x scripts/security_gate.sh
+          ./scripts/security_gate.sh

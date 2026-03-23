@@ -1,0 +1,11 @@
+# Bandit policy for Alpha Quantum.
+# LOW accepted findings are suppressed centrally:
+# - B105: false positives on non-secret constants
+# - B311: simulation-only pseudo-random usage (non-cryptographic path)
+exclude_dirs:
+  - tests
+  - venv
+  - __pycache__
+skips:
+  - B105
+  - B311

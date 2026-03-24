@@ -29,6 +29,7 @@ class FeasibilityRepository:
         project_name: str,
         sector: str,
         geography: str,
+        company_name: str = "",
         payload: dict[str, Any],
         report: dict[str, Any],
         status: str = "generated",
@@ -44,17 +45,19 @@ class FeasibilityRepository:
                     project_name,
                     sector,
                     geography,
+                    company_name,
                     status,
                     payload_json,
                     report_json,
                     created_at
                 )
-                VALUES(?, ?, ?, ?, ?, ?, ?)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     project_name,
                     sector,
                     geography,
+                    company_name,
                     status,
                     payload_json,
                     report_json,
@@ -66,42 +69,44 @@ class FeasibilityRepository:
 
         return self.get_report(report_id)
 
-    def list_reports(self, *, limit: int = 100, sector: str | None = None) -> list[dict[str, Any]]:
+    def list_reports(
+        self,
+        *,
+        limit: int = 100,
+        sector: str | None = None,
+        company_name: str | None = None,
+    ) -> list[dict[str, Any]]:
         safe_limit = max(1, min(limit, 500))
+        conditions: list[str] = []
+        params_list: list[Any] = []
+
         if sector:
-            query = """
-                SELECT
-                    id,
-                    project_name,
-                    sector,
-                    geography,
-                    status,
-                    created_at,
-                    report_json
-                FROM feasibility_reports
-                WHERE sector = ?
-                ORDER BY created_at DESC, id DESC
-                LIMIT ?
-            """
-            params: tuple[Any, ...] = (sector, safe_limit)
-        else:
-            query = """
-                SELECT
-                    id,
-                    project_name,
-                    sector,
-                    geography,
-                    status,
-                    created_at,
-                    report_json
-                FROM feasibility_reports
-                ORDER BY created_at DESC, id DESC
-                LIMIT ?
-            """
-            params = (safe_limit,)
+            conditions.append("sector = ?")
+            params_list.append(sector)
+        if company_name is not None:
+            conditions.append("company_name = ?")
+            params_list.append(company_name)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params_list.append(safe_limit)
+        query = f"""
+            SELECT
+                id,
+                project_name,
+                sector,
+                geography,
+                company_name,
+                status,
+                created_at,
+                report_json
+            FROM feasibility_reports
+            {where_clause}
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+        """
 
         with self._lock:
-            rows = self._conn.execute(query, params).fetchall()
+            rows = self._conn.execute(query, tuple(params_list)).fetchall()
 
         output: list[dict[str, Any]] = []
         for row in rows:
@@ -112,6 +117,7 @@ class FeasibilityRepository:
                     "project_name": str(row["project_name"]),
                     "sector": str(row["sector"]),
                     "geography": str(row["geography"]),
+                    "company_name": str(row["company_name"]),
                     "status": str(row["status"]),
                     "created_at": int(row["created_at"]),
                     "recommendation": str(report.get("recommendation") or "N/A"),
@@ -130,6 +136,7 @@ class FeasibilityRepository:
                     project_name,
                     sector,
                     geography,
+                    company_name,
                     status,
                     payload_json,
                     report_json,
@@ -150,6 +157,7 @@ class FeasibilityRepository:
             "project_name": str(row["project_name"]),
             "sector": str(row["sector"]),
             "geography": str(row["geography"]),
+            "company_name": str(row["company_name"]),
             "status": str(row["status"]),
             "payload": payload,
             "report": report,

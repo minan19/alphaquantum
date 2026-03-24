@@ -133,6 +133,8 @@ alpha-quantum/
     010_connector_sync_retry_dlq.down.sql
     011_connector_worker_leases.up.sql
     011_connector_worker_leases.down.sql
+    012_feasibility_company_scope.up.sql
+    012_feasibility_company_scope.down.sql
   main.py
   requirements.txt
   README.md

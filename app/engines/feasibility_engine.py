@@ -61,14 +61,21 @@ class FeasibilityEngine:
             project_name=payload.project_name,
             sector=payload.sector,
             geography=payload.geography,
+            company_name=payload.company_name,
             payload=payload.model_dump(),
             report=report.model_dump(),
             status="generated",
         )
         return self._to_stored_response(row)
 
-    def list_reports(self, *, limit: int = 100, sector: str | None = None) -> FeasibilityReportListResponse:
-        rows = self._repo.list_reports(limit=limit, sector=sector)
+    def list_reports(
+        self,
+        *,
+        limit: int = 100,
+        sector: str | None = None,
+        company_name: str | None = None,
+    ) -> FeasibilityReportListResponse:
+        rows = self._repo.list_reports(limit=limit, sector=sector, company_name=company_name)
         return FeasibilityReportListResponse(
             total=len(rows),
             items=[FeasibilityReportListItem(**row) for row in rows],
@@ -688,6 +695,7 @@ class FeasibilityEngine:
             project_name=str(row["project_name"]),
             sector=str(row["sector"]),
             geography=str(row["geography"]),
+            company_name=str(row.get("company_name") or ""),
             status=str(row["status"]),
             created_at=int(row["created_at"]),
             request_payload=dict(row.get("payload") or {}),

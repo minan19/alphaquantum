@@ -670,6 +670,7 @@ class FeasibilityReportRequest(BaseModel):
     sector: str = Field(min_length=2)
     geography: str = Field(min_length=2)
     objective: str = Field(min_length=10)
+    company_name: str = Field(default="", description="Owning company for scope isolation (required for scoped users)")
     currency: str = Field(default="TRY", min_length=2, max_length=8)
     initial_investment: float = Field(gt=0)
     annual_opex: float = Field(gt=0)
@@ -775,6 +776,7 @@ class FeasibilityReportListItem(BaseModel):
     sector: str
     geography: str
     status: str
+    company_name: str = ""
     created_at: int
     recommendation: str
     confidence: float = Field(ge=0, le=1)
@@ -792,6 +794,7 @@ class FeasibilityReportStoredResponse(BaseModel):
     sector: str
     geography: str
     status: str
+    company_name: str = ""
     created_at: int
     request_payload: dict[str, object] = Field(default_factory=dict)
     report: FeasibilityReportResponse

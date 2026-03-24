@@ -1235,7 +1235,13 @@ def generate_feasibility_report(
     request: Request,
     user: UserProfile = Depends(require_permissions("write_feasibility")),
 ) -> FeasibilityReportStoredResponse:
-    del user
+    if payload.company_name:
+        _ensure_company_scope(request, user, payload.company_name)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company_name in feasibility report request",
+        )
     try:
         return _feasibility_engine(request).generate(payload)
     except ValueError as exc:
@@ -1251,13 +1257,18 @@ def list_feasibility_reports(
     request: Request,
     limit: int = Query(default=100, ge=1, le=500),
     sector: str | None = Query(default=None),
+    company: str | None = Query(default=None),
     user: UserProfile = Depends(require_permissions("read_feasibility")),
 ) -> FeasibilityReportListResponse:
-    del user
-    return _feasibility_engine(request).list_reports(
-        limit=limit,
-        sector=sector,
-    )
+    if company:
+        _ensure_company_scope(request, user, company)
+        return _feasibility_engine(request).list_reports(limit=limit, sector=sector, company_name=company)
+    if not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _feasibility_engine(request).list_reports(limit=limit, sector=sector)
 
 
 @router.get(
@@ -1270,11 +1281,18 @@ def get_feasibility_report(
     request: Request,
     user: UserProfile = Depends(require_permissions("read_feasibility")),
 ) -> FeasibilityReportStoredResponse:
-    del user
     try:
-        return _feasibility_engine(request).get_report(report_id)
+        result = _feasibility_engine(request).get_report(report_id)
     except ValueError as exc:
         raise _value_error_to_http(exc)
+    if result.company_name:
+        _ensure_company_scope(request, user, result.company_name)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Scoped users cannot access unscoped feasibility reports",
+        )
+    return result
 
 
 @router.post(
@@ -1823,7 +1841,7 @@ def generate_tender_dossier(
     request: Request,
     user: UserProfile = Depends(require_permissions("prepare_tender_docs")),
 ) -> TenderDossierResponse:
-    del user
+    _ensure_company_scope(request, user, payload.company_name)
     return _tender_engine(request).build_dossier(payload)
 
 

@@ -155,6 +155,92 @@ class FinanceForecastResponse(BaseModel):
     model: str
 
 
+class FinanceRecurringEntryCreateRequest(BaseModel):
+    company: str = Field(min_length=1)
+    entry_type: str = Field(pattern="^(income|expense)$")
+    amount: float = Field(gt=0)
+    category: str = Field(min_length=1)
+    description: str = ""
+    frequency: str = Field(pattern="^(weekly|monthly|quarterly|yearly)$")
+    start_date: str
+    end_date: str | None = None
+
+
+class FinanceRecurringEntryRead(BaseModel):
+    id: int
+    company: str
+    entry_type: str
+    amount: float
+    category: str
+    description: str
+    frequency: str
+    start_date: str
+    end_date: str | None = None
+    last_generated_date: str | None = None
+    is_active: bool
+    created_at: int
+
+
+class FinanceRecurringListResponse(BaseModel):
+    total: int
+    entries: list[FinanceRecurringEntryRead] = Field(default_factory=list)
+
+
+class FinanceRecurringGenerateResponse(BaseModel):
+    generated_count: int
+    ledger_entry_ids: list[int] = Field(default_factory=list)
+    message: str
+
+
+class FinanceBudgetCreateRequest(BaseModel):
+    company: str = Field(min_length=1)
+    year: int = Field(ge=2000, le=2100)
+    month: int | None = Field(default=None, ge=1, le=12)
+    category: str = Field(min_length=1)
+    entry_type: str = Field(pattern="^(income|expense)$")
+    budget_amount: float = Field(ge=0)
+
+
+class FinanceBudgetRead(BaseModel):
+    id: int
+    company: str
+    year: int
+    month: int | None = None
+    category: str
+    entry_type: str
+    budget_amount: float
+    created_at: int
+
+
+class FinanceBudgetListResponse(BaseModel):
+    total: int
+    budgets: list[FinanceBudgetRead] = Field(default_factory=list)
+
+
+class FinanceBudgetVsActualItem(BaseModel):
+    category: str
+    entry_type: str
+    budget_amount: float
+    actual_amount: float
+    variance: float
+    variance_pct: float
+    status: str
+
+
+class FinanceBudgetVsActualResponse(BaseModel):
+    company: str | None = None
+    year: int
+    month: int | None = None
+    items: list[FinanceBudgetVsActualItem] = Field(default_factory=list)
+    total_budget_income: float
+    total_budget_expense: float
+    total_actual_income: float
+    total_actual_expense: float
+    net_budget: float
+    net_actual: float
+    net_variance: float
+
+
 class MarketOHLCVBar(BaseModel):
     date: str
     open: float

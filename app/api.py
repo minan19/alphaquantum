@@ -53,12 +53,20 @@ from app.models import (
     FeasibilityReportListResponse,
     FeasibilityReportRequest,
     FeasibilityReportStoredResponse,
+    FinanceBudgetCreateRequest,
+    FinanceBudgetListResponse,
+    FinanceBudgetRead,
+    FinanceBudgetVsActualResponse,
     FinanceCashflowResponse,
     FinanceForecastResponse,
     FinanceLedgerEntryCreateRequest,
     FinanceLedgerEntryRead,
     FinanceLedgerResponse,
     FinanceOverviewResponse,
+    FinanceRecurringEntryCreateRequest,
+    FinanceRecurringEntryRead,
+    FinanceRecurringGenerateResponse,
+    FinanceRecurringListResponse,
     HealthResponse,
     HoldingBulkOnboardRequest,
     HoldingBulkOnboardResponse,
@@ -913,6 +921,130 @@ def finance_forecast(
         )
     except ValueError as exc:
         raise _value_error_to_http(exc)
+
+
+# ── Finance recurring entries ──────────────────────────────────────────────────
+
+@router.post(
+    "/api/v1/finance-engine/recurring",
+    response_model=FinanceRecurringEntryRead,
+    tags=["finance_engine"],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_recurring_entry(
+    request: Request,
+    payload: FinanceRecurringEntryCreateRequest,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> FinanceRecurringEntryRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _finance_engine(request).create_recurring_entry(payload=payload)
+
+
+@router.get(
+    "/api/v1/finance-engine/recurring",
+    response_model=FinanceRecurringListResponse,
+    tags=["finance_engine"],
+)
+def list_recurring_entries(
+    request: Request,
+    company: str | None = Query(default=None),
+    active_only: bool = Query(default=True),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinanceRecurringListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _finance_engine(request).list_recurring_entries(
+        company=company, active_only=active_only
+    )
+
+
+@router.post(
+    "/api/v1/finance-engine/recurring/generate",
+    response_model=FinanceRecurringGenerateResponse,
+    tags=["finance_engine"],
+)
+def generate_due_recurring_entries(
+    request: Request,
+    as_of_date: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> FinanceRecurringGenerateResponse:
+    if not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only holding-scope users can trigger bulk recurring generation",
+        )
+    try:
+        return _finance_engine(request).generate_due_entries(as_of_date=as_of_date)
+    except ValueError as exc:
+        raise _value_error_to_http(exc)
+
+
+# ── Finance budgets ────────────────────────────────────────────────────────────
+
+@router.post(
+    "/api/v1/finance-engine/budgets",
+    response_model=FinanceBudgetRead,
+    tags=["finance_engine"],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_budget(
+    request: Request,
+    payload: FinanceBudgetCreateRequest,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> FinanceBudgetRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _finance_engine(request).create_budget(payload=payload)
+
+
+@router.get(
+    "/api/v1/finance-engine/budgets",
+    response_model=FinanceBudgetListResponse,
+    tags=["finance_engine"],
+)
+def list_budgets(
+    request: Request,
+    company: str | None = Query(default=None),
+    year: int | None = Query(default=None),
+    month: int | None = Query(default=None, ge=1, le=12),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinanceBudgetListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _finance_engine(request).list_budgets(company=company, year=year, month=month)
+
+
+@router.get(
+    "/api/v1/finance-engine/budget-vs-actual",
+    response_model=FinanceBudgetVsActualResponse,
+    tags=["finance_engine"],
+)
+def budget_vs_actual(
+    request: Request,
+    year: int = Query(..., ge=2000, le=2100),
+    company: str | None = Query(default=None),
+    month: int | None = Query(default=None, ge=1, le=12),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinanceBudgetVsActualResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _finance_engine(request).budget_vs_actual(
+        company=company, year=year, month=month
+    )
 
 
 @router.get(

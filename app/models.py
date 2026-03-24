@@ -1374,3 +1374,26 @@ class MigrationActionResponse(BaseModel):
 
 class MigrationRollbackRequest(BaseModel):
     steps: int = Field(default=1, ge=1, le=20)
+    force: bool = Field(default=False, description="Required to roll back migrations that touch critical tables")
+
+
+class MigrationPreflightItem(BaseModel):
+    version: int
+    name: str
+    sql_valid: bool
+    touches_critical_tables: bool
+    critical_tables_found: list[str] = Field(default_factory=list)
+    warning: str = ""
+
+
+class MigrationPreflightResponse(BaseModel):
+    pending_count: int
+    safe_to_apply: bool
+    warnings: list[str] = Field(default_factory=list)
+    items: list[MigrationPreflightItem] = Field(default_factory=list)
+
+
+class MigrationDryRunResponse(BaseModel):
+    would_apply: list[int] = Field(default_factory=list)
+    already_applied: list[int] = Field(default_factory=list)
+    total_pending: int

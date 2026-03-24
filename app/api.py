@@ -31,6 +31,8 @@ from app.models import (
     CentralBankPanelResponse,
     Company,
     CompanyEngineResponse,
+    MigrationDryRunResponse,
+    MigrationPreflightResponse,
     ConnectorCanonicalPreviewRequest,
     ConnectorCanonicalPreviewResponse,
     ConnectorCreateRequest,
@@ -550,11 +552,42 @@ def migration_rollback(
     user: UserProfile = Depends(require_permissions("manage_migrations")),
 ) -> MigrationActionResponse:
     del user
-    versions = _migration_manager(request).rollback(steps=payload.steps)
+    try:
+        versions = _migration_manager(request).rollback(steps=payload.steps, force=payload.force)
+    except ValueError as exc:
+        raise _value_error_to_http(exc)
     return MigrationActionResponse(
         message="Migrations rolled back",
         versions=versions,
     )
+
+
+@router.get(
+    "/api/v1/admin/migrations/dry-run",
+    response_model=MigrationDryRunResponse,
+    tags=["admin"],
+)
+def migration_dry_run(
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_migrations")),
+) -> MigrationDryRunResponse:
+    del user
+    result = _migration_manager(request).dry_run()
+    return MigrationDryRunResponse(**result)
+
+
+@router.post(
+    "/api/v1/admin/migrations/preflight",
+    response_model=MigrationPreflightResponse,
+    tags=["admin"],
+)
+def migration_preflight(
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_migrations")),
+) -> MigrationPreflightResponse:
+    del user
+    result = _migration_manager(request).preflight()
+    return MigrationPreflightResponse(**result)
 
 
 @router.get("/api/v1/users", response_model=list[UserRead], tags=["auth"])

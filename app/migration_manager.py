@@ -1,11 +1,28 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
 from typing import Any
+import re
 import sqlite3
 import time
+
+_CRITICAL_TABLES = frozenset(
+    {
+        "users",
+        "roles",
+        "permissions",
+        "role_permissions",
+        "refresh_tokens",
+        "revoked_access_tokens",
+    }
+)
+
+_TABLE_RE = re.compile(
+    r"\b(?:TABLE|INTO|FROM|UPDATE|ALTER\s+TABLE|DROP\s+TABLE)\s+(?:IF\s+EXISTS\s+)?(\w+)",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -14,6 +31,16 @@ class Migration:
     name: str
     up_path: Path
     down_path: Path
+
+
+@dataclass
+class PreflightItem:
+    version: int
+    name: str
+    sql_valid: bool
+    touches_critical_tables: bool
+    critical_tables_found: list[str] = field(default_factory=list)
+    warning: str = ""
 
 
 class MigrationManager:
@@ -68,7 +95,7 @@ class MigrationManager:
 
         return applied_now
 
-    def rollback(self, steps: int = 1) -> list[int]:
+    def rollback(self, steps: int = 1, *, force: bool = False) -> list[int]:
         if steps < 1:
             raise ValueError("steps must be >= 1")
 
@@ -82,6 +109,16 @@ class MigrationManager:
             if migration is None:
                 raise ValueError(f"Missing migration files for version {version}")
 
+            if not force:
+                down_sql = migration.down_path.read_text(encoding="utf-8")
+                critical = _find_critical_tables(down_sql)
+                if critical:
+                    raise ValueError(
+                        f"Migration {version} touches critical tables "
+                        f"({', '.join(sorted(critical))}). "
+                        "Pass force=true to proceed."
+                    )
+
             sql = migration.down_path.read_text(encoding="utf-8")
             self._apply_script(sql)
             with self._lock:
@@ -93,6 +130,73 @@ class MigrationManager:
             rolled_back.append(version)
 
         return rolled_back
+
+    def dry_run(self) -> dict[str, Any]:
+        migrations = self._discover_migrations()
+        applied_versions = set(self._get_applied_versions())
+        would_apply = [m.version for m in migrations if m.version not in applied_versions]
+        already_applied = [m.version for m in migrations if m.version in applied_versions]
+        return {
+            "would_apply": would_apply,
+            "already_applied": already_applied,
+            "total_pending": len(would_apply),
+        }
+
+    def preflight(self) -> dict[str, Any]:
+        migrations = self._discover_migrations()
+        applied_versions = set(self._get_applied_versions())
+        pending = [m for m in migrations if m.version not in applied_versions]
+
+        items: list[PreflightItem] = []
+        warnings: list[str] = []
+        safe_to_apply = True
+
+        for migration in pending:
+            try:
+                sql = migration.up_path.read_text(encoding="utf-8")
+                stmts = self._split_sql_statements(sql)
+                sql_valid = len(stmts) > 0
+            except Exception:
+                sql_valid = False
+                safe_to_apply = False
+
+            critical = _find_critical_tables(migration.up_path.read_text(encoding="utf-8") if sql_valid else "")
+            touches_critical = bool(critical)
+            warning = ""
+            if touches_critical:
+                warning = f"Touches critical tables: {', '.join(sorted(critical))}"
+                warnings.append(f"Migration {migration.version}: {warning}")
+
+            items.append(
+                PreflightItem(
+                    version=migration.version,
+                    name=migration.name,
+                    sql_valid=sql_valid,
+                    touches_critical_tables=touches_critical,
+                    critical_tables_found=sorted(critical),
+                    warning=warning,
+                )
+            )
+
+        if not safe_to_apply:
+            warnings.insert(0, "One or more migration files have invalid SQL")
+
+        return {
+            "pending_count": len(pending),
+            "safe_to_apply": safe_to_apply,
+            "warnings": warnings,
+            "items": [
+                {
+                    "version": item.version,
+                    "name": item.name,
+                    "sql_valid": item.sql_valid,
+                    "touches_critical_tables": item.touches_critical_tables,
+                    "critical_tables_found": item.critical_tables_found,
+                    "warning": item.warning,
+                }
+                for item in items
+            ],
+        }
 
     def status(self) -> list[dict[str, Any]]:
         migrations = self._discover_migrations()
@@ -187,3 +291,8 @@ class MigrationManager:
             statements.append(trailing)
 
         return statements
+
+
+def _find_critical_tables(sql: str) -> set[str]:
+    matches = _TABLE_RE.findall(sql)
+    return {table.lower() for table in matches} & _CRITICAL_TABLES

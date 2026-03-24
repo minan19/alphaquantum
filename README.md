@@ -135,6 +135,8 @@ alpha-quantum/
     011_connector_worker_leases.down.sql
     012_feasibility_company_scope.up.sql
     012_feasibility_company_scope.down.sql
+    013_audit_event_fields.up.sql
+    013_audit_event_fields.down.sql
   main.py
   requirements.txt
   README.md

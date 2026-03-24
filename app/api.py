@@ -155,6 +155,23 @@ def _audit_repo(request: Request) -> AuditRepository:
     return request.app.state.audit_repository
 
 
+def _emit_audit_event(
+    request: Request,
+    user: UserProfile,
+    event_type: str,
+    event_detail: dict | None = None,
+) -> None:
+    request_id = getattr(request.state, "request_id", "")
+    _audit_repo(request).write_event(
+        username=user.username,
+        role=user.role,
+        event_type=event_type,
+        event_detail=event_detail,
+        request_id=str(request_id),
+        ip_address=request.client.host if request.client else None,
+    )
+
+
 def _settings(request: Request):
     return request.app.state.settings
 
@@ -397,7 +414,6 @@ def create_role(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_roles")),
 ) -> RoleRead:
-    del user
     try:
         row = _auth_service(request).create_role(
             name=payload.name,
@@ -409,6 +425,7 @@ def create_role(
             detail="Role already exists",
         ) from exc
 
+    _emit_audit_event(request, user, "role.create", {"role_name": payload.name})
     return _to_role_read(row)
 
 
@@ -419,7 +436,6 @@ def update_role(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_roles")),
 ) -> RoleRead:
-    del user
     try:
         row = _auth_service(request).update_role(
             role_id,
@@ -434,6 +450,7 @@ def update_role(
             detail="Role already exists",
         ) from exc
 
+    _emit_audit_event(request, user, "role.update", {"role_id": role_id, "new_name": payload.name})
     return _to_role_read(row)
 
 
@@ -443,11 +460,11 @@ def delete_role(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_roles")),
 ) -> None:
-    del user
     try:
         _auth_service(request).delete_role(role_id)
     except ValueError as exc:
         raise _value_error_to_http(exc)
+    _emit_audit_event(request, user, "role.delete", {"role_id": role_id})
 
 
 @router.get("/api/v1/permissions", response_model=list[PermissionRead], tags=["auth"])
@@ -493,8 +510,8 @@ def update_role_permissions(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_roles")),
 ) -> RolePermissionsRead:
-    del user
     try:
+        old_permissions = _auth_service(request).role_permissions(role_id)
         permissions = _auth_service(request).update_role_permissions(
             role_id,
             payload.permissions,
@@ -503,6 +520,20 @@ def update_role_permissions(
     except ValueError as exc:
         raise _value_error_to_http(exc)
 
+    added = sorted(set(permissions) - set(old_permissions))
+    removed = sorted(set(old_permissions) - set(permissions))
+    _emit_audit_event(
+        request,
+        user,
+        "role.permissions.update",
+        {
+            "role_id": role_id,
+            "role_name": str(role["name"]),
+            "added": added,
+            "removed": removed,
+            "permissions_after": sorted(permissions),
+        },
+    )
     return RolePermissionsRead(
         role_id=role_id,
         role_name=str(role["name"]),
@@ -533,8 +564,8 @@ def migration_apply(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_migrations")),
 ) -> MigrationActionResponse:
-    del user
     versions = _migration_manager(request).apply_all()
+    _emit_audit_event(request, user, "migration.apply", {"versions_applied": versions})
     return MigrationActionResponse(
         message="Migrations applied",
         versions=versions,
@@ -551,11 +582,14 @@ def migration_rollback(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_migrations")),
 ) -> MigrationActionResponse:
-    del user
     try:
         versions = _migration_manager(request).rollback(steps=payload.steps, force=payload.force)
     except ValueError as exc:
         raise _value_error_to_http(exc)
+    _emit_audit_event(
+        request, user, "migration.rollback",
+        {"versions_rolled_back": versions, "steps": payload.steps, "force": payload.force},
+    )
     return MigrationActionResponse(
         message="Migrations rolled back",
         versions=versions,
@@ -613,7 +647,6 @@ def create_user(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_users")),
 ) -> UserRead:
-    del user
     try:
         row = _auth_service(request).create_user(
             username=payload.username,
@@ -630,6 +663,10 @@ def create_user(
             detail="Username already exists",
         ) from exc
 
+    _emit_audit_event(
+        request, user, "user.create",
+        {"target_username": payload.username, "role": payload.role, "is_active": payload.is_active},
+    )
     return _to_user_read(
         row,
         company_scopes=_auth_service(request).user_company_scopes(int(row["id"])),
@@ -643,7 +680,6 @@ def update_user(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_users")),
 ) -> UserRead:
-    del user
     try:
         row = _auth_service(request).update_user(
             user_id,
@@ -654,6 +690,10 @@ def update_user(
     except ValueError as exc:
         raise _value_error_to_http(exc)
 
+    _emit_audit_event(
+        request, user, "user.update",
+        {"target_user_id": user_id, "role": payload.role, "is_active": payload.is_active},
+    )
     return _to_user_read(
         row,
         company_scopes=_auth_service(request).user_company_scopes(int(row["id"])),
@@ -666,11 +706,11 @@ def delete_user(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_users")),
 ) -> None:
-    del user
     try:
         _auth_service(request).delete_user(user_id)
     except ValueError as exc:
         raise _value_error_to_http(exc)
+    _emit_audit_event(request, user, "user.delete", {"target_user_id": user_id})
 
 
 @router.post(

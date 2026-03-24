@@ -1340,6 +1340,8 @@ class AuditLogRead(BaseModel):
     user_agent: str | None = None
     duration_ms: float
     created_at: int
+    event_type: str | None = None
+    event_detail: dict[str, object] | None = None
 
 
 class PermissionRead(BaseModel):

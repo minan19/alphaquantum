@@ -267,7 +267,14 @@ class MigrationManager:
             try:
                 self._conn.execute("BEGIN")
                 for statement in statements:
-                    self._conn.execute(statement)
+                    try:
+                        self._conn.execute(statement)
+                    except sqlite3.OperationalError as stmt_err:
+                        msg = str(stmt_err).lower()
+                        # Ignore "duplicate column name" – column already added (idempotent ADD COLUMN)
+                        if "duplicate column name" in msg:
+                            continue
+                        raise
                 self._conn.commit()
             except Exception:
                 self._conn.rollback()

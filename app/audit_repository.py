@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -41,7 +42,9 @@ class AuditRepository:
                 ip_address TEXT,
                 user_agent TEXT,
                 duration_ms REAL NOT NULL,
-                created_at INTEGER NOT NULL
+                created_at INTEGER NOT NULL,
+                event_type TEXT,
+                event_detail TEXT
             )
             """
         )
@@ -59,8 +62,11 @@ class AuditRepository:
         ip_address: str | None,
         user_agent: str | None,
         duration_ms: float,
+        event_type: str | None = None,
+        event_detail: dict[str, Any] | None = None,
     ) -> None:
         now = int(time.time())
+        detail_json = json.dumps(event_detail, ensure_ascii=True) if event_detail else None
         with self._lock:
             self._conn.execute(
                 """
@@ -74,9 +80,11 @@ class AuditRepository:
                     ip_address,
                     user_agent,
                     duration_ms,
-                    created_at
+                    created_at,
+                    event_type,
+                    event_detail
                 )
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     request_id,
@@ -89,6 +97,57 @@ class AuditRepository:
                     user_agent,
                     duration_ms,
                     now,
+                    event_type,
+                    detail_json,
+                ),
+            )
+            self._conn.commit()
+
+    def write_event(
+        self,
+        *,
+        username: str | None,
+        role: str | None,
+        event_type: str,
+        event_detail: dict[str, Any] | None = None,
+        request_id: str = "",
+        ip_address: str | None = None,
+    ) -> None:
+        """Write a structured business event to the audit log (not tied to an HTTP request)."""
+        now = int(time.time())
+        detail_json = json.dumps(event_detail, ensure_ascii=True) if event_detail else None
+        with self._lock:
+            self._conn.execute(
+                """
+                INSERT INTO audit_logs(
+                    request_id,
+                    username,
+                    role,
+                    method,
+                    path,
+                    status_code,
+                    ip_address,
+                    user_agent,
+                    duration_ms,
+                    created_at,
+                    event_type,
+                    event_detail
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    request_id,
+                    username,
+                    role,
+                    "EVENT",
+                    f"/audit/event/{event_type}",
+                    200,
+                    ip_address,
+                    None,
+                    0.0,
+                    now,
+                    event_type,
+                    detail_json,
                 ),
             )
             self._conn.commit()
@@ -109,11 +168,23 @@ class AuditRepository:
                     ip_address,
                     user_agent,
                     duration_ms,
-                    created_at
+                    created_at,
+                    event_type,
+                    event_detail
                 FROM audit_logs
                 ORDER BY id DESC
                 LIMIT ?
                 """,
                 (safe_limit,),
             ).fetchall()
-            return [dict(row) for row in rows]
+            result: list[dict[str, Any]] = []
+            for row in rows:
+                row_dict = dict(row)
+                raw_detail = row_dict.get("event_detail")
+                if raw_detail:
+                    try:
+                        row_dict["event_detail"] = json.loads(str(raw_detail))
+                    except (TypeError, ValueError):
+                        row_dict["event_detail"] = None
+                result.append(row_dict)
+            return result

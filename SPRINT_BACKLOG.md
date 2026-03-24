@@ -59,20 +59,20 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
 
 ### Sprint 2.3 (2 hafta) - Ürün Paketleme + UX İyileştirme
 
-| Story ID | Epic | Story | Owner | Kabul Kriteri |
-|---|---|---|---|---|
-| S-231 | E-205 | Rol bazlı dashboard akışları netleşir | Frontend + UX | Admin/Manager/Viewer için akışlar ayrı |
-| S-232 | E-205 | Kritik kartlar için kullanılabilirlik revizyonu yapılır | Frontend | Kritik eylemler 3 tık altında tamamlanır |
-| S-233 | E-206 | ERP/Fintech/Global Intel ürün paketi tanımı çıkarılır | Product | Paket kapsam ve bağımlılıklar net |
-| S-234 | E-206 | Paket bazlı rollout checklist hazırlanır | Product + Backend | Her paket için rollout/rollback adımı var |
+| Story ID | Epic | Story | Owner | Kabul Kriteri | Durum (24 Mart 2026) |
+|---|---|---|---|---|---|
+| S-231 | E-205 | Rol bazlı dashboard akışları netleşir | Claude (23martclaude) | Admin/Manager/Viewer için akışlar ayrı | Done |
+| S-232 | E-205 | Kritik kartlar için kullanılabilirlik revizyonu yapılır | Claude (23martclaude) | Kritik eylemler 3 tık altında tamamlanır | Done |
+| S-233 | E-206 | ERP/Fintech/Global Intel ürün paketi tanımı çıkarılır | Claude (23martclaude) | Paket kapsam ve bağımlılıklar net | Done |
+| S-234 | E-206 | Paket bazlı rollout checklist hazırlanır | Claude (23martclaude) | Her paket için rollout/rollback adımı var | Done |
 
-| Task ID | Story | Task | Tahmin |
-|---|---|---|---|
-| T-231-1 | S-231 | Rol bazlı menü görünürlük kurallarını dokümante et | 0.5g |
-| T-231-2 | S-231 | Dashboard senaryo akış diyagramı ekle | 1g |
-| T-232-1 | S-232 | Kritik aksiyon kartlarını öncelik sırasına göre düzenle | 1g |
-| T-233-1 | S-233 | Ürün paket matrisi (modül, değer, bağımlılık) yaz | 1g |
-| T-234-1 | S-234 | Rollout/rollback checklist şablonu oluştur | 0.5g |
+| Task ID | Story | Task | Tahmin | Durum (24 Mart 2026) |
+|---|---|---|---|---|
+| T-231-1 | S-231 | Rol bazlı menü görünürlük kurallarını dokümante et | 0.5g | Done |
+| T-231-2 | S-231 | Dashboard senaryo akış diyagramı ekle | 1g | Done |
+| T-232-1 | S-232 | Kritik aksiyon kartlarını öncelik sırasına göre düzenle | 1g | Done |
+| T-233-1 | S-233 | Ürün paket matrisi (modül, değer, bağımlılık) yaz | 1g | Done |
+| T-234-1 | S-234 | Rollout/rollback checklist şablonu oluştur | 0.5g | Done |
 
 ## Faz 3 Hazırlık Backlog'u (Ön Kuyruk)
 
@@ -94,3 +94,15 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
 - Sprint 2.1 çekirdek işleri tamamlandı (`5/5 task done`).
 - Sprint 2.2 çekirdek işleri tamamlandı (`5/5 task done`).
 - Sonraki yürütme odağı: Sprint 2.3 (ürün paketleme + UX iyileştirme).
+
+## 24 Mart 2026 İlerleme Notu
+
+- Sprint 2.3 tüm task'ları tamamlandı (`5/5 task done`).
+- Yönetim Claude'a devredildi; çalışma branch'i: `23martclaude`.
+- Üretilen çıktılar:
+  - [docs/ROLE_BASED_DASHBOARD_RULES.md](/Users/mustafainan/alpha-quantum/docs/ROLE_BASED_DASHBOARD_RULES.md)
+  - [docs/DASHBOARD_FLOW_DIAGRAM.md](/Users/mustafainan/alpha-quantum/docs/DASHBOARD_FLOW_DIAGRAM.md)
+  - [docs/CRITICAL_ACTION_CARDS.md](/Users/mustafainan/alpha-quantum/docs/CRITICAL_ACTION_CARDS.md)
+  - [docs/PRODUCT_PACKAGE_MATRIX.md](/Users/mustafainan/alpha-quantum/docs/PRODUCT_PACKAGE_MATRIX.md)
+  - [docs/PRODUCT_ROLLOUT_CHECKLIST.md](/Users/mustafainan/alpha-quantum/docs/PRODUCT_ROLLOUT_CHECKLIST.md)
+- Sonraki odak: Faz 3 hazırlık backlog'u (S-311, S-312, S-313) + P0 teknik borç.

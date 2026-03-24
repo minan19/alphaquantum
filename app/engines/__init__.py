@@ -1,4 +1,5 @@
 from app.engines.company_engine import CompanyEngine
+from app.engines.reporting_engine import ReportingEngine
 from app.engines.connector_engine import ConnectorEngine
 from app.engines.feasibility_engine import FeasibilityEngine
 from app.engines.finance_engine import FinanceEngine
@@ -15,6 +16,7 @@ from app.engines.tender_engine import TenderEngine
 
 __all__ = [
     "CompanyEngine",
+    "ReportingEngine",
     "ConnectorEngine",
     "InventoryEngine",
     "FinanceEngine",

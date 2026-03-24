@@ -6,7 +6,7 @@ import logging
 import sqlite3
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from app.audit_repository import AuditRepository
 from app.auth_service import AuthService
@@ -22,6 +22,7 @@ from app.engines import (
     MarketDataEngine,
     MarketIntelligenceEngine,
     ProcurementEngine,
+    ReportingEngine,
     StrategicEcosystemEngine,
     TenderEngine,
 )
@@ -202,6 +203,10 @@ def _inventory_engine(request: Request) -> InventoryEngine:
 
 def _finance_engine(request: Request) -> FinanceEngine:
     return request.app.state.finance_engine
+
+
+def _reporting_engine(request: Request) -> ReportingEngine:
+    return request.app.state.reporting_engine
 
 
 def _market_engine(request: Request) -> MarketDataEngine:
@@ -1044,6 +1049,174 @@ def budget_vs_actual(
         )
     return _finance_engine(request).budget_vs_actual(
         company=company, year=year, month=month
+    )
+
+
+# ── Reporting exports ──────────────────────────────────────────────────────────
+
+def _build_export_response(
+    content: bytes,
+    media_type: str,
+    filename: str,
+    secret: str,
+    reporting: ReportingEngine,
+) -> Response:
+    signature = reporting.sign(content, secret)
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Export-Signature": signature,
+        },
+    )
+
+
+@router.get(
+    "/api/v1/reports/finance/ledger.xlsx",
+    tags=["reports"],
+    response_class=Response,
+)
+def export_ledger_xlsx(
+    request: Request,
+    company: str | None = Query(default=None),
+    start_date: str | None = Query(default=None),
+    end_date: str | None = Query(default=None),
+    limit: int = Query(default=1000, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    ledger = _finance_engine(request).list_ledger_entries(
+        company=company, start_date=start_date, end_date=end_date, limit=limit
+    )
+    entries = [e.model_dump() for e in ledger.entries]
+    reporting = _reporting_engine(request)
+    content = reporting.ledger_to_xlsx(entries)
+    return _build_export_response(
+        content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "finance_ledger.xlsx", request.app.state.settings.jwt_secret, reporting,
+    )
+
+
+@router.get(
+    "/api/v1/reports/finance/ledger.pdf",
+    tags=["reports"],
+    response_class=Response,
+)
+def export_ledger_pdf(
+    request: Request,
+    company: str | None = Query(default=None),
+    start_date: str | None = Query(default=None),
+    end_date: str | None = Query(default=None),
+    limit: int = Query(default=1000, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    ledger = _finance_engine(request).list_ledger_entries(
+        company=company, start_date=start_date, end_date=end_date, limit=limit
+    )
+    entries = [e.model_dump() for e in ledger.entries]
+    reporting = _reporting_engine(request)
+    content = reporting.ledger_to_pdf(entries)
+    return _build_export_response(
+        content, "application/pdf",
+        "finance_ledger.pdf", request.app.state.settings.jwt_secret, reporting,
+    )
+
+
+@router.get(
+    "/api/v1/reports/finance/budget-vs-actual.xlsx",
+    tags=["reports"],
+    response_class=Response,
+)
+def export_budget_vs_actual_xlsx(
+    request: Request,
+    year: int = Query(..., ge=2000, le=2100),
+    company: str | None = Query(default=None),
+    month: int | None = Query(default=None, ge=1, le=12),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    report = _finance_engine(request).budget_vs_actual(
+        company=company, year=year, month=month
+    )
+    items = [i.model_dump() for i in report.items]
+    totals = {
+        "total_budget_income": report.total_budget_income,
+        "total_budget_expense": report.total_budget_expense,
+        "total_actual_income": report.total_actual_income,
+        "total_actual_expense": report.total_actual_expense,
+        "net_budget": report.net_budget,
+        "net_actual": report.net_actual,
+        "net_variance": report.net_variance,
+    }
+    reporting = _reporting_engine(request)
+    content = reporting.budget_vs_actual_to_xlsx(
+        company=company, year=year, month=month, items=items, totals=totals
+    )
+    return _build_export_response(
+        content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "budget_vs_actual.xlsx", request.app.state.settings.jwt_secret, reporting,
+    )
+
+
+@router.get(
+    "/api/v1/reports/finance/budget-vs-actual.pdf",
+    tags=["reports"],
+    response_class=Response,
+)
+def export_budget_vs_actual_pdf(
+    request: Request,
+    year: int = Query(..., ge=2000, le=2100),
+    company: str | None = Query(default=None),
+    month: int | None = Query(default=None, ge=1, le=12),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    report = _finance_engine(request).budget_vs_actual(
+        company=company, year=year, month=month
+    )
+    items = [i.model_dump() for i in report.items]
+    totals = {
+        "total_budget_income": report.total_budget_income,
+        "total_budget_expense": report.total_budget_expense,
+        "total_actual_income": report.total_actual_income,
+        "total_actual_expense": report.total_actual_expense,
+        "net_budget": report.net_budget,
+        "net_actual": report.net_actual,
+        "net_variance": report.net_variance,
+    }
+    reporting = _reporting_engine(request)
+    content = reporting.budget_vs_actual_to_pdf(
+        company=company, year=year, month=month, items=items, totals=totals
+    )
+    return _build_export_response(
+        content, "application/pdf",
+        "budget_vs_actual.pdf", request.app.state.settings.jwt_secret, reporting,
     )
 
 

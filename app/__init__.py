@@ -30,6 +30,7 @@ from app.engines import (
     MarketDataEngine,
     MarketIntelligenceEngine,
     ProcurementEngine,
+    ReportingEngine,
     StrategicEcosystemEngine,
     TenderEngine,
 )
@@ -158,6 +159,7 @@ def create_app() -> FastAPI:
         app.state.international_operations_engine,
         app.state.procurement_engine,
     )
+    app.state.reporting_engine = ReportingEngine()
     app.state.auth_service = AuthService(app.state.identity_repository, settings)
     app.state.audit_repository = AuditRepository(settings.database_path)
 

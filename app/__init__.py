@@ -19,7 +19,9 @@ from app.connector_sync_worker import ConnectorSyncWorker
 from app.config import get_settings
 from app.engines import (
     CompanyEngine,
+    ComparisonEngine,
     ConnectorEngine,
+    DashboardEngine,
     FeasibilityEngine,
     FinanceEngine,
     GlobalAnalysisEngine,
@@ -31,11 +33,13 @@ from app.engines import (
     MarketIntelligenceEngine,
     ProcurementEngine,
     ReportingEngine,
+    ScheduleEngine,
     StrategicEcosystemEngine,
     TenderEngine,
 )
 from app.feasibility_repository import FeasibilityRepository
 from app.finance_repository import FinanceRepository
+from app.scheduled_report_repository import ScheduledReportRepository
 from app.identity_repository import IdentityRepository
 from app.international_repository import InternationalProjectRepository
 from app.holding_repository import HoldingRepository
@@ -160,6 +164,10 @@ def create_app() -> FastAPI:
         app.state.procurement_engine,
     )
     app.state.reporting_engine = ReportingEngine()
+    app.state.dashboard_engine = DashboardEngine()
+    app.state.comparison_engine = ComparisonEngine()
+    app.state.scheduled_report_repository = ScheduledReportRepository(settings.database_path)
+    app.state.schedule_engine = ScheduleEngine(app.state.scheduled_report_repository)
     app.state.auth_service = AuthService(app.state.identity_repository, settings)
     app.state.audit_repository = AuditRepository(settings.database_path)
 
@@ -243,6 +251,7 @@ def _close_app_resources(app: FastAPI) -> None:
         "procurement_repository",
         "feasibility_repository",
         "international_repository",
+        "scheduled_report_repository",
         "identity_repository",
         "audit_repository",
         "auth_limiter",

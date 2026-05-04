@@ -1485,3 +1485,83 @@ class MigrationDryRunResponse(BaseModel):
     would_apply: list[int] = Field(default_factory=list)
     already_applied: list[int] = Field(default_factory=list)
     total_pending: int
+
+
+# ── S-312: Scheduled Reports ───────────────────────────────────────────────────
+
+class ScheduledReportCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    report_type: str = Field(..., pattern="^(ledger|budget_vs_actual)$")
+    format: str = Field(..., pattern="^(xlsx|pdf)$")
+    company_name: str | None = None
+    params_json: dict = Field(default_factory=dict)
+    schedule_cron: str = Field(..., min_length=1, max_length=60)
+    recipient: str = Field(default="", max_length=255)
+
+class ScheduledReportRead(BaseModel):
+    id: int
+    name: str
+    report_type: str
+    format: str
+    company_name: str | None = None
+    params_json: dict = Field(default_factory=dict)
+    schedule_cron: str
+    recipient: str
+    is_active: bool
+    last_run_at: int | None = None
+    last_status: str | None = None
+    created_by: str
+    created_at: int
+
+class ScheduledReportListResponse(BaseModel):
+    total: int
+    jobs: list[ScheduledReportRead] = Field(default_factory=list)
+
+class ScheduledReportTriggerResponse(BaseModel):
+    id: int
+    message: str
+    download_path: str
+
+
+# ── S-311: Live Dashboard Signals ─────────────────────────────────────────────
+
+class DashboardSignalItem(BaseModel):
+    source: str          # "finance" | "market" | "inventory" | "procurement" | "feasibility"
+    label: str
+    value: str | float | int | None = None
+    unit: str = ""
+    status: str = "OK"   # "OK" | "WARN" | "ALERT"
+    detail: str = ""
+
+
+class DashboardLiveSignalsResponse(BaseModel):
+    generated_at: str
+    company_scope: str | None = None
+    signals: list[DashboardSignalItem] = Field(default_factory=list)
+    alert_count: int = 0
+    warn_count: int = 0
+
+
+# ── S-313: Multi-Company Comparison Panel ─────────────────────────────────────
+
+class CompanyFinanceSnapshot(BaseModel):
+    company: str
+    balance: float
+    total_income_30d: float
+    total_expense_30d: float
+    net_cashflow_30d: float
+    budget_vs_actual_year: int | None = None
+    net_budget: float | None = None
+    net_actual: float | None = None
+    net_variance: float | None = None
+    health_status: str   # "HEALTHY" | "WATCH" | "RISK" | "NO_DATA"
+    rank: int            # 1-based rank by net_cashflow_30d descending
+
+
+class CompanyComparisonResponse(BaseModel):
+    year: int | None = None
+    lookback_days: int
+    snapshots: list[CompanyFinanceSnapshot] = Field(default_factory=list)
+    total_companies: int
+    top_performer: str | None = None
+    bottom_performer: str | None = None

@@ -12,7 +12,9 @@ from app.audit_repository import AuditRepository
 from app.auth_service import AuthService
 from app.engines import (
     CompanyEngine,
+    ComparisonEngine,
     ConnectorEngine,
+    DashboardEngine,
     FeasibilityEngine,
     FinanceEngine,
     HoldingEngine,
@@ -23,6 +25,7 @@ from app.engines import (
     MarketIntelligenceEngine,
     ProcurementEngine,
     ReportingEngine,
+    ScheduleEngine,
     StrategicEcosystemEngine,
     TenderEngine,
 )
@@ -123,6 +126,13 @@ from app.models import (
     RolePermissionsUpdateRequest,
     RoleRead,
     RoleUpdateRequest,
+    CompanyComparisonResponse,
+    DashboardLiveSignalsResponse,
+    DashboardSignalItem,
+    ScheduledReportCreateRequest,
+    ScheduledReportListResponse,
+    ScheduledReportRead,
+    ScheduledReportTriggerResponse,
     TokenResponse,
     UpdateResult,
     UserCreateRequest,
@@ -209,6 +219,14 @@ def _reporting_engine(request: Request) -> ReportingEngine:
     return request.app.state.reporting_engine
 
 
+def _dashboard_engine(request: Request) -> DashboardEngine:
+    return request.app.state.dashboard_engine
+
+
+def _comparison_engine(request: Request) -> ComparisonEngine:
+    return request.app.state.comparison_engine
+
+
 def _market_engine(request: Request) -> MarketDataEngine:
     return request.app.state.market_data_engine
 
@@ -247,6 +265,193 @@ def _ecosystem_engine(request: Request) -> StrategicEcosystemEngine:
 
 def _holding_engine(request: Request) -> HoldingEngine:
     return request.app.state.holding_engine
+
+
+def _schedule_engine(request: Request) -> ScheduleEngine:
+    return request.app.state.schedule_engine
+
+
+# ── S-312: Scheduled Reports ──────────────────────────────────────────────────
+
+@router.post(
+    "/api/v1/reports/schedule",
+    response_model=ScheduledReportRead,
+    tags=["schedule"],
+)
+def create_scheduled_report(
+    payload: ScheduledReportCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_roles")),
+) -> ScheduledReportRead:
+    return _schedule_engine(request).create_job(payload=payload, created_by=user.username)
+
+
+@router.get(
+    "/api/v1/reports/schedule",
+    response_model=ScheduledReportListResponse,
+    tags=["schedule"],
+)
+def list_scheduled_reports(
+    request: Request,
+    active_only: bool = Query(default=False),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ScheduledReportListResponse:
+    del user
+    return _schedule_engine(request).list_jobs(active_only=active_only)
+
+
+@router.post(
+    "/api/v1/reports/schedule/{job_id}/trigger",
+    response_model=ScheduledReportTriggerResponse,
+    tags=["schedule"],
+)
+def trigger_scheduled_report(
+    job_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_roles")),
+) -> ScheduledReportTriggerResponse:
+    del user
+    try:
+        return _schedule_engine(request).trigger_job(job_id=job_id)
+    except ValueError as exc:
+        raise _value_error_to_http(exc)
+
+
+@router.delete(
+    "/api/v1/reports/schedule/{job_id}",
+    response_model=ScheduledReportRead,
+    tags=["schedule"],
+)
+def deactivate_scheduled_report(
+    job_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_roles")),
+) -> ScheduledReportRead:
+    del user
+    try:
+        return _schedule_engine(request).deactivate_job(job_id=job_id)
+    except ValueError as exc:
+        raise _value_error_to_http(exc)
+
+
+# ── S-311: Live Dashboard Signals ─────────────────────────────────────────────
+
+@router.get(
+    "/api/v1/dashboard/live-signals",
+    response_model=DashboardLiveSignalsResponse,
+    tags=["dashboard"],
+)
+def live_dashboard_signals(
+    request: Request,
+    company: str | None = Query(default=None),
+    lookback_days: int = Query(default=30, ge=1, le=365),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> DashboardLiveSignalsResponse:
+    if company is not None:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+
+    companies = request.app.state.company_repository.list_companies()
+    finance_overview = FinanceEngine.build_overview(companies)
+
+    try:
+        cashflow = _finance_engine(request).build_cashflow(
+            company=company, lookback_days=lookback_days
+        )
+    except Exception:
+        cashflow = None
+
+    low_stock_count = sum(
+        1
+        for c in companies
+        if (company is None or c.name == company)
+        for item in c.inventory
+        if item.quantity < item.min_level
+    )
+
+    try:
+        proc_rows = request.app.state.procurement_repository.list_requests(
+            status=None, limit=10_000
+        )
+        procurement_active_count = len(proc_rows)
+    except Exception:
+        procurement_active_count = 0
+
+    try:
+        feasibility_rows = request.app.state.feasibility_repository.list_reports(
+            limit=10_000
+        )
+        feasibility_pending_count = len(feasibility_rows)
+    except Exception:
+        feasibility_pending_count = 0
+
+    try:
+        market_signal_count = len(request.app.state.market_repository.list_symbols())
+    except Exception:
+        market_signal_count = 0
+
+    return _dashboard_engine(request).build_signals(
+        company_scope=company,
+        finance_overview=finance_overview,
+        cashflow=cashflow,
+        low_stock_count=low_stock_count,
+        procurement_active_count=procurement_active_count,
+        feasibility_pending_count=feasibility_pending_count,
+        market_signal_count=market_signal_count,
+    )
+
+
+# ── S-313: Multi-Company Comparison Panel ─────────────────────────────────────
+
+@router.get(
+    "/api/v1/analytics/company-comparison",
+    response_model=CompanyComparisonResponse,
+    tags=["analytics"],
+)
+def company_comparison(
+    request: Request,
+    lookback_days: int = Query(default=30, ge=1, le=365),
+    year: int | None = Query(default=None, ge=2000, le=2100),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CompanyComparisonResponse:
+    if not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Multi-company comparison requires holding scope",
+        )
+
+    companies = request.app.state.company_repository.list_companies()
+
+    cashflows: dict[str, object] = {}
+    for company in companies:
+        try:
+            cashflows[company.name] = _finance_engine(request).build_cashflow(
+                company=company.name, lookback_days=lookback_days
+            )
+        except Exception:
+            cashflows[company.name] = None
+
+    budget_reports: dict[str, object] = {}
+    if year is not None:
+        for company in companies:
+            try:
+                budget_reports[company.name] = _finance_engine(request).budget_vs_actual(
+                    company=company.name, year=year, month=None
+                )
+            except Exception:
+                budget_reports[company.name] = None
+
+    return _comparison_engine(request).build_comparison(
+        companies=companies,
+        cashflows=cashflows,
+        budget_reports=budget_reports,
+        year=year,
+        lookback_days=lookback_days,
+    )
 
 
 def _raise_auth_limiter_unavailable(*, client_host: str, username: str, stage: str) -> None:

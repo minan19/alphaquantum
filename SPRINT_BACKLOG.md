@@ -78,9 +78,9 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
 
 | Story ID | Epic | Story | Öncelik | Not |
 |---|---|---|---|---|
-| S-311 | E-301 | Canlı grafik + sinyal + profesyonel rapor akışını tek ekranda birleştir | P1 | Faz 3 başlangıç işi |
-| S-312 | E-301 | Yönetici rapor zamanlama ve otomatik dağıtım | P1 | Hizmet katmanı ile entegre |
-| S-313 | E-301 | Çoklu kurum ve ülke bazlı karşılaştırma paneli | P1 | Ürün&Çözüm + Dijital Platform ortak |
+| S-311 | E-301 | Canlı grafik + sinyal + profesyonel rapor akışını tek ekranda birleştir | P1 | **Done** — Claude (23martclaude) |
+| S-312 | E-301 | Yönetici rapor zamanlama ve otomatik dağıtım | P1 | **Done** — Claude (23martclaude) |
+| S-313 | E-301 | Çoklu kurum ve ülke bazlı karşılaştırma paneli | P1 | **Done** — Claude (23martclaude) |
 
 ## Definition of Done
 
@@ -106,3 +106,15 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
   - [docs/PRODUCT_PACKAGE_MATRIX.md](/Users/mustafainan/alpha-quantum/docs/PRODUCT_PACKAGE_MATRIX.md)
   - [docs/PRODUCT_ROLLOUT_CHECKLIST.md](/Users/mustafainan/alpha-quantum/docs/PRODUCT_ROLLOUT_CHECKLIST.md)
 - Sonraki odak: Faz 3 hazırlık backlog'u (S-311, S-312, S-313) + P0 teknik borç.
+
+## 4 Mayıs 2026 İlerleme Notu
+
+- Tüm P0 ve P1 teknik borç tamamlandı (P0-1, P0-2, P0-3, P1-1, P1-2).
+- Faz 3 hazırlık backlog'u tamamlandı: S-311, S-312, S-313 Done.
+- Çalışma branch'i: `23martclaude`. Test sayısı: 98 → 155.
+- Yeni endpoint'ler:
+  - GET /api/v1/dashboard/live-signals (S-311)
+  - POST/GET /api/v1/reports/schedule (S-312)
+  - POST /api/v1/reports/schedule/{id}/trigger (S-312)
+  - DELETE /api/v1/reports/schedule/{id} (S-312)
+  - GET /api/v1/analytics/company-comparison (S-313)

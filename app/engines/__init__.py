@@ -1,7 +1,10 @@
+from app.engines.collections_engine import CollectionsEngine
 from app.engines.company_engine import CompanyEngine
 from app.engines.comparison_engine import ComparisonEngine
+from app.engines.crm_engine import CRMEngine
 from app.engines.dashboard_engine import DashboardEngine
 from app.engines.reporting_engine import ReportingEngine
+from app.engines.task_engine import TaskEngine
 from app.engines.connector_engine import ConnectorEngine
 from app.engines.feasibility_engine import FeasibilityEngine
 from app.engines.finance_engine import FinanceEngine
@@ -18,10 +21,13 @@ from app.engines.strategic_ecosystem_engine import StrategicEcosystemEngine
 from app.engines.tender_engine import TenderEngine
 
 __all__ = [
+    "CollectionsEngine",
     "CompanyEngine",
     "ComparisonEngine",
+    "CRMEngine",
     "DashboardEngine",
     "ReportingEngine",
+    "TaskEngine",
     "ConnectorEngine",
     "InventoryEngine",
     "FinanceEngine",

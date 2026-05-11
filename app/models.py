@@ -1565,3 +1565,196 @@ class CompanyComparisonResponse(BaseModel):
     total_companies: int
     top_performer: str | None = None
     bottom_performer: str | None = None
+
+
+# ── S-321: CRM – Customers & Proposals ────────────────────────────────────────
+
+class CustomerCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    full_name: str = Field(..., min_length=1, max_length=200)
+    email: str = Field(default="", max_length=255)
+    phone: str = Field(default="", max_length=50)
+    sector: str = Field(default="general", max_length=80)
+    tags: list[str] = Field(default_factory=list)
+    notes: str = Field(default="", max_length=2000)
+
+
+class CustomerUpdateRequest(BaseModel):
+    full_name: str | None = Field(default=None, max_length=200)
+    email: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=50)
+    sector: str | None = Field(default=None, max_length=80)
+    tags: list[str] | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    is_active: bool | None = None
+
+
+class CustomerRead(BaseModel):
+    id: int
+    company: str
+    full_name: str
+    email: str = ""
+    phone: str = ""
+    sector: str = "general"
+    tags: list[str] = Field(default_factory=list)
+    notes: str = ""
+    is_active: bool = True
+    created_at: int
+    updated_at: int
+
+
+class CustomerListResponse(BaseModel):
+    total: int
+    customers: list[CustomerRead] = Field(default_factory=list)
+
+
+class ProposalCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    customer_id: int
+    title: str = Field(..., min_length=1, max_length=300)
+    amount: float = Field(..., ge=0)
+    currency: str = Field(default="TRY", max_length=10)
+    valid_until: str | None = None
+    description: str = Field(default="", max_length=2000)
+
+
+class ProposalStatusUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(draft|sent|accepted|rejected|expired)$")
+    amount: float | None = Field(default=None, ge=0)
+    valid_until: str | None = None
+    description: str | None = None
+
+
+class ProposalRead(BaseModel):
+    id: int
+    company: str
+    customer_id: int
+    title: str
+    amount: float
+    currency: str = "TRY"
+    status: str
+    valid_until: str | None = None
+    description: str = ""
+    created_at: int
+    updated_at: int
+
+
+class ProposalListResponse(BaseModel):
+    total: int
+    proposals: list[ProposalRead] = Field(default_factory=list)
+
+
+class ProposalSummaryResponse(BaseModel):
+    company: str | None = None
+    total_count: int
+    total_amount: float
+    accepted_amount: float
+    by_status: dict[str, int] = Field(default_factory=dict)
+
+
+# ── S-322: Task / Job Tracking ─────────────────────────────────────────────────
+
+class TaskCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1, max_length=300)
+    description: str = Field(default="", max_length=2000)
+    assigned_to: str = Field(default="", max_length=100)
+    priority: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
+    due_date: str | None = None
+    customer_id: int | None = None
+
+
+class TaskUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=300)
+    description: str | None = Field(default=None, max_length=2000)
+    assigned_to: str | None = Field(default=None, max_length=100)
+    priority: str | None = Field(default=None, pattern="^(low|medium|high|critical)$")
+    status: str | None = Field(default=None, pattern="^(open|in_progress|done|cancelled)$")
+    due_date: str | None = None
+
+
+class TaskRead(BaseModel):
+    id: int
+    company: str
+    title: str
+    description: str = ""
+    assigned_to: str = ""
+    priority: str = "medium"
+    status: str = "open"
+    due_date: str | None = None
+    customer_id: int | None = None
+    created_by: str = ""
+    created_at: int
+    updated_at: int
+
+
+class TaskListResponse(BaseModel):
+    total: int
+    tasks: list[TaskRead] = Field(default_factory=list)
+
+
+class TaskStatusSummaryResponse(BaseModel):
+    company: str | None = None
+    open: int = 0
+    in_progress: int = 0
+    done: int = 0
+    cancelled: int = 0
+    overdue: int = 0
+    total: int = 0
+
+
+# ── S-323: Collections / Invoices ──────────────────────────────────────────────
+
+class InvoiceCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1, max_length=300)
+    amount: float = Field(..., ge=0)
+    issue_date: str
+    due_date: str
+    customer_id: int | None = None
+    proposal_id: int | None = None
+    invoice_number: str = Field(default="", max_length=100)
+    currency: str = Field(default="TRY", max_length=10)
+    description: str = Field(default="", max_length=2000)
+
+
+class InvoicePaymentRequest(BaseModel):
+    payment_amount: float = Field(..., gt=0)
+    paid_date: str | None = None
+
+
+class InvoiceRead(BaseModel):
+    id: int
+    company: str
+    customer_id: int | None = None
+    proposal_id: int | None = None
+    invoice_number: str = ""
+    title: str
+    amount: float
+    paid_amount: float = 0.0
+    currency: str = "TRY"
+    status: str
+    issue_date: str
+    due_date: str
+    paid_date: str | None = None
+    description: str = ""
+    created_at: int
+    updated_at: int
+
+
+class InvoiceListResponse(BaseModel):
+    total: int
+    invoices: list[InvoiceRead] = Field(default_factory=list)
+
+
+class ReceivablesSummaryResponse(BaseModel):
+    company: str | None = None
+    pending_count: int = 0
+    partial_count: int = 0
+    overdue_count: int = 0
+    paid_count: int = 0
+    pending_amount: float = 0.0
+    partial_remaining: float = 0.0
+    overdue_amount: float = 0.0
+    paid_amount_total: float = 0.0
+    total_outstanding: float = 0.0

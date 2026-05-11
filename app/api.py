@@ -11,10 +11,13 @@ from fastapi.responses import HTMLResponse, Response
 from app.audit_repository import AuditRepository
 from app.auth_service import AuthService
 from app.engines import (
+    CollectionsEngine,
     CompanyEngine,
     ComparisonEngine,
     ConnectorEngine,
+    CRMEngine,
     DashboardEngine,
+    TaskEngine,
     FeasibilityEngine,
     FinanceEngine,
     HoldingEngine,
@@ -127,8 +130,27 @@ from app.models import (
     RoleRead,
     RoleUpdateRequest,
     CompanyComparisonResponse,
+    CustomerCreateRequest,
+    CustomerListResponse,
+    CustomerRead,
+    CustomerUpdateRequest,
     DashboardLiveSignalsResponse,
     DashboardSignalItem,
+    InvoiceCreateRequest,
+    InvoiceListResponse,
+    InvoicePaymentRequest,
+    InvoiceRead,
+    ProposalCreateRequest,
+    ProposalListResponse,
+    ProposalRead,
+    ProposalStatusUpdateRequest,
+    ProposalSummaryResponse,
+    ReceivablesSummaryResponse,
+    TaskCreateRequest,
+    TaskListResponse,
+    TaskRead,
+    TaskStatusSummaryResponse,
+    TaskUpdateRequest,
     ScheduledReportCreateRequest,
     ScheduledReportListResponse,
     ScheduledReportRead,
@@ -225,6 +247,18 @@ def _dashboard_engine(request: Request) -> DashboardEngine:
 
 def _comparison_engine(request: Request) -> ComparisonEngine:
     return request.app.state.comparison_engine
+
+
+def _crm_engine(request: Request) -> CRMEngine:
+    return request.app.state.crm_engine
+
+
+def _task_engine(request: Request) -> TaskEngine:
+    return request.app.state.task_engine
+
+
+def _collections_engine(request: Request) -> CollectionsEngine:
+    return request.app.state.collections_engine
 
 
 def _market_engine(request: Request) -> MarketDataEngine:
@@ -452,6 +486,270 @@ def company_comparison(
         year=year,
         lookback_days=lookback_days,
     )
+
+
+# ── S-321: CRM – Customers ────────────────────────────────────────────────────
+
+@router.post("/api/v1/crm/customers", response_model=CustomerRead, status_code=201, tags=["crm"])
+def create_customer(
+    payload: CustomerCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CustomerRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _crm_engine(request).create_customer(payload=payload)
+
+
+@router.get("/api/v1/crm/customers", response_model=CustomerListResponse, tags=["crm"])
+def list_customers(
+    request: Request,
+    company: str | None = Query(default=None),
+    active_only: bool = Query(default=True),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CustomerListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _crm_engine(request).list_customers(
+        company=company, active_only=active_only, limit=limit
+    )
+
+
+@router.get("/api/v1/crm/customers/{customer_id}", response_model=CustomerRead, tags=["crm"])
+def get_customer(
+    customer_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CustomerRead:
+    result = _crm_engine(request).get_customer(customer_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    _ensure_company_scope(request, user, result.company)
+    return result
+
+
+@router.patch("/api/v1/crm/customers/{customer_id}", response_model=CustomerRead, tags=["crm"])
+def update_customer(
+    customer_id: int,
+    payload: CustomerUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CustomerRead:
+    existing = _crm_engine(request).get_customer(customer_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _crm_engine(request).update_customer(customer_id, payload=payload)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return result
+
+
+# ── S-321: CRM – Proposals ────────────────────────────────────────────────────
+
+@router.post("/api/v1/crm/proposals", response_model=ProposalRead, status_code=201, tags=["crm"])
+def create_proposal(
+    payload: ProposalCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ProposalRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _crm_engine(request).create_proposal(payload=payload)
+
+
+@router.get("/api/v1/crm/proposals", response_model=ProposalListResponse, tags=["crm"])
+def list_proposals(
+    request: Request,
+    company: str | None = Query(default=None),
+    customer_id: int | None = Query(default=None),
+    status_filter: str | None = Query(default=None, alias="status"),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ProposalListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _crm_engine(request).list_proposals(
+        company=company, customer_id=customer_id, status=status_filter, limit=limit
+    )
+
+
+@router.get("/api/v1/crm/proposals/summary", response_model=ProposalSummaryResponse, tags=["crm"])
+def proposal_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ProposalSummaryResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _crm_engine(request).proposal_summary(company=company)
+
+
+@router.patch("/api/v1/crm/proposals/{proposal_id}", response_model=ProposalRead, tags=["crm"])
+def update_proposal_status(
+    proposal_id: int,
+    payload: ProposalStatusUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ProposalRead:
+    existing = _crm_engine(request).get_proposal(proposal_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _crm_engine(request).update_proposal_status(proposal_id, payload=payload)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    return result
+
+
+# ── S-322: Task Tracking ──────────────────────────────────────────────────────
+
+@router.post("/api/v1/tasks", response_model=TaskRead, status_code=201, tags=["tasks"])
+def create_task(
+    payload: TaskCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> TaskRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _task_engine(request).create_task(payload=payload, created_by=user.username)
+
+
+@router.get("/api/v1/tasks", response_model=TaskListResponse, tags=["tasks"])
+def list_tasks(
+    request: Request,
+    company: str | None = Query(default=None),
+    assigned_to: str | None = Query(default=None),
+    task_status: str | None = Query(default=None, alias="status"),
+    priority: str | None = Query(default=None),
+    overdue_only: bool = Query(default=False),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> TaskListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _task_engine(request).list_tasks(
+        company=company, assigned_to=assigned_to, status=task_status,
+        priority=priority, overdue_only=overdue_only, limit=limit,
+    )
+
+
+@router.get("/api/v1/tasks/summary", response_model=TaskStatusSummaryResponse, tags=["tasks"])
+def task_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> TaskStatusSummaryResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _task_engine(request).status_summary(company=company)
+
+
+@router.patch("/api/v1/tasks/{task_id}", response_model=TaskRead, tags=["tasks"])
+def update_task(
+    task_id: int,
+    payload: TaskUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> TaskRead:
+    existing = _task_engine(request).get_task(task_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _task_engine(request).update_task(task_id, payload=payload)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return result
+
+
+# ── S-323: Collections – Invoices ─────────────────────────────────────────────
+
+@router.post("/api/v1/collections/invoices", response_model=InvoiceRead, status_code=201, tags=["collections"])
+def create_invoice(
+    payload: InvoiceCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> InvoiceRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _collections_engine(request).create_invoice(payload=payload)
+
+
+@router.get("/api/v1/collections/invoices", response_model=InvoiceListResponse, tags=["collections"])
+def list_invoices(
+    request: Request,
+    company: str | None = Query(default=None),
+    customer_id: int | None = Query(default=None),
+    inv_status: str | None = Query(default=None, alias="status"),
+    overdue_only: bool = Query(default=False),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> InvoiceListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _collections_engine(request).list_invoices(
+        company=company, customer_id=customer_id,
+        status=inv_status, overdue_only=overdue_only, limit=limit,
+    )
+
+
+@router.get("/api/v1/collections/invoices/{invoice_id}", response_model=InvoiceRead, tags=["collections"])
+def get_invoice(
+    invoice_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> InvoiceRead:
+    result = _collections_engine(request).get_invoice(invoice_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    _ensure_company_scope(request, user, result.company)
+    return result
+
+
+@router.post("/api/v1/collections/invoices/{invoice_id}/payment", response_model=InvoiceRead, tags=["collections"])
+def record_payment(
+    invoice_id: int,
+    payload: InvoicePaymentRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> InvoiceRead:
+    existing = _collections_engine(request).get_invoice(invoice_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _collections_engine(request).record_payment(invoice_id, payload=payload)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return result
+
+
+@router.get("/api/v1/collections/summary", response_model=ReceivablesSummaryResponse, tags=["collections"])
+def receivables_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ReceivablesSummaryResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _collections_engine(request).receivables_summary(company=company)
 
 
 def _raise_auth_limiter_unavailable(*, client_host: str, username: str, stage: str) -> None:

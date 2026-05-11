@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS proposals;
+DROP TABLE IF EXISTS customers;

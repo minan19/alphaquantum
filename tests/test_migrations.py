@@ -24,23 +24,23 @@ class MigrationManagerTests(unittest.TestCase):
 
     def test_apply_status_and_rollback(self) -> None:
         applied = self.manager.apply_all()
-        self.assertEqual(applied, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+        self.assertEqual(applied, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18])
 
         status = self.manager.status()
-        self.assertEqual(len(status), 15)
-        for i in range(15):
+        self.assertEqual(len(status), 18)
+        for i in range(18):
             self.assertTrue(status[i]["applied"])
 
         rolled_back = self.manager.rollback(steps=1)
-        self.assertEqual(rolled_back, [15])
+        self.assertEqual(rolled_back, [18])
 
         status_after = self.manager.status()
-        for i in range(14):
+        for i in range(17):
             self.assertTrue(status_after[i]["applied"])
-        self.assertFalse(status_after[14]["applied"])
+        self.assertFalse(status_after[17]["applied"])
 
         reapplied = self.manager.apply_all()
-        self.assertEqual(reapplied, [15])
+        self.assertEqual(reapplied, [18])
 
 
 if __name__ == "__main__":

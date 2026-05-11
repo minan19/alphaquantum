@@ -81,6 +81,9 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
 | S-311 | E-301 | Canlı grafik + sinyal + profesyonel rapor akışını tek ekranda birleştir | P1 | **Done** — Claude (23martclaude) |
 | S-312 | E-301 | Yönetici rapor zamanlama ve otomatik dağıtım | P1 | **Done** — Claude (23martclaude) |
 | S-313 | E-301 | Çoklu kurum ve ülke bazlı karşılaştırma paneli | P1 | **Done** — Claude (23martclaude) |
+| S-321 | PatronOS | CRM — Müşteri ve Teklif yönetimi | P1 | **Done** — Claude (23martclaude) |
+| S-322 | PatronOS | Tasks — Görev atama ve takip | P1 | **Done** — Claude (23martclaude) |
+| S-323 | PatronOS | Collections — Fatura ve alacak takibi | P1 | **Done** — Claude (23martclaude) |
 
 ## Definition of Done
 
@@ -118,3 +121,15 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
   - POST /api/v1/reports/schedule/{id}/trigger (S-312)
   - DELETE /api/v1/reports/schedule/{id} (S-312)
   - GET /api/v1/analytics/company-comparison (S-313)
+
+## 11 Mayıs 2026 İlerleme Notu
+
+- PatronOS/İşKomuta entegrasyonu başlatıldı: S-321, S-322, S-323 Done.
+- Çalışma branch'i: `23martclaude`. Test sayısı: 155 → 211 (201 pass, 10 skip).
+- 3 yeni migration (016, 017, 018), 6 yeni kaynak dosyası, 55 yeni test.
+- Yeni endpoint'ler:
+  - POST/GET /api/v1/crm/customers, GET/PATCH /api/v1/crm/customers/{id} (S-321)
+  - POST/GET /api/v1/crm/proposals, GET /api/v1/crm/proposals/summary, PATCH /api/v1/crm/proposals/{id} (S-321)
+  - POST/GET /api/v1/tasks, GET /api/v1/tasks/summary, PATCH /api/v1/tasks/{id} (S-322)
+  - POST/GET /api/v1/collections/invoices, GET /api/v1/collections/invoices/{id} (S-323)
+  - POST /api/v1/collections/invoices/{id}/payment, GET /api/v1/collections/summary (S-323)

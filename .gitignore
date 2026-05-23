@@ -6,3 +6,40 @@ venv/
 .pytest_cache/
 *.db
 .claude/
+
+# SQLite runtime files
+*.db-shm
+*.db-wal
+*.db.backup_*
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Build
+dist/
+build/
+*.egg

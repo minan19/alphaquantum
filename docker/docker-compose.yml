@@ -1,0 +1,103 @@
+# ==============================================================================
+# FINOS Platform — docker-compose.yml (Geliştirme Ortamı)
+# 3 servis: postgres, redis, api
+# FINOS_MASTER.md C.2 şablonu temel alındı — geliştirme için hot reload eklendi
+#
+# Kullanım:
+#   cd docker/
+#   docker compose up
+#
+# Dikkat: Bu dosya GELİŞTİRME ortamı içindir.
+# Production'da şifreler değiştirilmeli, --reload kaldırılmalı.
+#
+# PORT STRATEJİSİ (host ↔ container):
+#   PostgreSQL : 5434:5432  — infra-postgres-1 (5433) ile çakışmaz
+#   Redis      : 6380:6379  — infra-redis-1    (6379) ile çakışmaz
+#   API        : 8000:8000  — boş, sorun yok
+#   Not: DATABASE_URL ve REDIS_URL container içi portları (5432, 6379) kullanır.
+#        Docker bridge ağında servisler birbirini container adıyla bulur.
+# ==============================================================================
+
+version: '3.9'
+
+services:
+
+  # ----------------------------------------------------------------------------
+  # PostgreSQL 16 — kalıcı veri katmanı (P0.2 geçişine hazır)
+  # Şu an SQLite kullanılıyor; container hazır, geçiş Hafta 2-8'de yapılacak
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: finos-postgres
+    environment:
+      POSTGRES_DB: finos
+      POSTGRES_USER: finos
+      # GELİŞTİRME ORTAMI — production'da mutlaka değiştir
+      POSTGRES_PASSWORD: dev_password_change_in_prod
+    volumes:
+      # Kalıcı veri: container silinse bile veriler korunur
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Redis 7 — cache + rate limiting + leader lock (mevcut, korunacak)
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: finos-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # API — FastAPI uygulaması (FinOS backend)
+  # ----------------------------------------------------------------------------
+  api:
+    build:
+      # Build context proje kökü — .dockerignore oradan okunur
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: finos-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # PostgreSQL bağlantısı (asyncpg driver — SQLAlchemy 2.0 geçişine hazır)
+      DATABASE_URL: postgresql+asyncpg://finos:dev_password_change_in_prod@postgres:5432/finos
+      REDIS_URL: redis://redis:6379/0
+      APP_ENV: development
+      # GELİŞTİRME ORTAMI — production'da CSPRNG ile üret, min 32 karakter
+      AQ_JWT_SECRET: dev_secret_change_in_prod_min_32_chars_long
+      # Güvenlik: demo kullanıcılar production'da KESİNLİKLE false
+      AQ_ENABLE_DEMO_USERS: "false"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Hot reload: app paketi ve kök main.py — kod değişikliği anında yansır
+      - ../app:/app/app
+      - ../main.py:/app/main.py
+    # Geliştirme modunda --reload (Dockerfile CMD'deki --workers 2'yi ezer)
+    # --reload, birden fazla worker ile çalışmaz — worker sayısı 1'de kalır
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+
+# ------------------------------------------------------------------------------
+# Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  # postgres_data: container silinse bile PostgreSQL verisi kalıcı
+  postgres_data:

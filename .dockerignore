@@ -1,0 +1,55 @@
+# ==============================================================================
+# .dockerignore — FINOS Platform
+# Build context proje kökü (..) olduğundan bu dosya proje kökünde.
+# Docker bu dosyayı build context kökünden okur — docker/Dockerfile ile uyumlu.
+# ==============================================================================
+
+# Python sanal ortam ve derleme artıkları
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Git geçmişi — image'e girmemeli
+.git/
+.gitignore
+
+# Veritabanı dosyaları — image'e gömülü veri taşıma yasak
+*.db
+*.db-shm
+*.db-wal
+alpha_quantum.db.backup_*
+
+# Ortam değişkenleri — secret image'e kesinlikle girmesin
+.env
+.env.local
+.env.*.local
+
+# Test altyapısı — runtime için gerekli değil, image boyutunu büyütür
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Geliştirici araçları ve dokümantasyon
+docs/
+scripts/
+*.md
+
+# IDE ve OS artıkları
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Gelecekteki frontend için (Ay 7+ Next.js)
+node_modules/
+.next/
+dist/
+build/
+
+# Python analiz araçları çıktıları
+.mypy_cache/
+.ruff_cache/

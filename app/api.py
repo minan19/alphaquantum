@@ -494,7 +494,7 @@ def company_comparison(
 def create_customer(
     payload: CustomerCreateRequest,
     request: Request,
-    user: UserProfile = Depends(require_permissions("read_finance")),
+    user: UserProfile = Depends(require_permissions("write_finance")),
 ) -> CustomerRead:
     _ensure_company_scope(request, user, payload.company)
     return _crm_engine(request).create_customer(payload=payload)
@@ -536,7 +536,7 @@ def update_customer(
     customer_id: int,
     payload: CustomerUpdateRequest,
     request: Request,
-    user: UserProfile = Depends(require_permissions("read_finance")),
+    user: UserProfile = Depends(require_permissions("write_finance")),
 ) -> CustomerRead:
     existing = _crm_engine(request).get_customer(customer_id)
     if existing is None:
@@ -554,7 +554,7 @@ def update_customer(
 def create_proposal(
     payload: ProposalCreateRequest,
     request: Request,
-    user: UserProfile = Depends(require_permissions("read_finance")),
+    user: UserProfile = Depends(require_permissions("write_finance")),
 ) -> ProposalRead:
     _ensure_company_scope(request, user, payload.company)
     return _crm_engine(request).create_proposal(payload=payload)
@@ -598,7 +598,7 @@ def update_proposal_status(
     proposal_id: int,
     payload: ProposalStatusUpdateRequest,
     request: Request,
-    user: UserProfile = Depends(require_permissions("read_finance")),
+    user: UserProfile = Depends(require_permissions("write_finance")),
 ) -> ProposalRead:
     existing = _crm_engine(request).get_proposal(proposal_id)
     if existing is None:
@@ -616,7 +616,7 @@ def update_proposal_status(
 def create_task(
     payload: TaskCreateRequest,
     request: Request,
-    user: UserProfile = Depends(require_permissions("read_finance")),
+    user: UserProfile = Depends(require_permissions("write_finance")),
 ) -> TaskRead:
     _ensure_company_scope(request, user, payload.company)
     return _task_engine(request).create_task(payload=payload, created_by=user.username)
@@ -663,7 +663,7 @@ def update_task(
     task_id: int,
     payload: TaskUpdateRequest,
     request: Request,
-    user: UserProfile = Depends(require_permissions("read_finance")),
+    user: UserProfile = Depends(require_permissions("write_finance")),
 ) -> TaskRead:
     existing = _task_engine(request).get_task(task_id)
     if existing is None:
@@ -681,7 +681,7 @@ def update_task(
 def create_invoice(
     payload: InvoiceCreateRequest,
     request: Request,
-    user: UserProfile = Depends(require_permissions("read_finance")),
+    user: UserProfile = Depends(require_permissions("write_finance")),
 ) -> InvoiceRead:
     _ensure_company_scope(request, user, payload.company)
     return _collections_engine(request).create_invoice(payload=payload)
@@ -726,7 +726,7 @@ def record_payment(
     invoice_id: int,
     payload: InvoicePaymentRequest,
     request: Request,
-    user: UserProfile = Depends(require_permissions("read_finance")),
+    user: UserProfile = Depends(require_permissions("write_finance")),
 ) -> InvoiceRead:
     existing = _collections_engine(request).get_invoice(invoice_id)
     if existing is None:

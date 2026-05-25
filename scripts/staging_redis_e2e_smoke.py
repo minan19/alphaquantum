@@ -70,7 +70,7 @@ def run_staging_redis_e2e_smoke(redis_url: str) -> list[tuple[str, str, str]]:
         db_path = str(Path(td) / "staging_redis_e2e.db")
         run_id = uuid4().hex[:10]
         flood_username = f"flood_{run_id}"
-        flood_password = "FloodUserPass123"
+        flood_password = os.environ.get("AQ_FLOOD_TEST_PASSWORD", "FloodUserPass123")
 
         env_keys = [
             "AQ_DATABASE_PATH",

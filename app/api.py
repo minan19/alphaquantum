@@ -458,6 +458,23 @@ def live_dashboard_signals(
     except Exception:
         market_signal_count = 0
 
+    # S-335 — operational signals (best-effort; failures degrade to zero)
+    try:
+        overdue_task_count = _task_engine(request).status_summary(
+            company=company
+        ).overdue
+    except Exception:
+        overdue_task_count = 0
+
+    try:
+        unread_critical_notification_count = len(
+            _notification_engine(request).list_notifications(
+                company=company, severity="critical", unread_only=True
+            ).notifications
+        )
+    except Exception:
+        unread_critical_notification_count = 0
+
     return _dashboard_engine(request).build_signals(
         company_scope=company,
         finance_overview=finance_overview,
@@ -466,6 +483,8 @@ def live_dashboard_signals(
         procurement_active_count=procurement_active_count,
         feasibility_pending_count=feasibility_pending_count,
         market_signal_count=market_signal_count,
+        overdue_task_count=overdue_task_count,
+        unread_critical_notification_count=unread_critical_notification_count,
     )
 
 
@@ -773,6 +792,36 @@ def get_invoice(
         raise HTTPException(status_code=404, detail="Invoice not found")
     _ensure_company_scope(request, user, result.company)
     return result
+
+
+@router.get(
+    "/api/v1/collections/invoices/{invoice_id}/pdf",
+    tags=["collections"],
+    response_class=Response,
+)
+def export_invoice_pdf(
+    invoice_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    """QW-2 — Imzalı tek fatura PDF'i. Müşteriye iletmeye uygun, audit'lenebilir."""
+    existing = _collections_engine(request).get_invoice(invoice_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    _ensure_company_scope(request, user, existing.company)
+    invoice_row = request.app.state.invoice_repository.get_invoice(invoice_id)
+    customer_row = None
+    if invoice_row and invoice_row.get("customer_id"):
+        customer_row = request.app.state.crm_repository.get_customer(
+            int(invoice_row["customer_id"])
+        )
+    reporting = _reporting_engine(request)
+    pdf_bytes = reporting.invoice_to_pdf(invoice_row, customer=customer_row)
+    filename = f"invoice_{invoice_row.get('invoice_number') or invoice_id}.pdf"
+    return _build_export_response(
+        pdf_bytes, "application/pdf",
+        filename, request.app.state.settings.jwt_secret, reporting,
+    )
 
 
 @router.post("/api/v1/collections/invoices/{invoice_id}/payment", response_model=InvoiceRead, tags=["collections"])

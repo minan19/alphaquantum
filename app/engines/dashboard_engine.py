@@ -23,6 +23,9 @@ class DashboardEngine:
         procurement_active_count: int,
         feasibility_pending_count: int,
         market_signal_count: int,
+        # S-335 — operational signals
+        overdue_task_count: int = 0,
+        unread_critical_notification_count: int = 0,
     ) -> DashboardLiveSignalsResponse:
         signals: list[DashboardSignalItem] = []
 
@@ -151,6 +154,37 @@ class DashboardEngine:
                 value=market_signal_count,
                 unit="symbols cached",
                 status="OK" if market_signal_count > 0 else "WARN",
+                detail="",
+            )
+        )
+
+        # S-335 — Task overdue signal (operasyonel uyarı)
+        signals.append(
+            DashboardSignalItem(
+                source="tasks",
+                label="Overdue Tasks",
+                value=overdue_task_count,
+                unit="tasks",
+                status=(
+                    "ALERT" if overdue_task_count > 5
+                    else "WARN" if overdue_task_count > 0
+                    else "OK"
+                ),
+                detail="",
+            )
+        )
+
+        # S-335 — Unread critical notifications signal (S-334 motoruna bağlı)
+        signals.append(
+            DashboardSignalItem(
+                source="notifications",
+                label="Critical Notifications",
+                value=unread_critical_notification_count,
+                unit="unread",
+                status=(
+                    "ALERT" if unread_critical_notification_count > 0
+                    else "OK"
+                ),
                 detail="",
             )
         )

@@ -104,6 +104,40 @@ class DashboardEngineUnitTests(unittest.TestCase):
         health_signal = next(s for s in result.signals if s.label == "Finance Health")
         self.assertEqual(health_signal.status, "ALERT")
 
+    # ── S-335 — Task & Notification signals ────────────────────────────────
+    def test_overdue_tasks_signal_present(self):
+        result = self._build()
+        sig = next(s for s in result.signals if s.label == "Overdue Tasks")
+        self.assertEqual(sig.source, "tasks")
+        self.assertEqual(sig.value, 0)
+        self.assertEqual(sig.status, "OK")
+
+    def test_few_overdue_tasks_triggers_warn(self):
+        result = self._build(overdue_task_count=3)
+        sig = next(s for s in result.signals if s.label == "Overdue Tasks")
+        self.assertEqual(sig.status, "WARN")
+        self.assertGreater(result.warn_count, 0)
+
+    def test_many_overdue_tasks_triggers_alert(self):
+        result = self._build(overdue_task_count=10)
+        sig = next(s for s in result.signals if s.label == "Overdue Tasks")
+        self.assertEqual(sig.status, "ALERT")
+        self.assertGreater(result.alert_count, 0)
+
+    def test_critical_notification_signal_present(self):
+        result = self._build()
+        sig = next(s for s in result.signals
+                   if s.label == "Critical Notifications")
+        self.assertEqual(sig.source, "notifications")
+        self.assertEqual(sig.value, 0)
+        self.assertEqual(sig.status, "OK")
+
+    def test_unread_critical_triggers_alert(self):
+        result = self._build(unread_critical_notification_count=2)
+        sig = next(s for s in result.signals
+                   if s.label == "Critical Notifications")
+        self.assertEqual(sig.status, "ALERT")
+
 
 class DashboardEngineApiTests(unittest.TestCase):
     def setUp(self):

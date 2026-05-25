@@ -84,6 +84,16 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
 | S-321 | PatronOS | CRM — Müşteri ve Teklif yönetimi | P1 | **Done** — Claude (23martclaude) |
 | S-322 | PatronOS | Tasks — Görev atama ve takip | P1 | **Done** — Claude (23martclaude) |
 | S-323 | PatronOS | Collections — Fatura ve alacak takibi | P1 | **Done** — Claude (23martclaude) |
+| S-331 | KOBİ Cash Flow | Alacak yaşlandırma analizi (30/60/90/90+ buckets) | P1 | **Done** — Claude (23martclaude) |
+| S-332 | KOBİ Cash Flow | Nakit akışı projeksiyonu (30/60/90 gün ileriye) | P1 | **Done** — Claude (23martclaude) |
+| S-333 | KOBİ Cash Flow | Müşteri ödeme risk skoru (0-100) | P1 | **Done** — Claude (23martclaude) |
+| S-334 | KOBİ Cash Flow | Vade uyarı / bildirim motoru (T-3..T+14 pencereleri) | P1 | **Done** — Claude (23martclaude) |
+| S-335 | Dashboard | Görev + bildirim sinyallerini dashboard'a ekle | P2 | **Done** — Claude (23martclaude) |
+| S-341 | KOBİ Cash Flow | Çok para birimi FX nakit akışı (TRY normalleştirme) | P2 | **Done** — Claude (23martclaude) |
+| S-342 | KOBİ Cash Flow | Senet / Çek / Bono takibi + status FSM | P2 | **Done** — Claude (23martclaude) |
+| S-343 | KOBİ Cash Flow | Tahsilat kanalı: provider abstraction + KVKK consent | P2 | **Done** — Claude (23martclaude) |
+| QW-1 | Hardening | Hardcoded test password → env var | P3 | **Done** — Claude (23martclaude) |
+| QW-2 | Reporting | Tek fatura için imzalı PDF export | P2 | **Done** — Claude (23martclaude) |
 
 ## Definition of Done
 
@@ -133,3 +143,37 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
   - POST/GET /api/v1/tasks, GET /api/v1/tasks/summary, PATCH /api/v1/tasks/{id} (S-322)
   - POST/GET /api/v1/collections/invoices, GET /api/v1/collections/invoices/{id} (S-323)
   - POST /api/v1/collections/invoices/{id}/payment, GET /api/v1/collections/summary (S-323)
+
+## 25 Mayıs 2026 İlerleme Notu — KOBİ Nakit Akışı sprint'i
+
+Kaynak: `KOBİ Nakit Akışı İstihbarat Platformu` proje tanım raporundaki MVP
+özelliklerinin platforma uyarlanması. Bir günde 10 sprint tamamlandı.
+
+**Tamamlananlar (commit sırasıyla):**
+
+| Sprint | Commit | Test | Açıklama |
+|---|---|---|---|
+| Pre-push gate fix | `de88b6b` | — | `.gitignore` cert/key + write_finance permission |
+| S-331 + S-332 | `9bec137` | +25 | Alacak yaşlandırma + 30/60/90 gün nakit projeksiyonu |
+| S-333 | `a5a8c4d` | +19 | Müşteri ödeme risk skoru (0-100) |
+| S-334 | `d206680` | +25 | Vade uyarı motoru (T-3, T-1, T+1, T+7, T+14) |
+| S-341 | `d18d848` | +26 | FX nakit akışı (12 para birimi + env override) |
+| S-342 | `7bb3f70` | +30 | Senet / Çek / Bono takibi + status FSM |
+| S-343 | `e0f3692` | +24 | Tahsilat kanalı + provider abstraction + KVKK consent |
+| S-335 + QW-1/2 | `dc14c81` | +17 | Dashboard sinyalleri + env password + Invoice PDF |
+
+**Cumulative metrikler:**
+- Test: 211 → 367 (+156, 10 skip platform bağımlılığı nedeniyle)
+- Migration: 18 → 21 (notifications, financial_instruments, delivery_log+consent)
+- Engine: 24 → 27 (NotificationEngine, FinancialInstrumentEngine, DeliveryEngine)
+- Endpoint sayısı: ~116 → ~132
+- Ruff: 0 hata · Mypy: 0 hata
+
+**Önemli mimari kararlar:**
+- KVKK consent flag'leri tüm kanallarda zorunlu — production'da AQ_NOTIFICATION_CHANNELS env değişkeniyle açılır, default sadece `console`
+- SendGrid provider varsayılan olarak sandbox modunda — kazara gerçek e-posta atma riski yok
+- CurrencyConverter deterministic + env override edilebilir — testler offline çalışır, prod'da live rate kolay enjekte edilebilir
+- Notification idempotency UNIQUE constraint ile DB seviyesinde garantili — scheduled scan'ler güvenle çalışır
+- DashboardEngine artık operasyonel sinyaller içeriyor (overdue tasks, critical notifications) — tek dashboard'da iş + finance görüntüsü
+
+**Sıradaki odak:** Platform/DevOps katmanı (S-361 Docker pipeline, S-362 Frontend, S-363 Multi-tenant onboarding) ve P3 dış entegrasyonlar (GİB, KEP, UYAP).

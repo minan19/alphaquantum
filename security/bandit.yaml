@@ -8,6 +8,10 @@
 #         repo files (crm/task/invoice/financial_instrument/notification/
 #         delivery_log) use this safe pattern. New repository files must
 #         follow the same convention or open per-line `# nosec B608`.
+# - B310: urllib.request.urlopen() called only in channel_providers.py with a
+#         hardcoded HTTPS URL (https://api.sendgrid.com/v3/mail/send). Schema
+#         is not user-controllable, no file:/ injection risk. Future providers
+#         must keep URLs hardcoded or open per-line `# nosec B310`.
 exclude_dirs:
   - tests
   - venv
@@ -18,3 +22,4 @@ skips:
   - B105
   - B311
   - B608
+  - B310

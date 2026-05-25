@@ -27,6 +27,8 @@ ignore = [
     "B904",  # raise-without-from-inside-except — mevcut except blokları çoğu
              # düz raise kullanıyor; bug değil stilist. Refactor ayrı sprint.
     "UP007", # use-pep604 — `X | None` zaten kullanıyoruz, ama bazı eski stiller `Optional[X]`
+    "UP017", # datetime.UTC alias — mevcut kod timezone.utc kullanıyor; ekipçe modernizasyon sprint'inde tek seferde fix
+    "UP037", # Remove quotes from type annotation — bazı self-referential type'lar quote kullanıyor
     "UP045", # non-pep604-annotation-optional
 ]
 

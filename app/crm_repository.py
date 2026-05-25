@@ -124,6 +124,39 @@ class CRMRepository:
             self._conn.commit()
             return self._fetch_customer(customer_id)
 
+    # ── S-343: KVKK consent flags ──────────────────────────────────────────────
+
+    def update_consent(
+        self,
+        customer_id: int,
+        *,
+        email_consent: bool | None = None,
+        sms_consent: bool | None = None,
+        whatsapp_consent: bool | None = None,
+    ) -> dict[str, Any] | None:
+        now = int(time.time())
+        fields: list[str] = ["updated_at = ?", "consent_updated_at = ?"]
+        values: list[Any] = [now, now]
+        if email_consent is not None:
+            fields.append("email_consent = ?")
+            values.append(1 if email_consent else 0)
+        if sms_consent is not None:
+            fields.append("sms_consent = ?")
+            values.append(1 if sms_consent else 0)
+        if whatsapp_consent is not None:
+            fields.append("whatsapp_consent = ?")
+            values.append(1 if whatsapp_consent else 0)
+        if len(fields) == 2:
+            # Nothing actually changed; nothing to do.
+            return self.get_customer(customer_id)
+        values.append(customer_id)
+        with self._lock:
+            self._conn.execute(
+                f"UPDATE customers SET {', '.join(fields)} WHERE id = ?", values
+            )
+            self._conn.commit()
+            return self._fetch_customer(customer_id)
+
     # ── Proposals ──────────────────────────────────────────────────────────────
 
     def create_proposal(

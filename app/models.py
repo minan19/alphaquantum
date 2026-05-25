@@ -1599,8 +1599,23 @@ class CustomerRead(BaseModel):
     tags: list[str] = Field(default_factory=list)
     notes: str = ""
     is_active: bool = True
+    # S-343: KVKK consent flags (default false until explicit opt-in)
+    email_consent: bool = False
+    sms_consent: bool = False
+    whatsapp_consent: bool = False
+    consent_updated_at: int = 0
     created_at: int
     updated_at: int
+
+
+class CustomerConsentUpdateRequest(BaseModel):
+    """S-343 — KVKK consent flag update.
+
+    Only fields explicitly set are changed; unset fields preserve current value.
+    """
+    email_consent: bool | None = None
+    sms_consent: bool | None = None
+    whatsapp_consent: bool | None = None
 
 
 class CustomerListResponse(BaseModel):
@@ -1960,3 +1975,47 @@ class FinancialInstrumentSummaryResponse(BaseModel):
     overdue_pending_count: int = 0
     overdue_pending_amount: float = 0.0
     by_kind_pending: dict[str, int] = Field(default_factory=dict)
+
+
+# ─── S-343: Tahsilat Kanalı (Delivery Log + Dispatch) ───────────────────────
+
+class DeliveryLogRead(BaseModel):
+    id: int
+    company: str
+    notification_id: int
+    channel: str                          # email | sms | whatsapp | console
+    provider: str                         # sendgrid | twilio | 360dialog | console
+    recipient: str = ""
+    status: str                           # queued | sent | failed | sandbox | skipped_*
+    error_message: str = ""
+    provider_message_id: str = ""
+    subject: str = ""
+    body: str = ""
+    sent_at: int | None = None
+    created_at: int
+
+
+class DeliveryLogListResponse(BaseModel):
+    total: int
+    entries: list[DeliveryLogRead] = Field(default_factory=list)
+
+
+class DispatchAttempt(BaseModel):
+    """One row from a dispatch result — what happened on each channel."""
+    channel: str
+    provider: str
+    recipient: str = ""
+    status: str
+    error_message: str = ""
+    provider_message_id: str = ""
+
+
+class DispatchResponse(BaseModel):
+    """Result of dispatching a single notification across configured channels."""
+    notification_id: int
+    company: str
+    attempted_channels: list[str] = Field(default_factory=list)
+    successful: int = 0
+    failed: int = 0
+    skipped: int = 0
+    attempts: list[DispatchAttempt] = Field(default_factory=list)

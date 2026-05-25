@@ -128,6 +128,23 @@ class CRMEngine:
 
     # ── Converters ─────────────────────────────────────────────────────────────
 
+    def update_consent(
+        self,
+        customer_id: int,
+        *,
+        email_consent: bool | None = None,
+        sms_consent: bool | None = None,
+        whatsapp_consent: bool | None = None,
+    ) -> CustomerRead | None:
+        """S-343 — KVKK consent flag update."""
+        row = self._repo.update_consent(
+            customer_id,
+            email_consent=email_consent,
+            sms_consent=sms_consent,
+            whatsapp_consent=whatsapp_consent,
+        )
+        return self._to_customer_read(row) if row else None
+
     @staticmethod
     def _to_customer_read(row: dict) -> CustomerRead:
         return CustomerRead(
@@ -140,6 +157,10 @@ class CRMEngine:
             tags=row.get("tags") or [],
             notes=str(row.get("notes") or ""),
             is_active=bool(row.get("is_active", 1)),
+            email_consent=bool(row.get("email_consent", 0)),
+            sms_consent=bool(row.get("sms_consent", 0)),
+            whatsapp_consent=bool(row.get("whatsapp_consent", 0)),
+            consent_updated_at=int(row.get("consent_updated_at") or 0),
             created_at=int(row["created_at"]),
             updated_at=int(row["updated_at"]),
         )

@@ -22,6 +22,7 @@ from app.task_repository import TaskRepository
 from app.invoice_repository import InvoiceRepository
 from app.financial_instrument_repository import FinancialInstrumentRepository
 from app.notification_repository import NotificationRepository
+from app.delivery_log_repository import DeliveryLogRepository
 from app.engines import (
     CollectionsEngine,
     CompanyEngine,
@@ -29,6 +30,7 @@ from app.engines import (
     ConnectorEngine,
     CRMEngine,
     DashboardEngine,
+    DeliveryEngine,
     TaskEngine,
     FeasibilityEngine,
     FinanceEngine,
@@ -183,6 +185,7 @@ def create_app() -> FastAPI:
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
     )
+    app.state.delivery_log_repository = DeliveryLogRepository(settings.database_path)
     app.state.crm_engine = CRMEngine(app.state.crm_repository)
     app.state.task_engine = TaskEngine(app.state.task_repository)
     app.state.collections_engine = CollectionsEngine(app.state.invoice_repository)
@@ -192,6 +195,12 @@ def create_app() -> FastAPI:
     )
     app.state.financial_instrument_engine = FinancialInstrumentEngine(
         app.state.financial_instrument_repository
+    )
+    app.state.delivery_engine = DeliveryEngine(
+        delivery_log_repo=app.state.delivery_log_repository,
+        notification_repo=app.state.notification_repository,
+        crm_repo=app.state.crm_repository,
+        invoice_repo=app.state.invoice_repository,
     )
     app.state.scheduled_report_repository = ScheduledReportRepository(settings.database_path)
     app.state.schedule_engine = ScheduleEngine(app.state.scheduled_report_repository)
@@ -286,6 +295,7 @@ def _close_app_resources(app: FastAPI) -> None:
         "invoice_repository",
         "notification_repository",
         "financial_instrument_repository",
+        "delivery_log_repository",
         "auth_limiter",
         "migration_manager",
     )

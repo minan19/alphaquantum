@@ -25,6 +25,7 @@ from app.engines import (
     InstitutionWebEngine,
     InventoryEngine,
     MarketDataEngine,
+    DeliveryEngine,
     FinancialInstrumentEngine,
     MarketIntelligenceEngine,
     NotificationEngine,
@@ -132,11 +133,14 @@ from app.models import (
     RoleRead,
     RoleUpdateRequest,
     CompanyComparisonResponse,
+    CustomerConsentUpdateRequest,
     CustomerCreateRequest,
     CustomerListResponse,
     CustomerRead,
     CustomerRiskScoreResponse,
     CustomerUpdateRequest,
+    DeliveryLogListResponse,
+    DispatchResponse,
     FinancialInstrumentCreateRequest,
     FinancialInstrumentListResponse,
     FinancialInstrumentRead,
@@ -281,6 +285,10 @@ def _notification_engine(request: Request) -> NotificationEngine:
 
 def _financial_instrument_engine(request: Request) -> FinancialInstrumentEngine:
     return request.app.state.financial_instrument_engine
+
+
+def _delivery_engine(request: Request) -> DeliveryEngine:
+    return request.app.state.delivery_engine
 
 
 def _market_engine(request: Request) -> MarketDataEngine:
@@ -1018,6 +1026,101 @@ def mark_notification_read(
     result = _notification_engine(request).mark_read(notification_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Notification not found")
+    return result
+
+
+# ── S-343: Tahsilat Kanalı (Dispatch + Delivery Log) ──────────────────────────
+
+@router.post(
+    "/api/v1/notifications/{notification_id}/dispatch",
+    response_model=DispatchResponse,
+    tags=["notifications"],
+)
+def dispatch_notification(
+    notification_id: int,
+    request: Request,
+    channels: str | None = Query(default=None,
+        description="Comma-separated channel list. Defaults to env config."),
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> DispatchResponse:
+    """S-343 — Send a notification across configured channels.
+
+    Honors per-customer KVKK consent flags. Channels without consent are
+    skipped (status='skipped_no_consent' in delivery_log). Missing contact
+    info → status='skipped_no_contact'.
+    """
+    existing = _notification_engine(request).get(notification_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    _ensure_company_scope(request, user, existing.company)
+    channel_list = (
+        [c.strip() for c in channels.split(",") if c.strip()]
+        if channels else None
+    )
+    result = _delivery_engine(request).dispatch(
+        notification_id=notification_id, channels=channel_list
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return result
+
+
+@router.get(
+    "/api/v1/delivery-log",
+    response_model=DeliveryLogListResponse,
+    tags=["notifications"],
+)
+def list_delivery_log(
+    request: Request,
+    company: str | None = Query(default=None),
+    notification_id: int | None = Query(default=None),
+    channel: str | None = Query(default=None),
+    delivery_status: str | None = Query(default=None, alias="status"),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> DeliveryLogListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _delivery_engine(request).list_log(
+        company=company,
+        notification_id=notification_id,
+        channel=channel,
+        status=delivery_status,
+        limit=limit,
+    )
+
+
+# ── S-343: KVKK Consent management ────────────────────────────────────────────
+
+@router.patch(
+    "/api/v1/crm/customers/{customer_id}/consent",
+    response_model=CustomerRead,
+    tags=["crm"],
+)
+def update_customer_consent(
+    customer_id: int,
+    payload: CustomerConsentUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> CustomerRead:
+    """S-343 — Update per-channel KVKK consent flags on a customer."""
+    existing = _crm_engine(request).get_customer(customer_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _crm_engine(request).update_consent(
+        customer_id,
+        email_consent=payload.email_consent,
+        sms_consent=payload.sms_consent,
+        whatsapp_consent=payload.whatsapp_consent,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
     return result
 
 

@@ -15,6 +15,7 @@ from app.engines.inventory_engine import InventoryEngine
 from app.engines.institution_web_engine import InstitutionWebEngine
 from app.engines.market_data_engine import MarketDataEngine
 from app.engines.market_intelligence_engine import MarketIntelligenceEngine
+from app.engines.notification_engine import NotificationEngine
 from app.engines.procurement_engine import ProcurementEngine
 from app.engines.schedule_engine import ScheduleEngine
 from app.engines.strategic_ecosystem_engine import StrategicEcosystemEngine
@@ -38,6 +39,7 @@ __all__ = [
     "HoldingEngine",
     "InstitutionWebEngine",
     "MarketIntelligenceEngine",
+    "NotificationEngine",
     "ProcurementEngine",
     "ScheduleEngine",
     "StrategicEcosystemEngine",

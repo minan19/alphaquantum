@@ -1827,3 +1827,44 @@ class CashflowProjectionResponse(BaseModel):
     total_expected_income: float = 0.0
     total_expected_expense: float = 0.0
     total_net: float = 0.0
+
+
+# ─── S-334: Vade Uyarı / Bildirim Motoru ─────────────────────────────────────
+
+class NotificationRead(BaseModel):
+    id: int
+    company: str
+    kind: str                       # 'invoice_due_soon' | 'invoice_overdue'
+    severity: str                   # 'info' | 'warning' | 'critical'
+    subject_type: str               # 'invoice' (future: 'task', 'proposal')
+    subject_id: int
+    window_key: str                 # 'T-3' | 'T-1' | 'T+1' | 'T+7' | 'T+14'
+    title: str
+    message: str = ""
+    is_read: bool = False
+    created_at: int
+    updated_at: int
+
+
+class NotificationListResponse(BaseModel):
+    total: int
+    unread_count: int = 0
+    notifications: list[NotificationRead] = Field(default_factory=list)
+
+
+class NotificationGenerateResponse(BaseModel):
+    """Result of a scan: how many invoices were checked, how many new
+    notifications were created (duplicates were silently dropped)."""
+    company: str | None = None
+    scanned: int = 0
+    created: int = 0
+    created_ids: list[int] = Field(default_factory=list)
+
+
+class NotificationSummaryResponse(BaseModel):
+    company: str | None = None
+    total: int = 0
+    unread: int = 0
+    info: int = 0
+    warning: int = 0
+    critical: int = 0

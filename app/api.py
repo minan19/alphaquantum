@@ -158,14 +158,13 @@ from app.models import (
     UserUpdateRequest,
     WorldBankPanelResponse,
 )
-from app.migration_manager import MigrationManager
-from app.repository import CompanyRepository
+# MigrationManager, CompanyRepository, AnalysisService, DashboardService
+# `app/routers/_deps.py`'den helper'lar üzerinden erişiliyor (A5.1).
 from app.security import (
     create_access_token,
     get_current_user,
     require_permissions,
 )
-from app.services import AnalysisService, DashboardService
 
 router = APIRouter()
 logger = logging.getLogger("alpha_quantum.auth")

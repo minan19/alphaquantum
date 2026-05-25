@@ -7,6 +7,7 @@ from app.models import (
     AgingBucket,
     CashflowProjectionBucket,
     CashflowProjectionResponse,
+    CustomerRiskScoreResponse,
     InvoiceCreateRequest,
     InvoiceRead,
     InvoiceListResponse,
@@ -178,6 +179,132 @@ class CollectionsEngine:
             total_expected_income=round(total_income, 2),
             total_expected_expense=round(total_expense, 2),
             total_net=round(total_income - total_expense, 2),
+        )
+
+    def customer_risk_score(
+        self,
+        *,
+        customer_id: int,
+        customer_name: str,
+        company: str,
+    ) -> CustomerRiskScoreResponse:
+        """S-333 — Compute a 0-100 payment-reliability score for a customer.
+
+        Scoring (starting from 100, subtract penalties, clamp to [0,100]):
+            On-time payment shortfall  →  up to -40   ((1 - on_time_ratio) * 40)
+            Active overdue ratio       →  up to -25   (active_overdue / invoice_count * 25)
+            Outstanding/billed ratio   →  up to -20   (outstanding / billed * 20)
+            Average late days          →  up to -15   (min(avg_late_days / 4, 15))
+
+        With no history: score = 50, risk_level = NO_HISTORY, confidence = LOW.
+        """
+        # mark any newly-overdue invoices first so counts are accurate
+        self._repo.mark_overdue(company_name=company)
+
+        stats = self._repo.customer_payment_stats(
+            customer_id=customer_id, company_name=company
+        )
+        invoice_count = int(stats.get("invoice_count", 0) or 0)
+
+        if invoice_count == 0:
+            return CustomerRiskScoreResponse(
+                customer_id=customer_id,
+                customer_name=customer_name,
+                company=company,
+                score=50.0,
+                risk_level="NO_HISTORY",
+                confidence="LOW",
+                factors=["Bu müşteri için kayıtlı fatura yok."],
+            )
+
+        paid_count = int(stats.get("paid_count", 0) or 0)
+        on_time_count = int(stats.get("on_time_count", 0) or 0)
+        late_paid_count = int(stats.get("late_paid_count", 0) or 0)
+        active_overdue_count = int(stats.get("active_overdue_count", 0) or 0)
+        avg_late_days = float(stats.get("avg_late_days", 0.0) or 0.0)
+        total_billed = float(stats.get("total_billed", 0.0) or 0.0)
+        total_outstanding = float(stats.get("total_outstanding", 0.0) or 0.0)
+
+        # On-time ratio uses paid invoices as denominator (only meaningful when
+        # we have closed history). If nothing paid yet, treat as fully on-time
+        # to avoid double-penalizing through the outstanding factor below.
+        if paid_count > 0:
+            on_time_ratio = on_time_count / paid_count
+        else:
+            on_time_ratio = 1.0
+
+        overdue_ratio = active_overdue_count / invoice_count
+        outstanding_ratio = (
+            total_outstanding / total_billed if total_billed > 0 else 0.0
+        )
+
+        # Penalty calculation
+        penalty_ontime = (1.0 - on_time_ratio) * 40.0
+        penalty_overdue = overdue_ratio * 25.0
+        penalty_outstanding = outstanding_ratio * 20.0
+        penalty_delay = min(avg_late_days / 4.0, 15.0) if avg_late_days > 0 else 0.0
+
+        score = 100.0 - (
+            penalty_ontime + penalty_overdue + penalty_outstanding + penalty_delay
+        )
+        score = max(0.0, min(100.0, score))
+
+        # Risk level
+        if score >= 75.0:
+            risk_level = "LOW"
+        elif score >= 40.0:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "HIGH"
+
+        # Confidence based on data volume
+        if invoice_count >= 5:
+            confidence = "HIGH"
+        elif invoice_count >= 2:
+            confidence = "MEDIUM"
+        else:
+            confidence = "LOW"
+
+        # Human-readable factor explanations (Turkish)
+        factors: list[str] = []
+        if paid_count > 0:
+            factors.append(
+                f"Zamanında ödeme oranı: %{on_time_ratio * 100:.0f} "
+                f"({on_time_count}/{paid_count})"
+            )
+        if late_paid_count > 0:
+            factors.append(
+                f"Ortalama gecikme: {avg_late_days:.1f} gün ({late_paid_count} faturada)"
+            )
+        if active_overdue_count > 0:
+            factors.append(
+                f"Aktif gecikmiş fatura: {active_overdue_count} adet"
+            )
+        if outstanding_ratio > 0:
+            factors.append(
+                f"Açık bakiye: {total_outstanding:.2f} / "
+                f"{total_billed:.2f} (%{outstanding_ratio * 100:.0f})"
+            )
+        if not factors:
+            factors.append("Tüm faturalar zamanında ve tam ödenmiş.")
+
+        return CustomerRiskScoreResponse(
+            customer_id=customer_id,
+            customer_name=customer_name,
+            company=company,
+            score=round(score, 1),
+            risk_level=risk_level,
+            confidence=confidence,
+            invoice_count=invoice_count,
+            paid_count=paid_count,
+            on_time_count=on_time_count,
+            late_paid_count=late_paid_count,
+            active_overdue_count=active_overdue_count,
+            avg_late_days=round(avg_late_days, 2),
+            total_billed=round(total_billed, 2),
+            total_outstanding=round(total_outstanding, 2),
+            on_time_ratio=round(on_time_ratio, 3),
+            factors=factors,
         )
 
     @staticmethod

@@ -1608,6 +1608,38 @@ class CustomerListResponse(BaseModel):
     customers: list[CustomerRead] = Field(default_factory=list)
 
 
+class CustomerRiskScoreResponse(BaseModel):
+    """S-333 — Payment reliability score (0-100) for a CRM customer.
+
+    Score interpretation:
+        ≥ 75   →  LOW risk     (reliable payer)
+        40-74  →  MEDIUM risk  (occasionally late)
+        < 40   →  HIGH risk    (problematic payer)
+        ---    →  NO_HISTORY   (insufficient data)
+
+    Confidence reflects data volume:
+        HIGH   if ≥ 5 invoices observed
+        MEDIUM if 2-4 invoices
+        LOW    if 0-1 invoice
+    """
+    customer_id: int
+    customer_name: str
+    company: str
+    score: float = Field(default=50.0, ge=0.0, le=100.0)
+    risk_level: str = Field(default="NO_HISTORY")
+    confidence: str = Field(default="LOW")
+    invoice_count: int = 0
+    paid_count: int = 0
+    on_time_count: int = 0
+    late_paid_count: int = 0
+    active_overdue_count: int = 0
+    avg_late_days: float = 0.0
+    total_billed: float = 0.0
+    total_outstanding: float = 0.0
+    on_time_ratio: float = 0.0
+    factors: list[str] = Field(default_factory=list)
+
+
 class ProposalCreateRequest(BaseModel):
     company: str = Field(..., min_length=1)
     customer_id: int

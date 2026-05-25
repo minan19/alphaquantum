@@ -165,6 +165,60 @@ class InvoiceRepository:
             "total_paid": r["total_paid"],
         } for r in rows}
 
+    def customer_payment_stats(
+        self, *, customer_id: int, company_name: str | None = None
+    ) -> dict[str, Any]:
+        """S-333 — Aggregate invoice payment behavior for a single customer.
+
+        Returns a dict with:
+            invoice_count, paid_count, on_time_count, late_paid_count,
+            active_overdue_count, avg_late_days, total_billed, total_outstanding
+
+        on_time = invoices paid where paid_date <= due_date
+        late_paid = invoices paid where paid_date > due_date
+        active_overdue = invoices still unpaid (status != paid/cancelled)
+                        with due_date < today
+        avg_late_days = average delay (paid_date - due_date) for late-paid invoices
+        """
+        today = time.strftime("%Y-%m-%d")
+        clauses = ["customer_id = ?"]
+        params: list[Any] = [customer_id]
+        if company_name:
+            clauses.append("company_name = ?"); params.append(company_name)
+        where = "WHERE " + " AND ".join(clauses)
+        sql = f"""
+            SELECT
+                COUNT(*) AS invoice_count,
+                SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_count,
+                SUM(CASE
+                    WHEN status = 'paid' AND paid_date IS NOT NULL
+                         AND paid_date <= due_date THEN 1 ELSE 0
+                END) AS on_time_count,
+                SUM(CASE
+                    WHEN status = 'paid' AND paid_date IS NOT NULL
+                         AND paid_date > due_date THEN 1 ELSE 0
+                END) AS late_paid_count,
+                SUM(CASE
+                    WHEN status NOT IN ('paid', 'cancelled')
+                         AND due_date < ? THEN 1 ELSE 0
+                END) AS active_overdue_count,
+                COALESCE(
+                    AVG(CASE
+                        WHEN status = 'paid' AND paid_date IS NOT NULL
+                             AND paid_date > due_date
+                        THEN CAST(julianday(paid_date) - julianday(due_date) AS REAL)
+                    END),
+                    0
+                ) AS avg_late_days,
+                COALESCE(SUM(amount), 0) AS total_billed,
+                COALESCE(SUM(amount - COALESCE(paid_amount, 0)), 0) AS total_outstanding
+            FROM invoices {where}
+        """
+        params.insert(0, today)  # for the active_overdue CASE WHEN
+        with self._lock:
+            row = self._conn.execute(sql, params).fetchone()
+        return dict(row) if row else {}
+
     def aging_analysis(self, *, company_name: str | None) -> list[dict[str, Any]]:
         """Overdue invoice aging: how many days past due, grouped in bands."""
         clauses = [

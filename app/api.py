@@ -133,6 +133,7 @@ from app.models import (
     CustomerCreateRequest,
     CustomerListResponse,
     CustomerRead,
+    CustomerRiskScoreResponse,
     CustomerUpdateRequest,
     DashboardLiveSignalsResponse,
     DashboardSignalItem,
@@ -547,6 +548,30 @@ def update_customer(
     if result is None:
         raise HTTPException(status_code=404, detail="Customer not found")
     return result
+
+
+# ── S-333: CRM – Customer Payment Risk Score ──────────────────────────────────
+
+@router.get(
+    "/api/v1/crm/customers/{customer_id}/risk-score",
+    response_model=CustomerRiskScoreResponse,
+    tags=["crm"],
+)
+def customer_risk_score(
+    customer_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CustomerRiskScoreResponse:
+    """S-333 — 0-100 payment-reliability score derived from invoice history."""
+    customer = _crm_engine(request).get_customer(customer_id)
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    _ensure_company_scope(request, user, customer.company)
+    return _collections_engine(request).customer_risk_score(
+        customer_id=customer.id,
+        customer_name=customer.full_name,
+        company=customer.company,
+    )
 
 
 # ── S-321: CRM – Proposals ────────────────────────────────────────────────────

@@ -1868,3 +1868,29 @@ class NotificationSummaryResponse(BaseModel):
     info: int = 0
     warning: int = 0
     critical: int = 0
+
+
+# ─── S-341: Çok Para Birimi FX Nakit Akışı ──────────────────────────────────
+
+class FxCurrencyBucket(BaseModel):
+    """Outstanding receivables in a single currency, with TRY conversion."""
+    currency: str
+    count: int = 0
+    outstanding: float = 0.0          # in the original currency
+    outstanding_try: float = 0.0      # converted to TRY at fx_rate
+    fx_rate: float = 1.0              # rate used (currency → TRY)
+    pct_of_total: float = 0.0         # share of total TRY-equivalent
+
+
+class FxReceivablesSummaryResponse(BaseModel):
+    """S-341 — Multi-currency outstanding receivables, broken down by currency
+    and normalized to TRY.
+
+    fx_exposure_pct reflects the share of outstanding receivables that sit in
+    non-TRY currencies — a leading indicator of FX risk.
+    """
+    company: str | None = None
+    total_outstanding_try: float = 0.0
+    fx_exposure_pct: float = 0.0      # % from non-TRY currencies
+    by_currency: list[FxCurrencyBucket] = Field(default_factory=list)
+    as_of_date: str = ""              # ISO date when rates snapshot was taken

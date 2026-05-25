@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from datetime import date
 
+from app.currency_converter import CurrencyConverter
 from app.invoice_repository import InvoiceRepository
 from app.models import (
     AgingBucket,
     CashflowProjectionBucket,
     CashflowProjectionResponse,
     CustomerRiskScoreResponse,
+    FxCurrencyBucket,
+    FxReceivablesSummaryResponse,
     InvoiceCreateRequest,
     InvoiceRead,
     InvoiceListResponse,
@@ -305,6 +308,83 @@ class CollectionsEngine:
             total_outstanding=round(total_outstanding, 2),
             on_time_ratio=round(on_time_ratio, 3),
             factors=factors,
+        )
+
+    def fx_aware_receivables_summary(
+        self,
+        *,
+        company: str | None,
+        converter: CurrencyConverter | None = None,
+    ) -> FxReceivablesSummaryResponse:
+        """S-341 — Outstanding receivables broken down by currency + normalized to TRY.
+
+        Returns one bucket per currency that has any open receivables, plus
+        a top-level TRY total and an `fx_exposure_pct` (share from non-TRY).
+        Paid and cancelled invoices are excluded; partial payments contribute
+        their remaining balance.
+        """
+        self._repo.mark_overdue(company_name=company)
+        conv = converter or CurrencyConverter()
+
+        invoices = self._repo.list_invoices(company_name=company, limit=10_000)
+
+        # Accumulate per currency
+        accum: dict[str, dict[str, float | int]] = {}
+        for inv in invoices:
+            if inv.get("status") in ("paid", "cancelled"):
+                continue
+            outstanding = float(inv.get("amount", 0.0)) - float(
+                inv.get("paid_amount") or 0.0
+            )
+            if outstanding <= 0:
+                continue
+            ccy = str(inv.get("currency") or "TRY").upper()
+            bucket = accum.setdefault(
+                ccy,
+                {"count": 0, "outstanding": 0.0},
+            )
+            bucket["count"] = int(bucket["count"]) + 1
+            bucket["outstanding"] = float(bucket["outstanding"]) + outstanding
+
+        # Convert and tally
+        buckets: list[FxCurrencyBucket] = []
+        total_try = 0.0
+        for ccy, b in accum.items():
+            rate = conv.rate(ccy)
+            outstanding = round(float(b["outstanding"]), 2)
+            outstanding_try = round(outstanding * rate, 2)
+            buckets.append(
+                FxCurrencyBucket(
+                    currency=ccy,
+                    count=int(b["count"]),
+                    outstanding=outstanding,
+                    outstanding_try=outstanding_try,
+                    fx_rate=round(rate, 4),
+                )
+            )
+            total_try += outstanding_try
+
+        # Compute percentages — guard against zero division
+        for bucket in buckets:
+            bucket.pct_of_total = round(
+                (bucket.outstanding_try / total_try * 100.0) if total_try > 0 else 0.0,
+                1,
+            )
+
+        foreign_try = sum(b.outstanding_try for b in buckets if b.currency != "TRY")
+        fx_exposure_pct = round(
+            (foreign_try / total_try * 100.0) if total_try > 0 else 0.0, 1
+        )
+
+        # Stable sort: TRY first, then by TRY-converted outstanding descending
+        buckets.sort(key=lambda b: (b.currency != "TRY", -b.outstanding_try))
+
+        return FxReceivablesSummaryResponse(
+            company=company,
+            total_outstanding_try=round(total_try, 2),
+            fx_exposure_pct=fx_exposure_pct,
+            by_currency=buckets,
+            as_of_date=date.today().isoformat(),
         )
 
     @staticmethod

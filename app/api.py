@@ -136,6 +136,7 @@ from app.models import (
     CustomerRead,
     CustomerRiskScoreResponse,
     CustomerUpdateRequest,
+    FxReceivablesSummaryResponse,
     NotificationGenerateResponse,
     NotificationListResponse,
     NotificationRead,
@@ -785,6 +786,28 @@ def receivables_summary(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Scoped users must provide company parameter")
     return _collections_engine(request).receivables_summary(company=company)
+
+
+@router.get(
+    "/api/v1/collections/fx-summary",
+    response_model=FxReceivablesSummaryResponse,
+    tags=["collections"],
+)
+def fx_receivables_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FxReceivablesSummaryResponse:
+    """S-341 — FX-aware outstanding receivables: per-currency breakdown +
+    TRY-normalized total + share of foreign-currency exposure."""
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _collections_engine(request).fx_aware_receivables_summary(company=company)
 
 
 # ── S-334: Notifications (vade uyarı / bildirim motoru) ───────────────────────

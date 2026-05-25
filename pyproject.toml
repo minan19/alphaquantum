@@ -26,11 +26,6 @@ ignore = []
              # dokümantasyon amaçlı yapılır
 ]
 
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = [
-    "F841",  # tests sometimes assign-but-don't-use as documentation/clarity
-]
-
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true

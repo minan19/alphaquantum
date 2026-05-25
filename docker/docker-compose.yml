@@ -104,6 +104,24 @@ services:
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     restart: unless-stopped
 
+  # ----------------------------------------------------------------------------
+  # Frontend — Next.js 15 + React 19 (S-362)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: alphaquantum-frontend
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      # Container içinden API'ye erişim — compose DNS adı kullanılır
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
 # ------------------------------------------------------------------------------
 # Volumes
 # ------------------------------------------------------------------------------

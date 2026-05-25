@@ -152,7 +152,6 @@ from app.models import (
     NotificationRead,
     NotificationSummaryResponse,
     DashboardLiveSignalsResponse,
-    DashboardSignalItem,
     CashflowProjectionResponse,
     InvoiceCreateRequest,
     InvoiceListResponse,

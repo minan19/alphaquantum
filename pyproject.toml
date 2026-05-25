@@ -12,16 +12,20 @@ select = [
     "E",   # pycodestyle errors
     "F",   # pyflakes (unused, undefined, etc.)
     "W",   # pycodestyle warnings
-    "I",   # isort
     "B",   # flake8-bugbear (likely bugs)
     "UP",  # pyupgrade
 ]
+# I (isort) deliberately NOT enabled — mevcut kod tabanı isort uygulanmamış,
+# büyük mekanik diff istemiyoruz. Gelecekte ayrı sprint'te `ruff check --fix`
+# çalıştırılarak tek seferde uygulanabilir.
 ignore = [
     "E701",  # Multiple statements on one line (colon) — kompakt setUp/tearDown stili
     "E702",  # Multiple statements on one line (semicolon) — repo SQL WHERE pattern
     "E402",  # Module level import not at top — scripts/*.py sys.path mutasyonu yapıyor
     "E501",  # Line too long — line-length zaten 120
     "B008",  # function-call-in-default-argument — FastAPI Depends() bunu gerektirir
+    "B904",  # raise-without-from-inside-except — mevcut except blokları çoğu
+             # düz raise kullanıyor; bug değil stilist. Refactor ayrı sprint.
     "UP007", # use-pep604 — `X | None` zaten kullanıyoruz, ama bazı eski stiller `Optional[X]`
     "UP045", # non-pep604-annotation-optional
 ]

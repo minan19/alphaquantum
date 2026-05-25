@@ -164,3 +164,71 @@ class InvoiceRepository:
             "total_amount": r["total_amount"],
             "total_paid": r["total_paid"],
         } for r in rows}
+
+    def aging_analysis(self, *, company_name: str | None) -> list[dict[str, Any]]:
+        """Overdue invoice aging: how many days past due, grouped in bands."""
+        clauses = [
+            "due_date < date('now')",
+            "status NOT IN ('paid', 'cancelled')",
+        ]
+        params: list[Any] = []
+        if company_name:
+            clauses.append("company_name = ?"); params.append(company_name)
+        where = "WHERE " + " AND ".join(clauses)
+        with self._lock:
+            rows = self._conn.execute(
+                f"""
+                SELECT
+                  CASE
+                    WHEN CAST(julianday('now') - julianday(due_date) AS INTEGER) <= 30
+                      THEN '1_30'
+                    WHEN CAST(julianday('now') - julianday(due_date) AS INTEGER) <= 60
+                      THEN '31_60'
+                    WHEN CAST(julianday('now') - julianday(due_date) AS INTEGER) <= 90
+                      THEN '61_90'
+                    ELSE '90_plus'
+                  END AS bucket,
+                  COUNT(*) AS cnt,
+                  COALESCE(SUM(amount - COALESCE(paid_amount, 0)), 0) AS outstanding
+                FROM invoices {where}
+                GROUP BY bucket
+                """,
+                params,
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def upcoming_cashflow(
+        self,
+        *,
+        company_name: str | None,
+        horizon_days: int = 90,
+    ) -> list[dict[str, Any]]:
+        """Pending/partial invoices due within horizon_days, grouped in 30-day bands."""
+        clauses = [
+            "due_date >= date('now')",
+            f"due_date < date('now', '+{horizon_days} days')",
+            "status IN ('pending', 'partial')",
+        ]
+        params: list[Any] = []
+        if company_name:
+            clauses.append("company_name = ?"); params.append(company_name)
+        where = "WHERE " + " AND ".join(clauses)
+        with self._lock:
+            rows = self._conn.execute(
+                f"""
+                SELECT
+                  CASE
+                    WHEN CAST(julianday(due_date) - julianday('now') AS INTEGER) <= 30
+                      THEN '0_30'
+                    WHEN CAST(julianday(due_date) - julianday('now') AS INTEGER) <= 60
+                      THEN '31_60'
+                    ELSE '61_90'
+                  END AS bucket,
+                  COUNT(*) AS cnt,
+                  COALESCE(SUM(amount - COALESCE(paid_amount, 0)), 0) AS expected
+                FROM invoices {where}
+                GROUP BY bucket
+                """,
+                params,
+            ).fetchall()
+        return [dict(r) for r in rows]

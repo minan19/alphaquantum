@@ -136,6 +136,7 @@ from app.models import (
     CustomerUpdateRequest,
     DashboardLiveSignalsResponse,
     DashboardSignalItem,
+    CashflowProjectionResponse,
     InvoiceCreateRequest,
     InvoiceListResponse,
     InvoicePaymentRequest,
@@ -750,6 +751,40 @@ def receivables_summary(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Scoped users must provide company parameter")
     return _collections_engine(request).receivables_summary(company=company)
+
+
+@router.get(
+    "/api/v1/finance/cashflow-projection",
+    response_model=CashflowProjectionResponse,
+    tags=["finance"],
+)
+def cashflow_projection(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CashflowProjectionResponse:
+    """S-332 — 30/60/90-day forward cashflow projection.
+
+    Combines pending/partial invoices (expected income) with
+    active recurring expenses (expected outflows) to produce
+    a 90-day outlook in three 30-day buckets.
+    """
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    # Fetch recurring entries from finance repo
+    finance_repo = request.app.state.finance_repository
+    recurring_rows = finance_repo.list_recurring_entries(
+        company_name=company, active_only=True
+    )
+    return _collections_engine(request).cashflow_projection(
+        company=company,
+        recurring_rows=recurring_rows,
+    )
 
 
 def _raise_auth_limiter_unavailable(*, client_host: str, username: str, stage: str) -> None:

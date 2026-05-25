@@ -1747,6 +1747,22 @@ class InvoiceListResponse(BaseModel):
     invoices: list[InvoiceRead] = Field(default_factory=list)
 
 
+class AgingBucket(BaseModel):
+    """Outstanding amount for a single overdue age band."""
+    count: int = 0
+    outstanding: float = 0.0
+
+
+class ReceivablesAgingResponse(BaseModel):
+    """Overdue invoice aging breakdown — how long invoices have been unpaid."""
+    days_1_30: AgingBucket = Field(default_factory=AgingBucket)
+    days_31_60: AgingBucket = Field(default_factory=AgingBucket)
+    days_61_90: AgingBucket = Field(default_factory=AgingBucket)
+    days_90_plus: AgingBucket = Field(default_factory=AgingBucket)
+    total_overdue_count: int = 0
+    total_overdue_outstanding: float = 0.0
+
+
 class ReceivablesSummaryResponse(BaseModel):
     company: str | None = None
     pending_count: int = 0
@@ -1758,3 +1774,24 @@ class ReceivablesSummaryResponse(BaseModel):
     overdue_amount: float = 0.0
     paid_amount_total: float = 0.0
     total_outstanding: float = 0.0
+    aging: ReceivablesAgingResponse = Field(default_factory=ReceivablesAgingResponse)
+
+
+# ── S-332: Cashflow Projection ────────────────────────────────────────────────
+
+class CashflowProjectionBucket(BaseModel):
+    """30-day forward cashflow window."""
+    label: str                      # e.g. "0-30", "31-60", "61-90"
+    expected_income: float = 0.0    # pending/partial invoices due in this window
+    expected_expense: float = 0.0   # recurring expenses falling in this window
+    net: float = 0.0                # income - expense
+    invoice_count: int = 0          # number of invoices due
+
+
+class CashflowProjectionResponse(BaseModel):
+    company: str | None = None
+    as_of_date: str                 # today's date when projection was computed
+    buckets: list[CashflowProjectionBucket] = Field(default_factory=list)
+    total_expected_income: float = 0.0
+    total_expected_expense: float = 0.0
+    total_net: float = 0.0

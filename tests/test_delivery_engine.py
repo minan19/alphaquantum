@@ -24,7 +24,6 @@ from app.invoice_repository import InvoiceRepository
 from app.notification_repository import NotificationRepository
 from app.models import (
     CustomerCreateRequest,
-    CustomerUpdateRequest,
     InvoiceCreateRequest,
 )
 

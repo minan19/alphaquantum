@@ -10,7 +10,6 @@ from app.models import (
     Company,
     FinanceBudgetVsActualResponse,
     FinanceCashflowResponse,
-    InventoryItem,
 )
 
 

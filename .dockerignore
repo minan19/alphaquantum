@@ -1,0 +1,68 @@
+# ==============================================================================
+# .dockerignore — Alpha Quantum Platform
+# Build context: proje kökü. docker/Dockerfile bu dosyayı kullanır.
+# ==============================================================================
+
+# Python sanal ortam ve derleme artıkları
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Git geçmişi — image'e girmemeli
+.git/
+.gitignore
+
+# Veritabanı dosyaları — image'e gömülü veri taşıma yasak
+# (SQLite DB volume mount edilir; image'da olmamalı)
+*.db
+*.db-shm
+*.db-wal
+alpha_quantum.db.backup_*
+
+# Ortam değişkenleri — secret image'e kesinlikle girmesin
+.env
+.env.local
+.env.*.local
+
+# Test altyapısı — runtime için gerekli değil, image boyutunu büyütür
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Geliştirici araçları ve dokümantasyon
+docs/
+scripts/
+*.md
+
+# IDE ve OS artıkları
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Sertifika & anahtarlar (.gitignore'la birebir aynı liste)
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.pub
+*.crt
+*.cert
+
+# Gelecekteki frontend için (S-362)
+node_modules/
+.next/
+dist/
+build/
+
+# Python analiz araçları çıktıları
+.mypy_cache/
+.ruff_cache/
+
+# Claude / iç notlar
+.claude/

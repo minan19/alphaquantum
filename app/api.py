@@ -6,13 +6,18 @@ import logging
 import sqlite3
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from app.audit_repository import AuditRepository
 from app.auth_service import AuthService
 from app.engines import (
+    CollectionsEngine,
     CompanyEngine,
+    ComparisonEngine,
     ConnectorEngine,
+    CRMEngine,
+    DashboardEngine,
+    TaskEngine,
     FeasibilityEngine,
     FinanceEngine,
     HoldingEngine,
@@ -20,8 +25,13 @@ from app.engines import (
     InstitutionWebEngine,
     InventoryEngine,
     MarketDataEngine,
+    DeliveryEngine,
+    FinancialInstrumentEngine,
     MarketIntelligenceEngine,
+    NotificationEngine,
     ProcurementEngine,
+    ReportingEngine,
+    ScheduleEngine,
     StrategicEcosystemEngine,
     TenderEngine,
 )
@@ -31,6 +41,8 @@ from app.models import (
     CentralBankPanelResponse,
     Company,
     CompanyEngineResponse,
+    MigrationDryRunResponse,
+    MigrationPreflightResponse,
     ConnectorCanonicalPreviewRequest,
     ConnectorCanonicalPreviewResponse,
     ConnectorCreateRequest,
@@ -51,12 +63,20 @@ from app.models import (
     FeasibilityReportListResponse,
     FeasibilityReportRequest,
     FeasibilityReportStoredResponse,
+    FinanceBudgetCreateRequest,
+    FinanceBudgetListResponse,
+    FinanceBudgetRead,
+    FinanceBudgetVsActualResponse,
     FinanceCashflowResponse,
     FinanceForecastResponse,
     FinanceLedgerEntryCreateRequest,
     FinanceLedgerEntryRead,
     FinanceLedgerResponse,
     FinanceOverviewResponse,
+    FinanceRecurringEntryCreateRequest,
+    FinanceRecurringEntryRead,
+    FinanceRecurringGenerateResponse,
+    FinanceRecurringListResponse,
     HealthResponse,
     HoldingBulkOnboardRequest,
     HoldingBulkOnboardResponse,
@@ -112,6 +132,46 @@ from app.models import (
     RolePermissionsUpdateRequest,
     RoleRead,
     RoleUpdateRequest,
+    CompanyComparisonResponse,
+    CustomerConsentUpdateRequest,
+    CustomerCreateRequest,
+    CustomerListResponse,
+    CustomerRead,
+    CustomerRiskScoreResponse,
+    CustomerUpdateRequest,
+    DeliveryLogListResponse,
+    DispatchResponse,
+    FinancialInstrumentCreateRequest,
+    FinancialInstrumentListResponse,
+    FinancialInstrumentRead,
+    FinancialInstrumentStatusUpdateRequest,
+    FinancialInstrumentSummaryResponse,
+    FxReceivablesSummaryResponse,
+    NotificationGenerateResponse,
+    NotificationListResponse,
+    NotificationRead,
+    NotificationSummaryResponse,
+    DashboardLiveSignalsResponse,
+    CashflowProjectionResponse,
+    InvoiceCreateRequest,
+    InvoiceListResponse,
+    InvoicePaymentRequest,
+    InvoiceRead,
+    ProposalCreateRequest,
+    ProposalListResponse,
+    ProposalRead,
+    ProposalStatusUpdateRequest,
+    ProposalSummaryResponse,
+    ReceivablesSummaryResponse,
+    TaskCreateRequest,
+    TaskListResponse,
+    TaskRead,
+    TaskStatusSummaryResponse,
+    TaskUpdateRequest,
+    ScheduledReportCreateRequest,
+    ScheduledReportListResponse,
+    ScheduledReportRead,
+    ScheduledReportTriggerResponse,
     TokenResponse,
     UpdateResult,
     UserCreateRequest,
@@ -153,6 +213,23 @@ def _audit_repo(request: Request) -> AuditRepository:
     return request.app.state.audit_repository
 
 
+def _emit_audit_event(
+    request: Request,
+    user: UserProfile,
+    event_type: str,
+    event_detail: dict | None = None,
+) -> None:
+    request_id = getattr(request.state, "request_id", "")
+    _audit_repo(request).write_event(
+        username=user.username,
+        role=user.role,
+        event_type=event_type,
+        event_detail=event_detail,
+        request_id=str(request_id),
+        ip_address=request.client.host if request.client else None,
+    )
+
+
 def _settings(request: Request):
     return request.app.state.settings
 
@@ -175,6 +252,42 @@ def _inventory_engine(request: Request) -> InventoryEngine:
 
 def _finance_engine(request: Request) -> FinanceEngine:
     return request.app.state.finance_engine
+
+
+def _reporting_engine(request: Request) -> ReportingEngine:
+    return request.app.state.reporting_engine
+
+
+def _dashboard_engine(request: Request) -> DashboardEngine:
+    return request.app.state.dashboard_engine
+
+
+def _comparison_engine(request: Request) -> ComparisonEngine:
+    return request.app.state.comparison_engine
+
+
+def _crm_engine(request: Request) -> CRMEngine:
+    return request.app.state.crm_engine
+
+
+def _task_engine(request: Request) -> TaskEngine:
+    return request.app.state.task_engine
+
+
+def _collections_engine(request: Request) -> CollectionsEngine:
+    return request.app.state.collections_engine
+
+
+def _notification_engine(request: Request) -> NotificationEngine:
+    return request.app.state.notification_engine
+
+
+def _financial_instrument_engine(request: Request) -> FinancialInstrumentEngine:
+    return request.app.state.financial_instrument_engine
+
+
+def _delivery_engine(request: Request) -> DeliveryEngine:
+    return request.app.state.delivery_engine
 
 
 def _market_engine(request: Request) -> MarketDataEngine:
@@ -215,6 +328,882 @@ def _ecosystem_engine(request: Request) -> StrategicEcosystemEngine:
 
 def _holding_engine(request: Request) -> HoldingEngine:
     return request.app.state.holding_engine
+
+
+def _schedule_engine(request: Request) -> ScheduleEngine:
+    return request.app.state.schedule_engine
+
+
+# ── S-312: Scheduled Reports ──────────────────────────────────────────────────
+
+@router.post(
+    "/api/v1/reports/schedule",
+    response_model=ScheduledReportRead,
+    tags=["schedule"],
+)
+def create_scheduled_report(
+    payload: ScheduledReportCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_roles")),
+) -> ScheduledReportRead:
+    return _schedule_engine(request).create_job(payload=payload, created_by=user.username)
+
+
+@router.get(
+    "/api/v1/reports/schedule",
+    response_model=ScheduledReportListResponse,
+    tags=["schedule"],
+)
+def list_scheduled_reports(
+    request: Request,
+    active_only: bool = Query(default=False),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ScheduledReportListResponse:
+    del user
+    return _schedule_engine(request).list_jobs(active_only=active_only)
+
+
+@router.post(
+    "/api/v1/reports/schedule/{job_id}/trigger",
+    response_model=ScheduledReportTriggerResponse,
+    tags=["schedule"],
+)
+def trigger_scheduled_report(
+    job_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_roles")),
+) -> ScheduledReportTriggerResponse:
+    del user
+    try:
+        return _schedule_engine(request).trigger_job(job_id=job_id)
+    except ValueError as exc:
+        raise _value_error_to_http(exc)
+
+
+@router.delete(
+    "/api/v1/reports/schedule/{job_id}",
+    response_model=ScheduledReportRead,
+    tags=["schedule"],
+)
+def deactivate_scheduled_report(
+    job_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_roles")),
+) -> ScheduledReportRead:
+    del user
+    try:
+        return _schedule_engine(request).deactivate_job(job_id=job_id)
+    except ValueError as exc:
+        raise _value_error_to_http(exc)
+
+
+# ── S-311: Live Dashboard Signals ─────────────────────────────────────────────
+
+@router.get(
+    "/api/v1/dashboard/live-signals",
+    response_model=DashboardLiveSignalsResponse,
+    tags=["dashboard"],
+)
+def live_dashboard_signals(
+    request: Request,
+    company: str | None = Query(default=None),
+    lookback_days: int = Query(default=30, ge=1, le=365),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> DashboardLiveSignalsResponse:
+    if company is not None:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+
+    companies = request.app.state.company_repository.list_companies()
+    finance_overview = FinanceEngine.build_overview(companies)
+
+    try:
+        cashflow = _finance_engine(request).build_cashflow(
+            company=company, lookback_days=lookback_days
+        )
+    except Exception:
+        cashflow = None
+
+    low_stock_count = sum(
+        1
+        for c in companies
+        if (company is None or c.name == company)
+        for item in c.inventory
+        if item.quantity < item.min_level
+    )
+
+    try:
+        proc_rows = request.app.state.procurement_repository.list_requests(
+            status=None, limit=10_000
+        )
+        procurement_active_count = len(proc_rows)
+    except Exception:
+        procurement_active_count = 0
+
+    try:
+        feasibility_rows = request.app.state.feasibility_repository.list_reports(
+            limit=10_000
+        )
+        feasibility_pending_count = len(feasibility_rows)
+    except Exception:
+        feasibility_pending_count = 0
+
+    try:
+        market_signal_count = len(request.app.state.market_repository.list_symbols())
+    except Exception:
+        market_signal_count = 0
+
+    # S-335 — operational signals (best-effort; failures degrade to zero)
+    try:
+        overdue_task_count = _task_engine(request).status_summary(
+            company=company
+        ).overdue
+    except Exception:
+        overdue_task_count = 0
+
+    try:
+        unread_critical_notification_count = len(
+            _notification_engine(request).list_notifications(
+                company=company, severity="critical", unread_only=True
+            ).notifications
+        )
+    except Exception:
+        unread_critical_notification_count = 0
+
+    return _dashboard_engine(request).build_signals(
+        company_scope=company,
+        finance_overview=finance_overview,
+        cashflow=cashflow,
+        low_stock_count=low_stock_count,
+        procurement_active_count=procurement_active_count,
+        feasibility_pending_count=feasibility_pending_count,
+        market_signal_count=market_signal_count,
+        overdue_task_count=overdue_task_count,
+        unread_critical_notification_count=unread_critical_notification_count,
+    )
+
+
+# ── S-313: Multi-Company Comparison Panel ─────────────────────────────────────
+
+@router.get(
+    "/api/v1/analytics/company-comparison",
+    response_model=CompanyComparisonResponse,
+    tags=["analytics"],
+)
+def company_comparison(
+    request: Request,
+    lookback_days: int = Query(default=30, ge=1, le=365),
+    year: int | None = Query(default=None, ge=2000, le=2100),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CompanyComparisonResponse:
+    if not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Multi-company comparison requires holding scope",
+        )
+
+    companies = request.app.state.company_repository.list_companies()
+
+    cashflows: dict[str, object] = {}
+    for company in companies:
+        try:
+            cashflows[company.name] = _finance_engine(request).build_cashflow(
+                company=company.name, lookback_days=lookback_days
+            )
+        except Exception:
+            cashflows[company.name] = None
+
+    budget_reports: dict[str, object] = {}
+    if year is not None:
+        for company in companies:
+            try:
+                budget_reports[company.name] = _finance_engine(request).budget_vs_actual(
+                    company=company.name, year=year, month=None
+                )
+            except Exception:
+                budget_reports[company.name] = None
+
+    return _comparison_engine(request).build_comparison(
+        companies=companies,
+        cashflows=cashflows,
+        budget_reports=budget_reports,
+        year=year,
+        lookback_days=lookback_days,
+    )
+
+
+# ── S-321: CRM – Customers ────────────────────────────────────────────────────
+
+@router.post("/api/v1/crm/customers", response_model=CustomerRead, status_code=201, tags=["crm"])
+def create_customer(
+    payload: CustomerCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> CustomerRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _crm_engine(request).create_customer(payload=payload)
+
+
+@router.get("/api/v1/crm/customers", response_model=CustomerListResponse, tags=["crm"])
+def list_customers(
+    request: Request,
+    company: str | None = Query(default=None),
+    active_only: bool = Query(default=True),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CustomerListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _crm_engine(request).list_customers(
+        company=company, active_only=active_only, limit=limit
+    )
+
+
+@router.get("/api/v1/crm/customers/{customer_id}", response_model=CustomerRead, tags=["crm"])
+def get_customer(
+    customer_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CustomerRead:
+    result = _crm_engine(request).get_customer(customer_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    _ensure_company_scope(request, user, result.company)
+    return result
+
+
+@router.patch("/api/v1/crm/customers/{customer_id}", response_model=CustomerRead, tags=["crm"])
+def update_customer(
+    customer_id: int,
+    payload: CustomerUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> CustomerRead:
+    existing = _crm_engine(request).get_customer(customer_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _crm_engine(request).update_customer(customer_id, payload=payload)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return result
+
+
+# ── S-333: CRM – Customer Payment Risk Score ──────────────────────────────────
+
+@router.get(
+    "/api/v1/crm/customers/{customer_id}/risk-score",
+    response_model=CustomerRiskScoreResponse,
+    tags=["crm"],
+)
+def customer_risk_score(
+    customer_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CustomerRiskScoreResponse:
+    """S-333 — 0-100 payment-reliability score derived from invoice history."""
+    customer = _crm_engine(request).get_customer(customer_id)
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    _ensure_company_scope(request, user, customer.company)
+    return _collections_engine(request).customer_risk_score(
+        customer_id=customer.id,
+        customer_name=customer.full_name,
+        company=customer.company,
+    )
+
+
+# ── S-321: CRM – Proposals ────────────────────────────────────────────────────
+
+@router.post("/api/v1/crm/proposals", response_model=ProposalRead, status_code=201, tags=["crm"])
+def create_proposal(
+    payload: ProposalCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> ProposalRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _crm_engine(request).create_proposal(payload=payload)
+
+
+@router.get("/api/v1/crm/proposals", response_model=ProposalListResponse, tags=["crm"])
+def list_proposals(
+    request: Request,
+    company: str | None = Query(default=None),
+    customer_id: int | None = Query(default=None),
+    status_filter: str | None = Query(default=None, alias="status"),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ProposalListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _crm_engine(request).list_proposals(
+        company=company, customer_id=customer_id, status=status_filter, limit=limit
+    )
+
+
+@router.get("/api/v1/crm/proposals/summary", response_model=ProposalSummaryResponse, tags=["crm"])
+def proposal_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ProposalSummaryResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _crm_engine(request).proposal_summary(company=company)
+
+
+@router.patch("/api/v1/crm/proposals/{proposal_id}", response_model=ProposalRead, tags=["crm"])
+def update_proposal_status(
+    proposal_id: int,
+    payload: ProposalStatusUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> ProposalRead:
+    existing = _crm_engine(request).get_proposal(proposal_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _crm_engine(request).update_proposal_status(proposal_id, payload=payload)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    return result
+
+
+# ── S-322: Task Tracking ──────────────────────────────────────────────────────
+
+@router.post("/api/v1/tasks", response_model=TaskRead, status_code=201, tags=["tasks"])
+def create_task(
+    payload: TaskCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> TaskRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _task_engine(request).create_task(payload=payload, created_by=user.username)
+
+
+@router.get("/api/v1/tasks", response_model=TaskListResponse, tags=["tasks"])
+def list_tasks(
+    request: Request,
+    company: str | None = Query(default=None),
+    assigned_to: str | None = Query(default=None),
+    task_status: str | None = Query(default=None, alias="status"),
+    priority: str | None = Query(default=None),
+    overdue_only: bool = Query(default=False),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> TaskListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _task_engine(request).list_tasks(
+        company=company, assigned_to=assigned_to, status=task_status,
+        priority=priority, overdue_only=overdue_only, limit=limit,
+    )
+
+
+@router.get("/api/v1/tasks/summary", response_model=TaskStatusSummaryResponse, tags=["tasks"])
+def task_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> TaskStatusSummaryResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _task_engine(request).status_summary(company=company)
+
+
+@router.patch("/api/v1/tasks/{task_id}", response_model=TaskRead, tags=["tasks"])
+def update_task(
+    task_id: int,
+    payload: TaskUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> TaskRead:
+    existing = _task_engine(request).get_task(task_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _task_engine(request).update_task(task_id, payload=payload)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return result
+
+
+# ── S-323: Collections – Invoices ─────────────────────────────────────────────
+
+@router.post("/api/v1/collections/invoices", response_model=InvoiceRead, status_code=201, tags=["collections"])
+def create_invoice(
+    payload: InvoiceCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> InvoiceRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _collections_engine(request).create_invoice(payload=payload)
+
+
+@router.get("/api/v1/collections/invoices", response_model=InvoiceListResponse, tags=["collections"])
+def list_invoices(
+    request: Request,
+    company: str | None = Query(default=None),
+    customer_id: int | None = Query(default=None),
+    inv_status: str | None = Query(default=None, alias="status"),
+    overdue_only: bool = Query(default=False),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> InvoiceListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _collections_engine(request).list_invoices(
+        company=company, customer_id=customer_id,
+        status=inv_status, overdue_only=overdue_only, limit=limit,
+    )
+
+
+@router.get("/api/v1/collections/invoices/{invoice_id}", response_model=InvoiceRead, tags=["collections"])
+def get_invoice(
+    invoice_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> InvoiceRead:
+    result = _collections_engine(request).get_invoice(invoice_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    _ensure_company_scope(request, user, result.company)
+    return result
+
+
+@router.get(
+    "/api/v1/collections/invoices/{invoice_id}/pdf",
+    tags=["collections"],
+    response_class=Response,
+)
+def export_invoice_pdf(
+    invoice_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    """QW-2 — Imzalı tek fatura PDF'i. Müşteriye iletmeye uygun, audit'lenebilir."""
+    existing = _collections_engine(request).get_invoice(invoice_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    _ensure_company_scope(request, user, existing.company)
+    invoice_row = request.app.state.invoice_repository.get_invoice(invoice_id)
+    customer_row = None
+    if invoice_row and invoice_row.get("customer_id"):
+        customer_row = request.app.state.crm_repository.get_customer(
+            int(invoice_row["customer_id"])
+        )
+    reporting = _reporting_engine(request)
+    pdf_bytes = reporting.invoice_to_pdf(invoice_row, customer=customer_row)
+    filename = f"invoice_{invoice_row.get('invoice_number') or invoice_id}.pdf"
+    return _build_export_response(
+        pdf_bytes, "application/pdf",
+        filename, request.app.state.settings.jwt_secret, reporting,
+    )
+
+
+@router.post("/api/v1/collections/invoices/{invoice_id}/payment", response_model=InvoiceRead, tags=["collections"])
+def record_payment(
+    invoice_id: int,
+    payload: InvoicePaymentRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> InvoiceRead:
+    existing = _collections_engine(request).get_invoice(invoice_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _collections_engine(request).record_payment(invoice_id, payload=payload)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return result
+
+
+@router.get("/api/v1/collections/summary", response_model=ReceivablesSummaryResponse, tags=["collections"])
+def receivables_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> ReceivablesSummaryResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Scoped users must provide company parameter")
+    return _collections_engine(request).receivables_summary(company=company)
+
+
+@router.get(
+    "/api/v1/collections/fx-summary",
+    response_model=FxReceivablesSummaryResponse,
+    tags=["collections"],
+)
+def fx_receivables_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FxReceivablesSummaryResponse:
+    """S-341 — FX-aware outstanding receivables: per-currency breakdown +
+    TRY-normalized total + share of foreign-currency exposure."""
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _collections_engine(request).fx_aware_receivables_summary(company=company)
+
+
+# ── S-342: Financial Instruments (senet / çek / bono) ────────────────────────
+
+@router.post(
+    "/api/v1/financial-instruments",
+    response_model=FinancialInstrumentRead,
+    status_code=201,
+    tags=["financial-instruments"],
+)
+def create_financial_instrument(
+    payload: FinancialInstrumentCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> FinancialInstrumentRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _financial_instrument_engine(request).create(payload=payload)
+
+
+@router.get(
+    "/api/v1/financial-instruments",
+    response_model=FinancialInstrumentListResponse,
+    tags=["financial-instruments"],
+)
+def list_financial_instruments(
+    request: Request,
+    company: str | None = Query(default=None),
+    kind: str | None = Query(default=None, pattern="^(senet|cek|bono)$"),
+    instr_status: str | None = Query(default=None, alias="status",
+                                      pattern="^(pending|cleared|bounced|cancelled)$"),
+    customer_id: int | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinancialInstrumentListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _financial_instrument_engine(request).list_instruments(
+        company=company, kind=kind, status=instr_status,
+        customer_id=customer_id, limit=limit,
+    )
+
+
+@router.get(
+    "/api/v1/financial-instruments/summary",
+    response_model=FinancialInstrumentSummaryResponse,
+    tags=["financial-instruments"],
+)
+def financial_instruments_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinancialInstrumentSummaryResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _financial_instrument_engine(request).summary(company=company)
+
+
+@router.get(
+    "/api/v1/financial-instruments/{instrument_id}",
+    response_model=FinancialInstrumentRead,
+    tags=["financial-instruments"],
+)
+def get_financial_instrument(
+    instrument_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinancialInstrumentRead:
+    result = _financial_instrument_engine(request).get(instrument_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Instrument not found")
+    _ensure_company_scope(request, user, result.company)
+    return result
+
+
+@router.patch(
+    "/api/v1/financial-instruments/{instrument_id}",
+    response_model=FinancialInstrumentRead,
+    tags=["financial-instruments"],
+)
+def update_financial_instrument_status(
+    instrument_id: int,
+    payload: FinancialInstrumentStatusUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> FinancialInstrumentRead:
+    existing = _financial_instrument_engine(request).get(instrument_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Instrument not found")
+    _ensure_company_scope(request, user, existing.company)
+    try:
+        result = _financial_instrument_engine(request).update_status(
+            instrument_id, payload=payload
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if result is None:
+        raise HTTPException(status_code=404, detail="Instrument not found")
+    return result
+
+
+# ── S-334: Notifications (vade uyarı / bildirim motoru) ───────────────────────
+
+@router.post(
+    "/api/v1/notifications/generate",
+    response_model=NotificationGenerateResponse,
+    tags=["notifications"],
+)
+def generate_notifications(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> NotificationGenerateResponse:
+    """Scan unpaid invoices and create any missing window notifications.
+
+    Idempotent — duplicates are dropped by a UNIQUE constraint at the DB layer.
+    """
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _notification_engine(request).scan_invoices(company=company)
+
+
+@router.get(
+    "/api/v1/notifications",
+    response_model=NotificationListResponse,
+    tags=["notifications"],
+)
+def list_notifications(
+    request: Request,
+    company: str | None = Query(default=None),
+    severity: str | None = Query(default=None),
+    unread_only: bool = Query(default=False),
+    kind: str | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> NotificationListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _notification_engine(request).list_notifications(
+        company=company, severity=severity, unread_only=unread_only,
+        kind=kind, limit=limit,
+    )
+
+
+@router.get(
+    "/api/v1/notifications/summary",
+    response_model=NotificationSummaryResponse,
+    tags=["notifications"],
+)
+def notification_summary(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> NotificationSummaryResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _notification_engine(request).summary(company=company)
+
+
+@router.patch(
+    "/api/v1/notifications/{notification_id}/read",
+    response_model=NotificationRead,
+    tags=["notifications"],
+)
+def mark_notification_read(
+    notification_id: int,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> NotificationRead:
+    existing = _notification_engine(request).get(notification_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _notification_engine(request).mark_read(notification_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return result
+
+
+# ── S-343: Tahsilat Kanalı (Dispatch + Delivery Log) ──────────────────────────
+
+@router.post(
+    "/api/v1/notifications/{notification_id}/dispatch",
+    response_model=DispatchResponse,
+    tags=["notifications"],
+)
+def dispatch_notification(
+    notification_id: int,
+    request: Request,
+    channels: str | None = Query(default=None,
+        description="Comma-separated channel list. Defaults to env config."),
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> DispatchResponse:
+    """S-343 — Send a notification across configured channels.
+
+    Honors per-customer KVKK consent flags. Channels without consent are
+    skipped (status='skipped_no_consent' in delivery_log). Missing contact
+    info → status='skipped_no_contact'.
+    """
+    existing = _notification_engine(request).get(notification_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    _ensure_company_scope(request, user, existing.company)
+    channel_list = (
+        [c.strip() for c in channels.split(",") if c.strip()]
+        if channels else None
+    )
+    result = _delivery_engine(request).dispatch(
+        notification_id=notification_id, channels=channel_list
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return result
+
+
+@router.get(
+    "/api/v1/delivery-log",
+    response_model=DeliveryLogListResponse,
+    tags=["notifications"],
+)
+def list_delivery_log(
+    request: Request,
+    company: str | None = Query(default=None),
+    notification_id: int | None = Query(default=None),
+    channel: str | None = Query(default=None),
+    delivery_status: str | None = Query(default=None, alias="status"),
+    limit: int = Query(default=200, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> DeliveryLogListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _delivery_engine(request).list_log(
+        company=company,
+        notification_id=notification_id,
+        channel=channel,
+        status=delivery_status,
+        limit=limit,
+    )
+
+
+# ── S-343: KVKK Consent management ────────────────────────────────────────────
+
+@router.patch(
+    "/api/v1/crm/customers/{customer_id}/consent",
+    response_model=CustomerRead,
+    tags=["crm"],
+)
+def update_customer_consent(
+    customer_id: int,
+    payload: CustomerConsentUpdateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> CustomerRead:
+    """S-343 — Update per-channel KVKK consent flags on a customer."""
+    existing = _crm_engine(request).get_customer(customer_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    _ensure_company_scope(request, user, existing.company)
+    result = _crm_engine(request).update_consent(
+        customer_id,
+        email_consent=payload.email_consent,
+        sms_consent=payload.sms_consent,
+        whatsapp_consent=payload.whatsapp_consent,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return result
+
+
+@router.get(
+    "/api/v1/finance/cashflow-projection",
+    response_model=CashflowProjectionResponse,
+    tags=["finance"],
+)
+def cashflow_projection(
+    request: Request,
+    company: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> CashflowProjectionResponse:
+    """S-332 — 30/60/90-day forward cashflow projection.
+
+    Combines pending/partial invoices (expected income) with
+    active recurring expenses (expected outflows) to produce
+    a 90-day outlook in three 30-day buckets.
+    """
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    # Fetch recurring entries from finance repo
+    finance_repo = request.app.state.finance_repository
+    recurring_rows = finance_repo.list_recurring_entries(
+        company_name=company, active_only=True
+    )
+    return _collections_engine(request).cashflow_projection(
+        company=company,
+        recurring_rows=recurring_rows,
+    )
 
 
 def _raise_auth_limiter_unavailable(*, client_host: str, username: str, stage: str) -> None:
@@ -395,7 +1384,6 @@ def create_role(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_roles")),
 ) -> RoleRead:
-    del user
     try:
         row = _auth_service(request).create_role(
             name=payload.name,
@@ -407,6 +1395,7 @@ def create_role(
             detail="Role already exists",
         ) from exc
 
+    _emit_audit_event(request, user, "role.create", {"role_name": payload.name})
     return _to_role_read(row)
 
 
@@ -417,7 +1406,6 @@ def update_role(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_roles")),
 ) -> RoleRead:
-    del user
     try:
         row = _auth_service(request).update_role(
             role_id,
@@ -432,6 +1420,7 @@ def update_role(
             detail="Role already exists",
         ) from exc
 
+    _emit_audit_event(request, user, "role.update", {"role_id": role_id, "new_name": payload.name})
     return _to_role_read(row)
 
 
@@ -441,11 +1430,11 @@ def delete_role(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_roles")),
 ) -> None:
-    del user
     try:
         _auth_service(request).delete_role(role_id)
     except ValueError as exc:
         raise _value_error_to_http(exc)
+    _emit_audit_event(request, user, "role.delete", {"role_id": role_id})
 
 
 @router.get("/api/v1/permissions", response_model=list[PermissionRead], tags=["auth"])
@@ -491,8 +1480,8 @@ def update_role_permissions(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_roles")),
 ) -> RolePermissionsRead:
-    del user
     try:
+        old_permissions = _auth_service(request).role_permissions(role_id)
         permissions = _auth_service(request).update_role_permissions(
             role_id,
             payload.permissions,
@@ -501,6 +1490,20 @@ def update_role_permissions(
     except ValueError as exc:
         raise _value_error_to_http(exc)
 
+    added = sorted(set(permissions) - set(old_permissions))
+    removed = sorted(set(old_permissions) - set(permissions))
+    _emit_audit_event(
+        request,
+        user,
+        "role.permissions.update",
+        {
+            "role_id": role_id,
+            "role_name": str(role["name"]),
+            "added": added,
+            "removed": removed,
+            "permissions_after": sorted(permissions),
+        },
+    )
     return RolePermissionsRead(
         role_id=role_id,
         role_name=str(role["name"]),
@@ -531,8 +1534,8 @@ def migration_apply(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_migrations")),
 ) -> MigrationActionResponse:
-    del user
     versions = _migration_manager(request).apply_all()
+    _emit_audit_event(request, user, "migration.apply", {"versions_applied": versions})
     return MigrationActionResponse(
         message="Migrations applied",
         versions=versions,
@@ -549,12 +1552,46 @@ def migration_rollback(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_migrations")),
 ) -> MigrationActionResponse:
-    del user
-    versions = _migration_manager(request).rollback(steps=payload.steps)
+    try:
+        versions = _migration_manager(request).rollback(steps=payload.steps, force=payload.force)
+    except ValueError as exc:
+        raise _value_error_to_http(exc)
+    _emit_audit_event(
+        request, user, "migration.rollback",
+        {"versions_rolled_back": versions, "steps": payload.steps, "force": payload.force},
+    )
     return MigrationActionResponse(
         message="Migrations rolled back",
         versions=versions,
     )
+
+
+@router.get(
+    "/api/v1/admin/migrations/dry-run",
+    response_model=MigrationDryRunResponse,
+    tags=["admin"],
+)
+def migration_dry_run(
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_migrations")),
+) -> MigrationDryRunResponse:
+    del user
+    result = _migration_manager(request).dry_run()
+    return MigrationDryRunResponse(**result)
+
+
+@router.post(
+    "/api/v1/admin/migrations/preflight",
+    response_model=MigrationPreflightResponse,
+    tags=["admin"],
+)
+def migration_preflight(
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_migrations")),
+) -> MigrationPreflightResponse:
+    del user
+    result = _migration_manager(request).preflight()
+    return MigrationPreflightResponse(**result)
 
 
 @router.get("/api/v1/users", response_model=list[UserRead], tags=["auth"])
@@ -580,7 +1617,6 @@ def create_user(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_users")),
 ) -> UserRead:
-    del user
     try:
         row = _auth_service(request).create_user(
             username=payload.username,
@@ -597,6 +1633,10 @@ def create_user(
             detail="Username already exists",
         ) from exc
 
+    _emit_audit_event(
+        request, user, "user.create",
+        {"target_username": payload.username, "role": payload.role, "is_active": payload.is_active},
+    )
     return _to_user_read(
         row,
         company_scopes=_auth_service(request).user_company_scopes(int(row["id"])),
@@ -610,7 +1650,6 @@ def update_user(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_users")),
 ) -> UserRead:
-    del user
     try:
         row = _auth_service(request).update_user(
             user_id,
@@ -621,6 +1660,10 @@ def update_user(
     except ValueError as exc:
         raise _value_error_to_http(exc)
 
+    _emit_audit_event(
+        request, user, "user.update",
+        {"target_user_id": user_id, "role": payload.role, "is_active": payload.is_active},
+    )
     return _to_user_read(
         row,
         company_scopes=_auth_service(request).user_company_scopes(int(row["id"])),
@@ -633,11 +1676,11 @@ def delete_user(
     request: Request,
     user: UserProfile = Depends(require_permissions("manage_users")),
 ) -> None:
-    del user
     try:
         _auth_service(request).delete_user(user_id)
     except ValueError as exc:
         raise _value_error_to_http(exc)
+    _emit_audit_event(request, user, "user.delete", {"target_user_id": user_id})
 
 
 @router.post(
@@ -840,6 +1883,298 @@ def finance_forecast(
         )
     except ValueError as exc:
         raise _value_error_to_http(exc)
+
+
+# ── Finance recurring entries ──────────────────────────────────────────────────
+
+@router.post(
+    "/api/v1/finance-engine/recurring",
+    response_model=FinanceRecurringEntryRead,
+    tags=["finance_engine"],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_recurring_entry(
+    request: Request,
+    payload: FinanceRecurringEntryCreateRequest,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> FinanceRecurringEntryRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _finance_engine(request).create_recurring_entry(payload=payload)
+
+
+@router.get(
+    "/api/v1/finance-engine/recurring",
+    response_model=FinanceRecurringListResponse,
+    tags=["finance_engine"],
+)
+def list_recurring_entries(
+    request: Request,
+    company: str | None = Query(default=None),
+    active_only: bool = Query(default=True),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinanceRecurringListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _finance_engine(request).list_recurring_entries(
+        company=company, active_only=active_only
+    )
+
+
+@router.post(
+    "/api/v1/finance-engine/recurring/generate",
+    response_model=FinanceRecurringGenerateResponse,
+    tags=["finance_engine"],
+)
+def generate_due_recurring_entries(
+    request: Request,
+    as_of_date: str | None = Query(default=None),
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> FinanceRecurringGenerateResponse:
+    if not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only holding-scope users can trigger bulk recurring generation",
+        )
+    try:
+        return _finance_engine(request).generate_due_entries(as_of_date=as_of_date)
+    except ValueError as exc:
+        raise _value_error_to_http(exc)
+
+
+# ── Finance budgets ────────────────────────────────────────────────────────────
+
+@router.post(
+    "/api/v1/finance-engine/budgets",
+    response_model=FinanceBudgetRead,
+    tags=["finance_engine"],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_budget(
+    request: Request,
+    payload: FinanceBudgetCreateRequest,
+    user: UserProfile = Depends(require_permissions("write_finance")),
+) -> FinanceBudgetRead:
+    _ensure_company_scope(request, user, payload.company)
+    return _finance_engine(request).create_budget(payload=payload)
+
+
+@router.get(
+    "/api/v1/finance-engine/budgets",
+    response_model=FinanceBudgetListResponse,
+    tags=["finance_engine"],
+)
+def list_budgets(
+    request: Request,
+    company: str | None = Query(default=None),
+    year: int | None = Query(default=None),
+    month: int | None = Query(default=None, ge=1, le=12),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinanceBudgetListResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _finance_engine(request).list_budgets(company=company, year=year, month=month)
+
+
+@router.get(
+    "/api/v1/finance-engine/budget-vs-actual",
+    response_model=FinanceBudgetVsActualResponse,
+    tags=["finance_engine"],
+)
+def budget_vs_actual(
+    request: Request,
+    year: int = Query(..., ge=2000, le=2100),
+    company: str | None = Query(default=None),
+    month: int | None = Query(default=None, ge=1, le=12),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinanceBudgetVsActualResponse:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _finance_engine(request).budget_vs_actual(
+        company=company, year=year, month=month
+    )
+
+
+# ── Reporting exports ──────────────────────────────────────────────────────────
+
+def _build_export_response(
+    content: bytes,
+    media_type: str,
+    filename: str,
+    secret: str,
+    reporting: ReportingEngine,
+) -> Response:
+    signature = reporting.sign(content, secret)
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Export-Signature": signature,
+        },
+    )
+
+
+@router.get(
+    "/api/v1/reports/finance/ledger.xlsx",
+    tags=["reports"],
+    response_class=Response,
+)
+def export_ledger_xlsx(
+    request: Request,
+    company: str | None = Query(default=None),
+    start_date: str | None = Query(default=None),
+    end_date: str | None = Query(default=None),
+    limit: int = Query(default=1000, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    ledger = _finance_engine(request).list_ledger_entries(
+        company=company, start_date=start_date, end_date=end_date, limit=limit
+    )
+    entries = [e.model_dump() for e in ledger.entries]
+    reporting = _reporting_engine(request)
+    content = reporting.ledger_to_xlsx(entries)
+    return _build_export_response(
+        content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "finance_ledger.xlsx", request.app.state.settings.jwt_secret, reporting,
+    )
+
+
+@router.get(
+    "/api/v1/reports/finance/ledger.pdf",
+    tags=["reports"],
+    response_class=Response,
+)
+def export_ledger_pdf(
+    request: Request,
+    company: str | None = Query(default=None),
+    start_date: str | None = Query(default=None),
+    end_date: str | None = Query(default=None),
+    limit: int = Query(default=1000, ge=1, le=1000),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    ledger = _finance_engine(request).list_ledger_entries(
+        company=company, start_date=start_date, end_date=end_date, limit=limit
+    )
+    entries = [e.model_dump() for e in ledger.entries]
+    reporting = _reporting_engine(request)
+    content = reporting.ledger_to_pdf(entries)
+    return _build_export_response(
+        content, "application/pdf",
+        "finance_ledger.pdf", request.app.state.settings.jwt_secret, reporting,
+    )
+
+
+@router.get(
+    "/api/v1/reports/finance/budget-vs-actual.xlsx",
+    tags=["reports"],
+    response_class=Response,
+)
+def export_budget_vs_actual_xlsx(
+    request: Request,
+    year: int = Query(..., ge=2000, le=2100),
+    company: str | None = Query(default=None),
+    month: int | None = Query(default=None, ge=1, le=12),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    report = _finance_engine(request).budget_vs_actual(
+        company=company, year=year, month=month
+    )
+    items = [i.model_dump() for i in report.items]
+    totals = {
+        "total_budget_income": report.total_budget_income,
+        "total_budget_expense": report.total_budget_expense,
+        "total_actual_income": report.total_actual_income,
+        "total_actual_expense": report.total_actual_expense,
+        "net_budget": report.net_budget,
+        "net_actual": report.net_actual,
+        "net_variance": report.net_variance,
+    }
+    reporting = _reporting_engine(request)
+    content = reporting.budget_vs_actual_to_xlsx(
+        company=company, year=year, month=month, items=items, totals=totals
+    )
+    return _build_export_response(
+        content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "budget_vs_actual.xlsx", request.app.state.settings.jwt_secret, reporting,
+    )
+
+
+@router.get(
+    "/api/v1/reports/finance/budget-vs-actual.pdf",
+    tags=["reports"],
+    response_class=Response,
+)
+def export_budget_vs_actual_pdf(
+    request: Request,
+    year: int = Query(..., ge=2000, le=2100),
+    company: str | None = Query(default=None),
+    month: int | None = Query(default=None, ge=1, le=12),
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> Response:
+    if company:
+        _ensure_company_scope(request, user, company)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    report = _finance_engine(request).budget_vs_actual(
+        company=company, year=year, month=month
+    )
+    items = [i.model_dump() for i in report.items]
+    totals = {
+        "total_budget_income": report.total_budget_income,
+        "total_budget_expense": report.total_budget_expense,
+        "total_actual_income": report.total_actual_income,
+        "total_actual_expense": report.total_actual_expense,
+        "net_budget": report.net_budget,
+        "net_actual": report.net_actual,
+        "net_variance": report.net_variance,
+    }
+    reporting = _reporting_engine(request)
+    content = reporting.budget_vs_actual_to_pdf(
+        company=company, year=year, month=month, items=items, totals=totals
+    )
+    return _build_export_response(
+        content, "application/pdf",
+        "budget_vs_actual.pdf", request.app.state.settings.jwt_secret, reporting,
+    )
 
 
 @router.get(
@@ -1235,7 +2570,13 @@ def generate_feasibility_report(
     request: Request,
     user: UserProfile = Depends(require_permissions("write_feasibility")),
 ) -> FeasibilityReportStoredResponse:
-    del user
+    if payload.company_name:
+        _ensure_company_scope(request, user, payload.company_name)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company_name in feasibility report request",
+        )
     try:
         return _feasibility_engine(request).generate(payload)
     except ValueError as exc:
@@ -1251,13 +2592,18 @@ def list_feasibility_reports(
     request: Request,
     limit: int = Query(default=100, ge=1, le=500),
     sector: str | None = Query(default=None),
+    company: str | None = Query(default=None),
     user: UserProfile = Depends(require_permissions("read_feasibility")),
 ) -> FeasibilityReportListResponse:
-    del user
-    return _feasibility_engine(request).list_reports(
-        limit=limit,
-        sector=sector,
-    )
+    if company:
+        _ensure_company_scope(request, user, company)
+        return _feasibility_engine(request).list_reports(limit=limit, sector=sector, company_name=company)
+    if not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scoped users must provide company parameter",
+        )
+    return _feasibility_engine(request).list_reports(limit=limit, sector=sector)
 
 
 @router.get(
@@ -1270,11 +2616,18 @@ def get_feasibility_report(
     request: Request,
     user: UserProfile = Depends(require_permissions("read_feasibility")),
 ) -> FeasibilityReportStoredResponse:
-    del user
     try:
-        return _feasibility_engine(request).get_report(report_id)
+        result = _feasibility_engine(request).get_report(report_id)
     except ValueError as exc:
         raise _value_error_to_http(exc)
+    if result.company_name:
+        _ensure_company_scope(request, user, result.company_name)
+    elif not _is_holding_scope(request, user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Scoped users cannot access unscoped feasibility reports",
+        )
+    return result
 
 
 @router.post(
@@ -1823,7 +3176,7 @@ def generate_tender_dossier(
     request: Request,
     user: UserProfile = Depends(require_permissions("prepare_tender_docs")),
 ) -> TenderDossierResponse:
-    del user
+    _ensure_company_scope(request, user, payload.company_name)
     return _tender_engine(request).build_dossier(payload)
 
 

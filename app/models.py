@@ -155,6 +155,92 @@ class FinanceForecastResponse(BaseModel):
     model: str
 
 
+class FinanceRecurringEntryCreateRequest(BaseModel):
+    company: str = Field(min_length=1)
+    entry_type: str = Field(pattern="^(income|expense)$")
+    amount: float = Field(gt=0)
+    category: str = Field(min_length=1)
+    description: str = ""
+    frequency: str = Field(pattern="^(weekly|monthly|quarterly|yearly)$")
+    start_date: str
+    end_date: str | None = None
+
+
+class FinanceRecurringEntryRead(BaseModel):
+    id: int
+    company: str
+    entry_type: str
+    amount: float
+    category: str
+    description: str
+    frequency: str
+    start_date: str
+    end_date: str | None = None
+    last_generated_date: str | None = None
+    is_active: bool
+    created_at: int
+
+
+class FinanceRecurringListResponse(BaseModel):
+    total: int
+    entries: list[FinanceRecurringEntryRead] = Field(default_factory=list)
+
+
+class FinanceRecurringGenerateResponse(BaseModel):
+    generated_count: int
+    ledger_entry_ids: list[int] = Field(default_factory=list)
+    message: str
+
+
+class FinanceBudgetCreateRequest(BaseModel):
+    company: str = Field(min_length=1)
+    year: int = Field(ge=2000, le=2100)
+    month: int | None = Field(default=None, ge=1, le=12)
+    category: str = Field(min_length=1)
+    entry_type: str = Field(pattern="^(income|expense)$")
+    budget_amount: float = Field(ge=0)
+
+
+class FinanceBudgetRead(BaseModel):
+    id: int
+    company: str
+    year: int
+    month: int | None = None
+    category: str
+    entry_type: str
+    budget_amount: float
+    created_at: int
+
+
+class FinanceBudgetListResponse(BaseModel):
+    total: int
+    budgets: list[FinanceBudgetRead] = Field(default_factory=list)
+
+
+class FinanceBudgetVsActualItem(BaseModel):
+    category: str
+    entry_type: str
+    budget_amount: float
+    actual_amount: float
+    variance: float
+    variance_pct: float
+    status: str
+
+
+class FinanceBudgetVsActualResponse(BaseModel):
+    company: str | None = None
+    year: int
+    month: int | None = None
+    items: list[FinanceBudgetVsActualItem] = Field(default_factory=list)
+    total_budget_income: float
+    total_budget_expense: float
+    total_actual_income: float
+    total_actual_expense: float
+    net_budget: float
+    net_actual: float
+    net_variance: float
+
+
 class MarketOHLCVBar(BaseModel):
     date: str
     open: float
@@ -670,6 +756,7 @@ class FeasibilityReportRequest(BaseModel):
     sector: str = Field(min_length=2)
     geography: str = Field(min_length=2)
     objective: str = Field(min_length=10)
+    company_name: str = Field(default="", description="Owning company for scope isolation (required for scoped users)")
     currency: str = Field(default="TRY", min_length=2, max_length=8)
     initial_investment: float = Field(gt=0)
     annual_opex: float = Field(gt=0)
@@ -775,6 +862,7 @@ class FeasibilityReportListItem(BaseModel):
     sector: str
     geography: str
     status: str
+    company_name: str = ""
     created_at: int
     recommendation: str
     confidence: float = Field(ge=0, le=1)
@@ -792,6 +880,7 @@ class FeasibilityReportStoredResponse(BaseModel):
     sector: str
     geography: str
     status: str
+    company_name: str = ""
     created_at: int
     request_payload: dict[str, object] = Field(default_factory=dict)
     report: FeasibilityReportResponse
@@ -1337,6 +1426,8 @@ class AuditLogRead(BaseModel):
     user_agent: str | None = None
     duration_ms: float
     created_at: int
+    event_type: str | None = None
+    event_detail: dict[str, object] | None = None
 
 
 class PermissionRead(BaseModel):
@@ -1371,3 +1462,560 @@ class MigrationActionResponse(BaseModel):
 
 class MigrationRollbackRequest(BaseModel):
     steps: int = Field(default=1, ge=1, le=20)
+    force: bool = Field(default=False, description="Required to roll back migrations that touch critical tables")
+
+
+class MigrationPreflightItem(BaseModel):
+    version: int
+    name: str
+    sql_valid: bool
+    touches_critical_tables: bool
+    critical_tables_found: list[str] = Field(default_factory=list)
+    warning: str = ""
+
+
+class MigrationPreflightResponse(BaseModel):
+    pending_count: int
+    safe_to_apply: bool
+    warnings: list[str] = Field(default_factory=list)
+    items: list[MigrationPreflightItem] = Field(default_factory=list)
+
+
+class MigrationDryRunResponse(BaseModel):
+    would_apply: list[int] = Field(default_factory=list)
+    already_applied: list[int] = Field(default_factory=list)
+    total_pending: int
+
+
+# ── S-312: Scheduled Reports ───────────────────────────────────────────────────
+
+class ScheduledReportCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    report_type: str = Field(..., pattern="^(ledger|budget_vs_actual)$")
+    format: str = Field(..., pattern="^(xlsx|pdf)$")
+    company_name: str | None = None
+    params_json: dict = Field(default_factory=dict)
+    schedule_cron: str = Field(..., min_length=1, max_length=60)
+    recipient: str = Field(default="", max_length=255)
+
+class ScheduledReportRead(BaseModel):
+    id: int
+    name: str
+    report_type: str
+    format: str
+    company_name: str | None = None
+    params_json: dict = Field(default_factory=dict)
+    schedule_cron: str
+    recipient: str
+    is_active: bool
+    last_run_at: int | None = None
+    last_status: str | None = None
+    created_by: str
+    created_at: int
+
+class ScheduledReportListResponse(BaseModel):
+    total: int
+    jobs: list[ScheduledReportRead] = Field(default_factory=list)
+
+class ScheduledReportTriggerResponse(BaseModel):
+    id: int
+    message: str
+    download_path: str
+
+
+# ── S-311: Live Dashboard Signals ─────────────────────────────────────────────
+
+class DashboardSignalItem(BaseModel):
+    source: str          # "finance" | "market" | "inventory" | "procurement" | "feasibility"
+    label: str
+    value: str | float | int | None = None
+    unit: str = ""
+    status: str = "OK"   # "OK" | "WARN" | "ALERT"
+    detail: str = ""
+
+
+class DashboardLiveSignalsResponse(BaseModel):
+    generated_at: str
+    company_scope: str | None = None
+    signals: list[DashboardSignalItem] = Field(default_factory=list)
+    alert_count: int = 0
+    warn_count: int = 0
+
+
+# ── S-313: Multi-Company Comparison Panel ─────────────────────────────────────
+
+class CompanyFinanceSnapshot(BaseModel):
+    company: str
+    balance: float
+    total_income_30d: float
+    total_expense_30d: float
+    net_cashflow_30d: float
+    budget_vs_actual_year: int | None = None
+    net_budget: float | None = None
+    net_actual: float | None = None
+    net_variance: float | None = None
+    health_status: str   # "HEALTHY" | "WATCH" | "RISK" | "NO_DATA"
+    rank: int            # 1-based rank by net_cashflow_30d descending
+
+
+class CompanyComparisonResponse(BaseModel):
+    year: int | None = None
+    lookback_days: int
+    snapshots: list[CompanyFinanceSnapshot] = Field(default_factory=list)
+    total_companies: int
+    top_performer: str | None = None
+    bottom_performer: str | None = None
+
+
+# ── S-321: CRM – Customers & Proposals ────────────────────────────────────────
+
+class CustomerCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    full_name: str = Field(..., min_length=1, max_length=200)
+    email: str = Field(default="", max_length=255)
+    phone: str = Field(default="", max_length=50)
+    sector: str = Field(default="general", max_length=80)
+    tags: list[str] = Field(default_factory=list)
+    notes: str = Field(default="", max_length=2000)
+
+
+class CustomerUpdateRequest(BaseModel):
+    full_name: str | None = Field(default=None, max_length=200)
+    email: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=50)
+    sector: str | None = Field(default=None, max_length=80)
+    tags: list[str] | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    is_active: bool | None = None
+
+
+class CustomerRead(BaseModel):
+    id: int
+    company: str
+    full_name: str
+    email: str = ""
+    phone: str = ""
+    sector: str = "general"
+    tags: list[str] = Field(default_factory=list)
+    notes: str = ""
+    is_active: bool = True
+    # S-343: KVKK consent flags (default false until explicit opt-in)
+    email_consent: bool = False
+    sms_consent: bool = False
+    whatsapp_consent: bool = False
+    consent_updated_at: int = 0
+    created_at: int
+    updated_at: int
+
+
+class CustomerConsentUpdateRequest(BaseModel):
+    """S-343 — KVKK consent flag update.
+
+    Only fields explicitly set are changed; unset fields preserve current value.
+    """
+    email_consent: bool | None = None
+    sms_consent: bool | None = None
+    whatsapp_consent: bool | None = None
+
+
+class CustomerListResponse(BaseModel):
+    total: int
+    customers: list[CustomerRead] = Field(default_factory=list)
+
+
+class CustomerRiskScoreResponse(BaseModel):
+    """S-333 — Payment reliability score (0-100) for a CRM customer.
+
+    Score interpretation:
+        ≥ 75   →  LOW risk     (reliable payer)
+        40-74  →  MEDIUM risk  (occasionally late)
+        < 40   →  HIGH risk    (problematic payer)
+        ---    →  NO_HISTORY   (insufficient data)
+
+    Confidence reflects data volume:
+        HIGH   if ≥ 5 invoices observed
+        MEDIUM if 2-4 invoices
+        LOW    if 0-1 invoice
+    """
+    customer_id: int
+    customer_name: str
+    company: str
+    score: float = Field(default=50.0, ge=0.0, le=100.0)
+    risk_level: str = Field(default="NO_HISTORY")
+    confidence: str = Field(default="LOW")
+    invoice_count: int = 0
+    paid_count: int = 0
+    on_time_count: int = 0
+    late_paid_count: int = 0
+    active_overdue_count: int = 0
+    avg_late_days: float = 0.0
+    total_billed: float = 0.0
+    total_outstanding: float = 0.0
+    on_time_ratio: float = 0.0
+    factors: list[str] = Field(default_factory=list)
+
+
+class ProposalCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    customer_id: int
+    title: str = Field(..., min_length=1, max_length=300)
+    amount: float = Field(..., ge=0)
+    currency: str = Field(default="TRY", max_length=10)
+    valid_until: str | None = None
+    description: str = Field(default="", max_length=2000)
+
+
+class ProposalStatusUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(draft|sent|accepted|rejected|expired)$")
+    amount: float | None = Field(default=None, ge=0)
+    valid_until: str | None = None
+    description: str | None = None
+
+
+class ProposalRead(BaseModel):
+    id: int
+    company: str
+    customer_id: int
+    title: str
+    amount: float
+    currency: str = "TRY"
+    status: str
+    valid_until: str | None = None
+    description: str = ""
+    created_at: int
+    updated_at: int
+
+
+class ProposalListResponse(BaseModel):
+    total: int
+    proposals: list[ProposalRead] = Field(default_factory=list)
+
+
+class ProposalSummaryResponse(BaseModel):
+    company: str | None = None
+    total_count: int
+    total_amount: float
+    accepted_amount: float
+    by_status: dict[str, int] = Field(default_factory=dict)
+
+
+# ── S-322: Task / Job Tracking ─────────────────────────────────────────────────
+
+class TaskCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1, max_length=300)
+    description: str = Field(default="", max_length=2000)
+    assigned_to: str = Field(default="", max_length=100)
+    priority: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
+    due_date: str | None = None
+    customer_id: int | None = None
+
+
+class TaskUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=300)
+    description: str | None = Field(default=None, max_length=2000)
+    assigned_to: str | None = Field(default=None, max_length=100)
+    priority: str | None = Field(default=None, pattern="^(low|medium|high|critical)$")
+    status: str | None = Field(default=None, pattern="^(open|in_progress|done|cancelled)$")
+    due_date: str | None = None
+
+
+class TaskRead(BaseModel):
+    id: int
+    company: str
+    title: str
+    description: str = ""
+    assigned_to: str = ""
+    priority: str = "medium"
+    status: str = "open"
+    due_date: str | None = None
+    customer_id: int | None = None
+    created_by: str = ""
+    created_at: int
+    updated_at: int
+
+
+class TaskListResponse(BaseModel):
+    total: int
+    tasks: list[TaskRead] = Field(default_factory=list)
+
+
+class TaskStatusSummaryResponse(BaseModel):
+    company: str | None = None
+    open: int = 0
+    in_progress: int = 0
+    done: int = 0
+    cancelled: int = 0
+    overdue: int = 0
+    total: int = 0
+
+
+# ── S-323: Collections / Invoices ──────────────────────────────────────────────
+
+class InvoiceCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1, max_length=300)
+    amount: float = Field(..., ge=0)
+    issue_date: str
+    due_date: str
+    customer_id: int | None = None
+    proposal_id: int | None = None
+    invoice_number: str = Field(default="", max_length=100)
+    currency: str = Field(default="TRY", max_length=10)
+    description: str = Field(default="", max_length=2000)
+
+
+class InvoicePaymentRequest(BaseModel):
+    payment_amount: float = Field(..., gt=0)
+    paid_date: str | None = None
+
+
+class InvoiceRead(BaseModel):
+    id: int
+    company: str
+    customer_id: int | None = None
+    proposal_id: int | None = None
+    invoice_number: str = ""
+    title: str
+    amount: float
+    paid_amount: float = 0.0
+    currency: str = "TRY"
+    status: str
+    issue_date: str
+    due_date: str
+    paid_date: str | None = None
+    description: str = ""
+    created_at: int
+    updated_at: int
+
+
+class InvoiceListResponse(BaseModel):
+    total: int
+    invoices: list[InvoiceRead] = Field(default_factory=list)
+
+
+class AgingBucket(BaseModel):
+    """Outstanding amount for a single overdue age band."""
+    count: int = 0
+    outstanding: float = 0.0
+
+
+class ReceivablesAgingResponse(BaseModel):
+    """Overdue invoice aging breakdown — how long invoices have been unpaid."""
+    days_1_30: AgingBucket = Field(default_factory=AgingBucket)
+    days_31_60: AgingBucket = Field(default_factory=AgingBucket)
+    days_61_90: AgingBucket = Field(default_factory=AgingBucket)
+    days_90_plus: AgingBucket = Field(default_factory=AgingBucket)
+    total_overdue_count: int = 0
+    total_overdue_outstanding: float = 0.0
+
+
+class ReceivablesSummaryResponse(BaseModel):
+    company: str | None = None
+    pending_count: int = 0
+    partial_count: int = 0
+    overdue_count: int = 0
+    paid_count: int = 0
+    pending_amount: float = 0.0
+    partial_remaining: float = 0.0
+    overdue_amount: float = 0.0
+    paid_amount_total: float = 0.0
+    total_outstanding: float = 0.0
+    aging: ReceivablesAgingResponse = Field(default_factory=ReceivablesAgingResponse)
+
+
+# ── S-332: Cashflow Projection ────────────────────────────────────────────────
+
+class CashflowProjectionBucket(BaseModel):
+    """30-day forward cashflow window."""
+    label: str                      # e.g. "0-30", "31-60", "61-90"
+    expected_income: float = 0.0    # pending/partial invoices due in this window
+    expected_expense: float = 0.0   # recurring expenses falling in this window
+    net: float = 0.0                # income - expense
+    invoice_count: int = 0          # number of invoices due
+
+
+class CashflowProjectionResponse(BaseModel):
+    company: str | None = None
+    as_of_date: str                 # today's date when projection was computed
+    buckets: list[CashflowProjectionBucket] = Field(default_factory=list)
+    total_expected_income: float = 0.0
+    total_expected_expense: float = 0.0
+    total_net: float = 0.0
+
+
+# ─── S-334: Vade Uyarı / Bildirim Motoru ─────────────────────────────────────
+
+class NotificationRead(BaseModel):
+    id: int
+    company: str
+    kind: str                       # 'invoice_due_soon' | 'invoice_overdue'
+    severity: str                   # 'info' | 'warning' | 'critical'
+    subject_type: str               # 'invoice' (future: 'task', 'proposal')
+    subject_id: int
+    window_key: str                 # 'T-3' | 'T-1' | 'T+1' | 'T+7' | 'T+14'
+    title: str
+    message: str = ""
+    is_read: bool = False
+    created_at: int
+    updated_at: int
+
+
+class NotificationListResponse(BaseModel):
+    total: int
+    unread_count: int = 0
+    notifications: list[NotificationRead] = Field(default_factory=list)
+
+
+class NotificationGenerateResponse(BaseModel):
+    """Result of a scan: how many invoices were checked, how many new
+    notifications were created (duplicates were silently dropped)."""
+    company: str | None = None
+    scanned: int = 0
+    created: int = 0
+    created_ids: list[int] = Field(default_factory=list)
+
+
+class NotificationSummaryResponse(BaseModel):
+    company: str | None = None
+    total: int = 0
+    unread: int = 0
+    info: int = 0
+    warning: int = 0
+    critical: int = 0
+
+
+# ─── S-341: Çok Para Birimi FX Nakit Akışı ──────────────────────────────────
+
+class FxCurrencyBucket(BaseModel):
+    """Outstanding receivables in a single currency, with TRY conversion."""
+    currency: str
+    count: int = 0
+    outstanding: float = 0.0          # in the original currency
+    outstanding_try: float = 0.0      # converted to TRY at fx_rate
+    fx_rate: float = 1.0              # rate used (currency → TRY)
+    pct_of_total: float = 0.0         # share of total TRY-equivalent
+
+
+class FxReceivablesSummaryResponse(BaseModel):
+    """S-341 — Multi-currency outstanding receivables, broken down by currency
+    and normalized to TRY.
+
+    fx_exposure_pct reflects the share of outstanding receivables that sit in
+    non-TRY currencies — a leading indicator of FX risk.
+    """
+    company: str | None = None
+    total_outstanding_try: float = 0.0
+    fx_exposure_pct: float = 0.0      # % from non-TRY currencies
+    by_currency: list[FxCurrencyBucket] = Field(default_factory=list)
+    as_of_date: str = ""              # ISO date when rates snapshot was taken
+
+
+# ─── S-342: Senet / Çek / Bono Takibi ───────────────────────────────────────
+
+class FinancialInstrumentCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    kind: str = Field(..., pattern="^(senet|cek|bono)$")
+    amount: float = Field(..., gt=0)
+    issue_date: str = Field(..., min_length=1)
+    due_date: str = Field(..., min_length=1)
+    currency: str = Field(default="TRY", max_length=10)
+    customer_id: int | None = None
+    instrument_number: str = Field(default="", max_length=120)
+    payer_name: str = Field(default="", max_length=300)
+    bank_name: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=2000)
+
+
+class FinancialInstrumentStatusUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(cleared|bounced|cancelled)$")
+    cleared_date: str | None = None       # auto-defaults to today for 'cleared'
+
+
+class FinancialInstrumentRead(BaseModel):
+    id: int
+    company: str
+    customer_id: int | None = None
+    kind: str
+    instrument_number: str = ""
+    amount: float
+    currency: str = "TRY"
+    issue_date: str
+    due_date: str
+    payer_name: str = ""
+    bank_name: str = ""
+    status: str
+    cleared_date: str | None = None
+    notes: str = ""
+    created_at: int
+    updated_at: int
+
+
+class FinancialInstrumentListResponse(BaseModel):
+    total: int
+    instruments: list[FinancialInstrumentRead] = Field(default_factory=list)
+
+
+class FinancialInstrumentSummaryResponse(BaseModel):
+    """Status & kind breakdown for promissory notes / cheques / bonds.
+
+    overdue_pending = unpaid instruments whose due_date is already in the past.
+    by_kind_pending = how many of each kind are still pending (most useful slice
+    for an operations dashboard).
+    """
+    company: str | None = None
+    total_count: int = 0
+    pending_count: int = 0
+    cleared_count: int = 0
+    bounced_count: int = 0
+    cancelled_count: int = 0
+    pending_amount: float = 0.0
+    cleared_amount: float = 0.0
+    bounced_amount: float = 0.0
+    overdue_pending_count: int = 0
+    overdue_pending_amount: float = 0.0
+    by_kind_pending: dict[str, int] = Field(default_factory=dict)
+
+
+# ─── S-343: Tahsilat Kanalı (Delivery Log + Dispatch) ───────────────────────
+
+class DeliveryLogRead(BaseModel):
+    id: int
+    company: str
+    notification_id: int
+    channel: str                          # email | sms | whatsapp | console
+    provider: str                         # sendgrid | twilio | 360dialog | console
+    recipient: str = ""
+    status: str                           # queued | sent | failed | sandbox | skipped_*
+    error_message: str = ""
+    provider_message_id: str = ""
+    subject: str = ""
+    body: str = ""
+    sent_at: int | None = None
+    created_at: int
+
+
+class DeliveryLogListResponse(BaseModel):
+    total: int
+    entries: list[DeliveryLogRead] = Field(default_factory=list)
+
+
+class DispatchAttempt(BaseModel):
+    """One row from a dispatch result — what happened on each channel."""
+    channel: str
+    provider: str
+    recipient: str = ""
+    status: str
+    error_message: str = ""
+    provider_message_id: str = ""
+
+
+class DispatchResponse(BaseModel):
+    """Result of dispatching a single notification across configured channels."""
+    notification_id: int
+    company: str
+    attempted_channels: list[str] = Field(default_factory=list)
+    successful: int = 0
+    failed: int = 0
+    skipped: int = 0
+    attempts: list[DispatchAttempt] = Field(default_factory=list)

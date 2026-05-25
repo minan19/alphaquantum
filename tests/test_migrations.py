@@ -24,40 +24,23 @@ class MigrationManagerTests(unittest.TestCase):
 
     def test_apply_status_and_rollback(self) -> None:
         applied = self.manager.apply_all()
-        self.assertEqual(applied, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+        self.assertEqual(applied, list(range(1, 22)))
 
         status = self.manager.status()
-        self.assertEqual(len(status), 11)
-        self.assertTrue(status[0]["applied"])
-        self.assertTrue(status[1]["applied"])
-        self.assertTrue(status[2]["applied"])
-        self.assertTrue(status[3]["applied"])
-        self.assertTrue(status[4]["applied"])
-        self.assertTrue(status[5]["applied"])
-        self.assertTrue(status[6]["applied"])
-        self.assertTrue(status[7]["applied"])
-        self.assertTrue(status[8]["applied"])
-        self.assertTrue(status[9]["applied"])
-        self.assertTrue(status[10]["applied"])
+        self.assertEqual(len(status), 21)
+        for i in range(21):
+            self.assertTrue(status[i]["applied"])
 
         rolled_back = self.manager.rollback(steps=1)
-        self.assertEqual(rolled_back, [11])
+        self.assertEqual(rolled_back, [21])
 
         status_after = self.manager.status()
-        self.assertTrue(status_after[0]["applied"])
-        self.assertTrue(status_after[1]["applied"])
-        self.assertTrue(status_after[2]["applied"])
-        self.assertTrue(status_after[3]["applied"])
-        self.assertTrue(status_after[4]["applied"])
-        self.assertTrue(status_after[5]["applied"])
-        self.assertTrue(status_after[6]["applied"])
-        self.assertTrue(status_after[7]["applied"])
-        self.assertTrue(status_after[8]["applied"])
-        self.assertTrue(status_after[9]["applied"])
-        self.assertFalse(status_after[10]["applied"])
+        for i in range(20):
+            self.assertTrue(status_after[i]["applied"])
+        self.assertFalse(status_after[20]["applied"])
 
         reapplied = self.manager.apply_all()
-        self.assertEqual(reapplied, [11])
+        self.assertEqual(reapplied, [21])
 
 
 if __name__ == "__main__":

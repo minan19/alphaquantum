@@ -1,0 +1,130 @@
+# ==============================================================================
+# Alpha Quantum — docker-compose.yml (geliştirme ortamı)
+# 3 servis: postgres (hazır, kullanılmıyor henüz), redis, api
+#
+# Kullanım:
+#   cd docker/
+#   docker compose up
+#
+# Dikkat: GELİŞTİRME ortamıdır. Production'da:
+#   - şifreler ENV/secret manager'a taşınmalı
+#   - --reload kaldırılmalı
+#   - AQ_ENABLE_DEMO_USERS=false (zaten default)
+#
+# PORT STRATEJİSİ (host ↔ container):
+#   API        : 8000:8000
+#   PostgreSQL : 5434:5432   — yerel infra-postgres-1 (5433) ile çakışmaz
+#   Redis      : 6380:6379   — yerel infra-redis-1 (6379) ile çakışmaz
+#
+# Şu an SQLite kullanılıyor (AQ_DATABASE_PATH=/data/alpha_quantum.db),
+# Postgres container'ı gelecekteki geçişe hazırlık olarak ayakta.
+# ==============================================================================
+
+version: '3.9'
+
+services:
+
+  # ----------------------------------------------------------------------------
+  # PostgreSQL 16 — gelecekteki kalıcı veri katmanı
+  # Şu an kullanılmıyor; SQLite ile devam ediyoruz. Container hazır bekliyor.
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: alphaquantum-postgres
+    environment:
+      POSTGRES_DB: alphaquantum
+      POSTGRES_USER: alphaquantum
+      POSTGRES_PASSWORD: dev_password_change_in_prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alphaquantum"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Redis 7 — cache, rate limiting, leader lock
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: alphaquantum-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # API — FastAPI uygulaması
+  # ----------------------------------------------------------------------------
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: alphaquantum-api
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # SQLite — kalıcı volume mount edilen yola yazar
+      AQ_DATABASE_PATH: /data/alpha_quantum.db
+      AQ_REDIS_URL: redis://redis:6379/0
+      AQ_ENV: development
+      # GELİŞTİRME ORTAMI — production'da CSPRNG ile üret, min 32 karakter
+      AQ_JWT_SECRET: dev_secret_change_in_prod_min_32_chars_long
+      # Güvenlik: demo kullanıcılar production'da KESİNLİKLE false
+      AQ_ENABLE_DEMO_USERS: "false"
+      # GELİŞTİRME admin'i — production'da bu env'i set ETMEYİN; gerçek
+      # kullanıcıları POST /api/v1/users üzerinden, scoped olarak ekleyin.
+      AQ_AUTH_USERS: "admin:devpassword123:admin"
+      # Bildirim kanalı varsayılanı: sadece console (kazara outbound yok)
+      AQ_NOTIFICATION_CHANNELS: console
+      AQ_NOTIFICATION_SANDBOX: "true"
+      # Test/CI verileri için offline modlar
+      AQ_MARKET_OFFLINE: "true"
+      AQ_MACRO_OFFLINE: "true"
+      AQ_WEB_OFFLINE: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Kalıcı SQLite verisi (container silinse bile veri kalır)
+      - sqlite_data:/data
+      # Hot reload — kod değişikliği anında yansır (sadece dev)
+      - ../app:/app/app
+      - ../main.py:/app/main.py
+      - ../migrations:/app/migrations
+    # Geliştirme modunda --reload (Dockerfile CMD'deki --workers 2'yi ezer)
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Frontend — Next.js 15 + React 19 (S-362)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: alphaquantum-frontend
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      # Container içinden API'ye erişim — compose DNS adı kullanılır
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+# ------------------------------------------------------------------------------
+# Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  postgres_data:   # gelecekteki PG geçişi için hazır
+  sqlite_data:     # SQLite veritabanı kalıcılığı

@@ -1,11 +1,25 @@
 # Bandit policy for Alpha Quantum.
-# LOW accepted findings are suppressed centrally:
+# Centrally suppressed findings (each documented):
 # - B105: false positives on non-secret constants
 # - B311: simulation-only pseudo-random usage (non-cryptographic path)
+# - B608: f-string SQL where {where} is built ONLY from hardcoded column-name
+#         clauses (e.g. "company_name = ?"); user values always pass through
+#         ? placeholders + params list. Pre-push gate Faz 1 verified all
+#         repo files (crm/task/invoice/financial_instrument/notification/
+#         delivery_log) use this safe pattern. New repository files must
+#         follow the same convention or open per-line `# nosec B608`.
+# - B310: urllib.request.urlopen() called only in channel_providers.py with a
+#         hardcoded HTTPS URL (https://api.sendgrid.com/v3/mail/send). Schema
+#         is not user-controllable, no file:/ injection risk. Future providers
+#         must keep URLs hardcoded or open per-line `# nosec B310`.
 exclude_dirs:
   - tests
   - venv
   - __pycache__
+  - frontend
+  - node_modules
 skips:
   - B105
   - B311
+  - B608
+  - B310

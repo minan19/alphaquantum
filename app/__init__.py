@@ -17,11 +17,24 @@ from app.connector_adapters import ConnectorAdapterRegistry
 from app.connector_repository import ConnectorRepository
 from app.connector_sync_worker import ConnectorSyncWorker
 from app.config import get_settings
+from app.crm_repository import CRMRepository
+from app.task_repository import TaskRepository
+from app.invoice_repository import InvoiceRepository
+from app.financial_instrument_repository import FinancialInstrumentRepository
+from app.notification_repository import NotificationRepository
+from app.delivery_log_repository import DeliveryLogRepository
 from app.engines import (
+    CollectionsEngine,
     CompanyEngine,
+    ComparisonEngine,
     ConnectorEngine,
+    CRMEngine,
+    DashboardEngine,
+    DeliveryEngine,
+    TaskEngine,
     FeasibilityEngine,
     FinanceEngine,
+    FinancialInstrumentEngine,
     GlobalAnalysisEngine,
     HoldingEngine,
     InternationalOperationsEngine,
@@ -29,12 +42,16 @@ from app.engines import (
     InstitutionWebEngine,
     MarketDataEngine,
     MarketIntelligenceEngine,
+    NotificationEngine,
     ProcurementEngine,
+    ReportingEngine,
+    ScheduleEngine,
     StrategicEcosystemEngine,
     TenderEngine,
 )
 from app.feasibility_repository import FeasibilityRepository
 from app.finance_repository import FinanceRepository
+from app.scheduled_report_repository import ScheduledReportRepository
 from app.identity_repository import IdentityRepository
 from app.international_repository import InternationalProjectRepository
 from app.holding_repository import HoldingRepository
@@ -158,6 +175,35 @@ def create_app() -> FastAPI:
         app.state.international_operations_engine,
         app.state.procurement_engine,
     )
+    app.state.reporting_engine = ReportingEngine()
+    app.state.dashboard_engine = DashboardEngine()
+    app.state.comparison_engine = ComparisonEngine()
+    app.state.crm_repository = CRMRepository(settings.database_path)
+    app.state.task_repository = TaskRepository(settings.database_path)
+    app.state.invoice_repository = InvoiceRepository(settings.database_path)
+    app.state.notification_repository = NotificationRepository(settings.database_path)
+    app.state.financial_instrument_repository = FinancialInstrumentRepository(
+        settings.database_path
+    )
+    app.state.delivery_log_repository = DeliveryLogRepository(settings.database_path)
+    app.state.crm_engine = CRMEngine(app.state.crm_repository)
+    app.state.task_engine = TaskEngine(app.state.task_repository)
+    app.state.collections_engine = CollectionsEngine(app.state.invoice_repository)
+    app.state.notification_engine = NotificationEngine(
+        notif_repo=app.state.notification_repository,
+        invoice_repo=app.state.invoice_repository,
+    )
+    app.state.financial_instrument_engine = FinancialInstrumentEngine(
+        app.state.financial_instrument_repository
+    )
+    app.state.delivery_engine = DeliveryEngine(
+        delivery_log_repo=app.state.delivery_log_repository,
+        notification_repo=app.state.notification_repository,
+        crm_repo=app.state.crm_repository,
+        invoice_repo=app.state.invoice_repository,
+    )
+    app.state.scheduled_report_repository = ScheduledReportRepository(settings.database_path)
+    app.state.schedule_engine = ScheduleEngine(app.state.scheduled_report_repository)
     app.state.auth_service = AuthService(app.state.identity_repository, settings)
     app.state.audit_repository = AuditRepository(settings.database_path)
 
@@ -241,8 +287,15 @@ def _close_app_resources(app: FastAPI) -> None:
         "procurement_repository",
         "feasibility_repository",
         "international_repository",
+        "scheduled_report_repository",
         "identity_repository",
         "audit_repository",
+        "crm_repository",
+        "task_repository",
+        "invoice_repository",
+        "notification_repository",
+        "financial_instrument_repository",
+        "delivery_log_repository",
         "auth_limiter",
         "migration_manager",
     )

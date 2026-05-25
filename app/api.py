@@ -8,33 +8,11 @@ import sqlite3
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, Response
 
-from app.audit_repository import AuditRepository
-from app.auth_service import AuthService
-from app.engines import (
-    CollectionsEngine,
-    CompanyEngine,
-    ComparisonEngine,
-    ConnectorEngine,
-    CRMEngine,
-    DashboardEngine,
-    TaskEngine,
-    FeasibilityEngine,
-    FinanceEngine,
-    HoldingEngine,
-    InternationalOperationsEngine,
-    InstitutionWebEngine,
-    InventoryEngine,
-    MarketDataEngine,
-    DeliveryEngine,
-    FinancialInstrumentEngine,
-    MarketIntelligenceEngine,
-    NotificationEngine,
-    ProcurementEngine,
-    ReportingEngine,
-    ScheduleEngine,
-    StrategicEcosystemEngine,
-    TenderEngine,
-)
+# Engine + service + audit accessors `app/routers/_deps.py`'den import ediliyor (A5.1).
+# Sadece doğrudan class metodu olarak kullanılan engine'ler burada kalır:
+#   - FinanceEngine.build_overview() — sync class method
+#   - ReportingEngine() — direct instantiation
+from app.engines import FinanceEngine, ReportingEngine
 from app.models import (
     AnalysisResult,
     AuditLogRead,

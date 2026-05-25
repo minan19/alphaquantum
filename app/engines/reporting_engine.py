@@ -74,7 +74,7 @@ class ReportingEngine:
         totals: dict[str, float],
     ) -> bytes:
         from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment, numbers
+        from openpyxl.styles import Font, PatternFill, Alignment
 
         wb = Workbook()
         ws = wb.active

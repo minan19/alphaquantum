@@ -192,146 +192,44 @@ from app.services import AnalysisService, DashboardService
 router = APIRouter()
 logger = logging.getLogger("alpha_quantum.auth")
 
-
-def _repo(request: Request) -> CompanyRepository:
-    return request.app.state.company_repository
-
-
-def _analysis_service(request: Request) -> AnalysisService:
-    return request.app.state.analysis_service
-
-
-def _dashboard_service(request: Request) -> DashboardService:
-    return request.app.state.dashboard_service
-
-
-def _auth_service(request: Request) -> AuthService:
-    return request.app.state.auth_service
-
-
-def _audit_repo(request: Request) -> AuditRepository:
-    return request.app.state.audit_repository
-
-
-def _emit_audit_event(
-    request: Request,
-    user: UserProfile,
-    event_type: str,
-    event_detail: dict | None = None,
-) -> None:
-    request_id = getattr(request.state, "request_id", "")
-    _audit_repo(request).write_event(
-        username=user.username,
-        role=user.role,
-        event_type=event_type,
-        event_detail=event_detail,
-        request_id=str(request_id),
-        ip_address=request.client.host if request.client else None,
-    )
-
-
-def _settings(request: Request):
-    return request.app.state.settings
-
-
-def _migration_manager(request: Request) -> MigrationManager:
-    return request.app.state.migration_manager
-
-
-def _company_engine(request: Request) -> CompanyEngine:
-    return request.app.state.company_engine
-
-
-def _connector_engine(request: Request) -> ConnectorEngine:
-    return request.app.state.connector_engine
-
-
-def _inventory_engine(request: Request) -> InventoryEngine:
-    return request.app.state.inventory_engine
-
-
-def _finance_engine(request: Request) -> FinanceEngine:
-    return request.app.state.finance_engine
-
-
-def _reporting_engine(request: Request) -> ReportingEngine:
-    return request.app.state.reporting_engine
-
-
-def _dashboard_engine(request: Request) -> DashboardEngine:
-    return request.app.state.dashboard_engine
-
-
-def _comparison_engine(request: Request) -> ComparisonEngine:
-    return request.app.state.comparison_engine
-
-
-def _crm_engine(request: Request) -> CRMEngine:
-    return request.app.state.crm_engine
-
-
-def _task_engine(request: Request) -> TaskEngine:
-    return request.app.state.task_engine
-
-
-def _collections_engine(request: Request) -> CollectionsEngine:
-    return request.app.state.collections_engine
-
-
-def _notification_engine(request: Request) -> NotificationEngine:
-    return request.app.state.notification_engine
-
-
-def _financial_instrument_engine(request: Request) -> FinancialInstrumentEngine:
-    return request.app.state.financial_instrument_engine
-
-
-def _delivery_engine(request: Request) -> DeliveryEngine:
-    return request.app.state.delivery_engine
-
-
-def _market_engine(request: Request) -> MarketDataEngine:
-    return request.app.state.market_data_engine
-
-
-def _market_intelligence_engine(request: Request) -> MarketIntelligenceEngine:
-    return request.app.state.market_intelligence_engine
-
-
-def _global_engine(request: Request):
-    return request.app.state.global_analysis_engine
-
-
-def _institution_engine(request: Request) -> InstitutionWebEngine:
-    return request.app.state.institution_web_engine
-
-
-def _tender_engine(request: Request) -> TenderEngine:
-    return request.app.state.tender_engine
-
-
-def _procurement_engine(request: Request) -> ProcurementEngine:
-    return request.app.state.procurement_engine
-
-
-def _feasibility_engine(request: Request) -> FeasibilityEngine:
-    return request.app.state.feasibility_engine
-
-
-def _international_engine(request: Request) -> InternationalOperationsEngine:
-    return request.app.state.international_operations_engine
-
-
-def _ecosystem_engine(request: Request) -> StrategicEcosystemEngine:
-    return request.app.state.strategic_ecosystem_engine
-
-
-def _holding_engine(request: Request) -> HoldingEngine:
-    return request.app.state.holding_engine
-
-
-def _schedule_engine(request: Request) -> ScheduleEngine:
-    return request.app.state.schedule_engine
+# A5.1 — Helper accessors `app/routers/_deps.py`'ye taşındı (Mayıs 26, 2026).
+# Bu sayede yeni router modülleri (app/routers/<domain>.py) aynı helper'ları
+# tek bir yerden import edebilir. Geçiş döneminde api.py burada hâlâ duruyor;
+# `app/routers/__init__.py` migration sırasını dokümante ediyor.
+from app.routers._deps import (  # noqa: E402  (configured imports after router init)
+    _analysis_service,
+    _audit_repo,
+    _auth_service,
+    _collections_engine,
+    _company_engine,
+    _comparison_engine,
+    _connector_engine,
+    _crm_engine,
+    _dashboard_engine,
+    _dashboard_service,
+    _delivery_engine,
+    _ecosystem_engine,
+    _emit_audit_event,
+    _feasibility_engine,
+    _finance_engine,
+    _financial_instrument_engine,
+    _global_engine,
+    _holding_engine,
+    _institution_engine,
+    _international_engine,
+    _inventory_engine,
+    _market_engine,
+    _market_intelligence_engine,
+    _migration_manager,
+    _notification_engine,
+    _procurement_engine,
+    _reporting_engine,
+    _repo,
+    _schedule_engine,
+    _settings,
+    _task_engine,
+    _tender_engine,
+)
 
 
 # ── S-312: Scheduled Reports ──────────────────────────────────────────────────
@@ -3308,43 +3206,14 @@ def _parse_symbols_csv(raw: str) -> list[str]:
     return symbols
 
 
-def _scope_mode_from_scopes(scopes: list[str]) -> str:
-    if "*" in scopes:
-        return "holding"
-    if len(scopes) <= 1:
-        return "single"
-    return "multi"
-
-
-def _is_holding_scope(request: Request, user: UserProfile) -> bool:
-    return _auth_service(request).is_holding_scope(user.id)
-
-
-def _user_has_company_scope(request: Request, user: UserProfile, company_name: str) -> bool:
-    return _auth_service(request).user_has_company_scope(user.id, company_name)
-
-
-def _ensure_company_scope(request: Request, user: UserProfile, company_name: str) -> None:
-    if _user_has_company_scope(request, user, company_name):
-        return
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=f"User scope does not allow company: {company_name}",
-    )
-
-
-def _filter_companies_by_user_scope(
-    request: Request,
-    user: UserProfile,
-    companies: list[Company],
-) -> list[Company]:
-    if _is_holding_scope(request, user):
-        return companies
-    return [
-        company
-        for company in companies
-        if _user_has_company_scope(request, user, company.name)
-    ]
+# Scope helpers `app/routers/_deps.py`'den import ediliyor (A5.1)
+from app.routers._deps import (  # noqa: E402
+    _ensure_company_scope,
+    _filter_companies_by_user_scope,
+    _is_holding_scope,
+    _scope_mode_from_scopes,
+    _user_has_company_scope,
+)
 
 
 def _build_dashboard_data(request: Request) -> DashboardDataResponse:

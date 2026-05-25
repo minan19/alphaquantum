@@ -8,6 +8,7 @@ from app.engines.task_engine import TaskEngine
 from app.engines.connector_engine import ConnectorEngine
 from app.engines.feasibility_engine import FeasibilityEngine
 from app.engines.finance_engine import FinanceEngine
+from app.engines.financial_instrument_engine import FinancialInstrumentEngine
 from app.engines.global_analysis_engine import GlobalAnalysisEngine
 from app.engines.holding_engine import HoldingEngine
 from app.engines.international_operations_engine import InternationalOperationsEngine
@@ -32,6 +33,7 @@ __all__ = [
     "ConnectorEngine",
     "InventoryEngine",
     "FinanceEngine",
+    "FinancialInstrumentEngine",
     "FeasibilityEngine",
     "InternationalOperationsEngine",
     "MarketDataEngine",

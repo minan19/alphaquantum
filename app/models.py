@@ -1894,3 +1894,69 @@ class FxReceivablesSummaryResponse(BaseModel):
     fx_exposure_pct: float = 0.0      # % from non-TRY currencies
     by_currency: list[FxCurrencyBucket] = Field(default_factory=list)
     as_of_date: str = ""              # ISO date when rates snapshot was taken
+
+
+# ─── S-342: Senet / Çek / Bono Takibi ───────────────────────────────────────
+
+class FinancialInstrumentCreateRequest(BaseModel):
+    company: str = Field(..., min_length=1)
+    kind: str = Field(..., pattern="^(senet|cek|bono)$")
+    amount: float = Field(..., gt=0)
+    issue_date: str = Field(..., min_length=1)
+    due_date: str = Field(..., min_length=1)
+    currency: str = Field(default="TRY", max_length=10)
+    customer_id: int | None = None
+    instrument_number: str = Field(default="", max_length=120)
+    payer_name: str = Field(default="", max_length=300)
+    bank_name: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=2000)
+
+
+class FinancialInstrumentStatusUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(cleared|bounced|cancelled)$")
+    cleared_date: str | None = None       # auto-defaults to today for 'cleared'
+
+
+class FinancialInstrumentRead(BaseModel):
+    id: int
+    company: str
+    customer_id: int | None = None
+    kind: str
+    instrument_number: str = ""
+    amount: float
+    currency: str = "TRY"
+    issue_date: str
+    due_date: str
+    payer_name: str = ""
+    bank_name: str = ""
+    status: str
+    cleared_date: str | None = None
+    notes: str = ""
+    created_at: int
+    updated_at: int
+
+
+class FinancialInstrumentListResponse(BaseModel):
+    total: int
+    instruments: list[FinancialInstrumentRead] = Field(default_factory=list)
+
+
+class FinancialInstrumentSummaryResponse(BaseModel):
+    """Status & kind breakdown for promissory notes / cheques / bonds.
+
+    overdue_pending = unpaid instruments whose due_date is already in the past.
+    by_kind_pending = how many of each kind are still pending (most useful slice
+    for an operations dashboard).
+    """
+    company: str | None = None
+    total_count: int = 0
+    pending_count: int = 0
+    cleared_count: int = 0
+    bounced_count: int = 0
+    cancelled_count: int = 0
+    pending_amount: float = 0.0
+    cleared_amount: float = 0.0
+    bounced_amount: float = 0.0
+    overdue_pending_count: int = 0
+    overdue_pending_amount: float = 0.0
+    by_kind_pending: dict[str, int] = Field(default_factory=dict)

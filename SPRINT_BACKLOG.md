@@ -81,9 +81,9 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
 | S-311 | E-301 | Canlı grafik + sinyal + profesyonel rapor akışını tek ekranda birleştir | P1 | **Done** — Claude (23martclaude) |
 | S-312 | E-301 | Yönetici rapor zamanlama ve otomatik dağıtım | P1 | **Done** — Claude (23martclaude) |
 | S-313 | E-301 | Çoklu kurum ve ülke bazlı karşılaştırma paneli | P1 | **Done** — Claude (23martclaude) |
-| S-321 | PatronOS | CRM — Müşteri ve Teklif yönetimi | P1 | **Done** — Claude (23martclaude) |
-| S-322 | PatronOS | Tasks — Görev atama ve takip | P1 | **Done** — Claude (23martclaude) |
-| S-323 | PatronOS | Collections — Fatura ve alacak takibi | P1 | **Done** — Claude (23martclaude) |
+| S-321 | CorpOS | CRM — Müşteri ve Teklif yönetimi | P1 | **Done** — Claude (23martclaude) |
+| S-322 | CorpOS | Tasks — Görev atama ve takip | P1 | **Done** — Claude (23martclaude) |
+| S-323 | FinOS | Collections — Fatura ve alacak takibi | P1 | **Done** — Claude (23martclaude) |
 | S-331 | KOBİ Cash Flow | Alacak yaşlandırma analizi (30/60/90/90+ buckets) | P1 | **Done** — Claude (23martclaude) |
 | S-332 | KOBİ Cash Flow | Nakit akışı projeksiyonu (30/60/90 gün ileriye) | P1 | **Done** — Claude (23martclaude) |
 | S-333 | KOBİ Cash Flow | Müşteri ödeme risk skoru (0-100) | P1 | **Done** — Claude (23martclaude) |
@@ -134,7 +134,7 @@ Durum: Faz 2 başlatıldı, Faz 1 çıktıları korunuyor.
 
 ## 11 Mayıs 2026 İlerleme Notu
 
-- PatronOS/İşKomuta entegrasyonu başlatıldı: S-321, S-322, S-323 Done.
+- CorpOS / FinOS modül entegrasyonu başlatıldı: S-321, S-322 (CorpOS), S-323 (FinOS) Done.
 - Çalışma branch'i: `23martclaude`. Test sayısı: 155 → 211 (201 pass, 10 skip).
 - 3 yeni migration (016, 017, 018), 6 yeni kaynak dosyası, 55 yeni test.
 - Yeni endpoint'ler:

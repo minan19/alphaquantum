@@ -18,7 +18,7 @@ export function Sidebar() {
     <aside className="flex h-screen w-56 flex-col bg-brand-700 text-white">
       <div className="border-b border-brand-600 px-6 py-4">
         <h1 className="text-lg font-bold">Alpha Quantum</h1>
-        <p className="text-xs text-brand-100">PatronOS</p>
+        <p className="text-xs text-brand-100">CorpOS · FinOS</p>
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">

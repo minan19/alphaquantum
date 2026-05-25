@@ -10,7 +10,7 @@
 
 ## 1. Yönetici Özeti
 
-Alpha Quantum, tek bir holding sahibinin birden fazla şirketini merkezi bir platform üzerinden yönetmesine olanak tanıyan FastAPI tabanlı bir kurumsal yönetim sistemidir. Mart 2026'da başlayan aktif geliştirme, Mayıs 2026'ya kadar hızlanmış; test sayısı 29'dan 211'e çıkmış, 18 migration uygulanmış ve PatronOS (CRM/Tasks/Collections) modülleri tamamlanmıştır.
+Alpha Quantum, tek bir holding sahibinin birden fazla şirketini merkezi bir platform üzerinden yönetmesine olanak tanıyan FastAPI tabanlı bir kurumsal yönetim sistemidir. Mart 2026'da başlayan aktif geliştirme, Mayıs 2026'ya kadar hızlanmış; test sayısı 29'dan 211'e çıkmış, 18 migration uygulanmış ve CorpOS+FinOS (CRM/Tasks/Collections) modülleri tamamlanmıştır.
 
 **Güçlü Taraflar:** Proje mimarisi —engine/repository/api katmanlaması— son derece tutarlı ve genişletilebilir. Güvenlik temeli sağlam: PBKDF2-SHA256 parola hash'leme (260.000 iterasyon), özel JWT uygulaması, RBAC + permission matrisi, company-scope izolasyonu, audit log, Redis tabanlı rate limiting ve kapsamlı CI güvenlik kapısı gerçek bir production baseline'ı temsil etmektedir.
 
@@ -18,7 +18,7 @@ Alpha Quantum, tek bir holding sahibinin birden fazla şirketini merkezi bir pla
 
 **Multi-tenancy modeli** beklenmedik biçimde `company_name TEXT` discriminator tabanlıdır. Her tablo bir `company_name` sütunu taşır, ancak `companies` tablosuna foreign key bağlantısı yoktur. Bu yaklaşım esnek fakat referential integrity açısından kırılgandır. Şirket ismi değiştiğinde tüm ilişkili verileri cascade güncelleyecek bir mekanizma bulunmamaktadır.
 
-**Mevcut olgunluk seviyesi:** Modül bazında **Alpha/Beta** aralığında. Temel finans, procurement, feasibility, uluslararası operasyon modülleri Beta düzeyinde test edilmiştir. PatronOS (CRM/Tasks/Collections) Alpha düzeyindedir. Gerçek üretim ortamı için PostgreSQL geçişi, containerization ve OAuth2 implementasyonu zorunludur.
+**Mevcut olgunluk seviyesi:** Modül bazında **Alpha/Beta** aralığında. Temel finans, procurement, feasibility, uluslararası operasyon modülleri Beta düzeyinde test edilmiştir. CorpOS+FinOS (CRM/Tasks/Collections) Alpha düzeyindedir. Gerçek üretim ortamı için PostgreSQL geçişi, containerization ve OAuth2 implementasyonu zorunludur.
 
 **Entegrasyon hazırlığı (KOBİ Nakit Akışı Platformu ile):** Mimari temiz ve genişlemeye açık. 7/10 zorluk skoru — büyük engel OAuth2/SSO eksikliği ve SQLite. Ortak bir kullanıcı servisi (Identity Provider) kurulduğu anda entegrasyon akışı mantıklı hale gelir.
 
@@ -34,7 +34,7 @@ Alpha Quantum, tek bir holding sahibinin birden fazla şirketini merkezi bir pla
 | `LAYER_EXECUTION_PLAN.md` | KPI/SLA/owner bazlı yürütme planı | Okundu, içerik dokümantasyon düzeyinde. |
 | `TECHNICAL_AUDIT_2026-03-20.md` | Önceki denetim (Mart 2026) | **P0 borçlar kapatılmış** (company-scope, migration güvenliği, audit event). |
 | `PENTEST_REPORT_2026-03-20.md` | Güvenlik testi sonuçları (Mart 2026) | AQ-SEC-001 kapatılmış, AQ-SEC-002/003 kontrollü açık. Bulgular mevcut kodla uyuşuyor. |
-| `SPRINT_BACKLOG.md` | Sprint geçmişi (Faz 1 → PatronOS) | **En güncel kaynak.** Test sayısı ve sprint ilerlemesi doğrulandı. |
+| `SPRINT_BACKLOG.md` | Sprint geçmişi (Faz 1 → CorpOS+FinOS) | **En güncel kaynak.** Test sayısı ve sprint ilerlemesi doğrulandı. |
 | `KPI_SLA_DICTIONARY.md` | KPI/SLA hedef seti | Tanımsal; gerçek ölçüm dashboardı yok. |
 | `API_ERROR_BUDGET_POLICY.md` | Hata bütçesi politikası | Script mevcut (`scripts/api_error_budget_report.py`). |
 | `BACKUP_RESTORE_RUNBOOK.md` | Backup/restore adımları | Script mevcut, otomasyonu yok. |
@@ -151,9 +151,9 @@ Alpha Quantum, tek bir holding sahibinin birden fazla şirketini merkezi bir pla
 | Connector / Entegrasyon | `app/engines/connector_engine.py`, `migrations/009-011` | **Alpha** | 60% | Queue/DLQ/leader-lock hazır. Gerçek adaptör yok (mock). |
 | Raporlama (PDF/Excel) | `app/engines/reporting_engine.py`, `migrations/015` | **Alpha** | 65% | Export hazır. Scheduled report sistemi var. |
 | Dashboard / Canlı Sinyaller | `app/engines/dashboard_engine.py`, `comparison_engine.py` | **Alpha** | 60% | Server-side HTML. SSE/WebSocket yok. |
-| CRM (PatronOS S-321) | `app/engines/crm_engine.py`, `app/crm_repository.py`, `migrations/016` | **Alpha** | 65% | Müşteri + teklif yönetimi. Temel CRUD. |
-| Görev Yönetimi (PatronOS S-322) | `app/engines/task_engine.py`, `app/task_repository.py`, `migrations/017` | **Alpha** | 60% | Task atama, durum takibi. |
-| Tahsilat (PatronOS S-323) | `app/engines/collections_engine.py`, `app/invoice_repository.py`, `migrations/018` | **Alpha** | 65% | Fatura oluşturma, ödeme kayıt, gecikme tespiti. |
+| CRM (CorpOS S-321) | `app/engines/crm_engine.py`, `app/crm_repository.py`, `migrations/016` | **Alpha** | 65% | Müşteri + teklif yönetimi. Temel CRUD. |
+| Görev Yönetimi (CorpOS S-322) | `app/engines/task_engine.py`, `app/task_repository.py`, `migrations/017` | **Alpha** | 60% | Task atama, durum takibi. |
+| Tahsilat (CorpOS+FinOS S-323) | `app/engines/collections_engine.py`, `app/invoice_repository.py`, `migrations/018` | **Alpha** | 65% | Fatura oluşturma, ödeme kayıt, gecikme tespiti. |
 | Bildirim Motoru | **Yok** | **Planned** | 0% | Email/WhatsApp — Blueprint'te var, kodda yok. |
 
 ---
@@ -173,7 +173,7 @@ Temel tablolar:
 - **Feasibility/International:** `feasibility_reports`, `international_projects`
 - **Connector:** `integration_connectors`, `integration_sync_jobs`, `integration_worker_leases`
 - **Pazar:** `market_ohlcv_cache`
-- **PatronOS:** `customers`, `proposals`, `tasks` (eksik — tablo henüz oluşturulmamış), `invoices`
+- **CorpOS+FinOS:** `customers`, `proposals`, `tasks` (eksik — tablo henüz oluşturulmamış), `invoices`
 - **Diğer:** `audit_logs`, `schema_migrations`
 
 ### 6.2 Multi-Tenancy Modeli: "Shared Schema + company_name Discriminator"
@@ -355,12 +355,12 @@ user_company_scopes (user_id, company_scope)
 - Mart (pentest sonrası): 73 test
 - Mart (technical audit): 74 test
 - Nisan (P0/P1 borç): 155 test
-- Mayıs 11 (PatronOS): 211 test
+- Mayıs 11 (CorpOS+FinOS): 211 test
 
 ### 12.3 Test Derinliği
 - Her engine dosyası için ayrı test dosyası mevcut.
 - `test_api_auth.py`, `test_auth_limiter.py`, `test_auth_service.py` — auth katmanı kapsamlı.
-- `test_crm_engine.py`, `test_collections_engine.py`, `test_task_engine.py` — PatronOS test edilmiş.
+- `test_crm_engine.py`, `test_collections_engine.py`, `test_task_engine.py` — CorpOS+FinOS test edilmiş.
 - E2E test: Redis e2e smoke (`scripts/staging_redis_e2e_smoke.py`) var, ancak tam e2e test suite yok.
 - **Gerçek coverage oranı bilinmiyor** — coverage.py konfigürasyonu eksik.
 

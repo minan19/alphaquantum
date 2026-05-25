@@ -4,7 +4,7 @@ Alpha Quantum, **iki ana modülden** oluşan multi-tenant yönetim platformudur.
 Modüller aynı kod tabanında yaşar; lisans / feature flag ile bağımsız aktive
 edilebilir.
 
-## Modül 1: PatronOS — Çok Şirketli Yönetim
+## Modül 1: CorpOS — Çok Şirketli Yönetim
 
 > "Bir kişinin birden fazla şirketi, şubesi, markası olabilir; hepsini tek
 > platformdan yönetebilsin."
@@ -23,7 +23,7 @@ Kapsam:
 - Dashboard / Live Signals / Comparison
 - User / Auth / RBAC
 
-Bkz: [docs/modules/patronos/](./patronos/)
+Bkz: [docs/modules/corpos/](./corpos/)
 
 ---
 
@@ -65,18 +65,18 @@ Bkz: [docs/modules/finos/](./finos/)
 Veri akışı örnekleri:
 
 ```
-PatronOS  →  FinOS:
+CorpOS  →  FinOS:
     CRM müşterisi  →  FinOS müşteri risk skoru hesaplanırken referans
     Holding şirketleri → FinOS company comparison'da listelenir
 
-FinOS  →  PatronOS:
-    FinOS notification (overdue fatura)  →  PatronOS dashboard sinyali
-    FinOS receivables  →  PatronOS company karşılaştırma metriği
+FinOS  →  CorpOS:
+    FinOS notification (overdue fatura)  →  CorpOS dashboard sinyali
+    FinOS receivables  →  CorpOS company karşılaştırma metriği
 ```
 
 ## Mevcut sprint geçmişi (modül etiketli)
 
-PatronOS ailesi:
+CorpOS ailesi:
 - S-211/212/213/214 — Governance, KPI, SLA
 - S-221/222/223/224 — Backup, kapasite, API operations
 - S-231/232/233/234 — UX, ürün paketleme

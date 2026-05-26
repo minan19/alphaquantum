@@ -14,7 +14,6 @@ import {
   Download,
   FileText,
   Hash,
-  Mail,
   Receipt,
   Send,
   User as UserIcon,

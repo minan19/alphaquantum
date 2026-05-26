@@ -24,6 +24,8 @@ import { TestimonialCard, type Testimonial } from "@/components/landing/testimon
 import { FAQAccordion, type FAQItem } from "@/components/landing/faq-accordion";
 import { StickyDemoCTA } from "@/components/landing/sticky-demo-cta";
 import { LogoMarquee } from "@/components/landing/logo-marquee";
+import { RoiCalculator } from "@/components/landing/roi-calculator";
+import { ComparisonTable } from "@/components/landing/comparison-table";
 import { cn } from "@/lib/cn";
 
 const PARTNER_LOGOS = [
@@ -376,6 +378,27 @@ export default function PricingPage() {
               <p className="mt-2 text-sm text-aq-dust leading-relaxed">{f.text}</p>
             </motion.div>
           ))}
+        </div>
+      </section>
+
+      {/* ROI Calculator — interactive value preview */}
+      <section className="relative z-10 mx-auto max-w-6xl px-6 py-16">
+        <RoiCalculator />
+      </section>
+
+      {/* Karşılaştırma tablosu — Excel vs Paraşüt vs Alpha Quantum */}
+      <section className="relative z-10 mx-auto max-w-6xl px-6 py-16">
+        <div className="text-center mb-10">
+          <Badge tone="primary" className="mb-3">Neden biz?</Badge>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Mevcut araçlarla karşılaştırma
+          </h2>
+          <p className="mt-2 text-sm text-aq-dust">
+            Klasik muhasebe yazılımları vs Alpha Quantum
+          </p>
+        </div>
+        <div className="rounded-xl border border-aq-mist/40 bg-card/40 overflow-hidden">
+          <ComparisonTable />
         </div>
       </section>
 

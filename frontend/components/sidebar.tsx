@@ -53,6 +53,12 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { href: "/notifications",label: "Bildirimler",   icon: Bell, module: "finos", badge: "yeni" },
     ],
   },
+  {
+    group: "Hesap",
+    items: [
+      { href: "/settings",     label: "Ayarlar",       icon: Settings },
+    ],
+  },
 ];
 
 export function Sidebar({
@@ -153,7 +159,6 @@ export function Sidebar({
 
       {/* Footer */}
       <div className="border-t border-aq-mist/40 p-2 space-y-0.5">
-        <FooterItem icon={Settings} label="Ayarlar" collapsed={collapsed} />
         <FooterItem icon={HelpCircle} label="Yardım" collapsed={collapsed} />
         <button
           onClick={logout}

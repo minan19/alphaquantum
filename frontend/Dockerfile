@@ -8,9 +8,11 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-# Install with strict reproducibility. If package-lock.json missing, fall back
-# to a regular install so first-time builds don't hard-fail.
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+# `npm install` (vs ci) is more tolerant: handles platform-specific optional
+# deps (e.g. @emnapi/runtime on arm vs amd64) without exploding when the lock
+# file is generated on a different OS. For production deterministic builds
+# regenerate the lock on the target platform first, then switch to npm ci.
+RUN npm install --no-audit --no-fund
 
 FROM node:20-alpine AS builder
 WORKDIR /app

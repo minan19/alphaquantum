@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -40,6 +41,7 @@ function fmt(n: number, ccy: string) {
 }
 
 export default function InvoicesPage() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +188,7 @@ export default function InvoicesPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3, delay: 0.02 * idx }}
+                    onClick={() => router.push(`/invoices/${inv.id}`)}
                     className="border-b border-aq-mist/30 cursor-pointer transition-colors hover:bg-aq-quantum/5"
                   >
                     <td className="px-4 py-3">

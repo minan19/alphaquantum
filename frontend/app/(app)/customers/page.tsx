@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowUpDown,
@@ -28,6 +29,7 @@ type SortKey = "name" | "sector" | "consent";
 type SortDir = "asc" | "desc";
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -266,7 +268,12 @@ export default function CustomersPage() {
 
               <div className="flex gap-2 pt-2">
                 <Button variant="secondary" className="flex-1">Düzenle</Button>
-                <Button className="flex-1">Faturaları Gör</Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => router.push(`/customers/${selected.id}`)}
+                >
+                  Müşteri 360 Görünümü
+                </Button>
               </div>
             </div>
           </motion.aside>

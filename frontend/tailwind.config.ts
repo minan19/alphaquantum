@@ -85,6 +85,18 @@ export default {
           from: { opacity: "0", transform: "scale(0.96)" },
           to:   { opacity: "1", transform: "scale(1)" },
         },
+        "accordion-down": {
+          from: { height: "0" },
+          to:   { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to:   { height: "0" },
+        },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to:   { transform: "translateX(-50%)" },
+        },
       },
       boxShadow: {
         "quantum":     "0 0 0 1px rgba(91,71,251,0.18), 0 8px 32px -8px rgba(91,71,251,0.40)",

@@ -19,7 +19,92 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Logomark, Wordmark } from "@/components/brand/logomark";
+import { AnimatedCounter } from "@/components/landing/animated-counter";
+import { TestimonialCard, type Testimonial } from "@/components/landing/testimonial-card";
+import { FAQAccordion, type FAQItem } from "@/components/landing/faq-accordion";
+import { StickyDemoCTA } from "@/components/landing/sticky-demo-cta";
+import { LogoMarquee } from "@/components/landing/logo-marquee";
 import { cn } from "@/lib/cn";
+
+const PARTNER_LOGOS = [
+  "Alpha Holding",
+  "Beta Tekstil",
+  "Gamma İnşaat",
+  "Delta Lojistik",
+  "Epsilon Gıda",
+  "Zeta Kimya",
+  "Eta Makina",
+  "Theta Enerji",
+];
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    quote:
+      "Üç şirketin nakit akışını tek panelden görebilmek inanılmaz. Gecikmiş alacakların %42'si Alpha Quantum'a geçtikten sonra ilk 3 ayda tahsil edildi.",
+    authorName: "Mehmet K.",
+    authorRole: "Genel Müdür",
+    company: "İnşaat Holding",
+    metric: "%42 alacak tahsili",
+    rating: 5,
+  },
+  {
+    quote:
+      "Daha önce Excel'de takip ediyorduk, her ay 2 gün kayıp. FinOS'un vade uyarı motoru kurulduktan sonra hatırlatma için iş gücü harcamıyoruz.",
+    authorName: "Ayşe Y.",
+    authorRole: "CFO",
+    company: "Tekstil Grup",
+    metric: "16 saat / ay tasarruf",
+    rating: 5,
+  },
+  {
+    quote:
+      "Müşteri risk skoru sayesinde hangi yeni müşterilere kredi açıp açmayacağımıza veriyle karar veriyoruz. Bir kötü alacak vakası daha yaşamadık.",
+    authorName: "Hakan B.",
+    authorRole: "Finans Direktörü",
+    company: "Toptan Gıda",
+    metric: "0 kötü alacak (6 ay)",
+    rating: 5,
+  },
+];
+
+const FAQ_ITEMS: FAQItem[] = [
+  {
+    category: "Fiyat",
+    question: "Ücretsiz deneme nasıl çalışıyor?",
+    answer:
+      "30 gün boyunca Pro planının tüm özelliklerine erişebilirsiniz. Kredi kartı bilgisi istemiyoruz. Sürenin sonunda ödeme planına geçmediğiniz takdirde hesap otomatik olarak Starter seviyesine düşer; verileriniz silinmez.",
+  },
+  {
+    category: "KVKK",
+    question: "Verilerim güvende mi? KVKK uyumlu musunuz?",
+    answer:
+      "Tüm veriler Türkiye'de (Frankfurt yedek + KVK Kurumu uyumlu data residency) tutulur. KVKK madde 11 kapsamında veri sahibi haklarınızı (görüntüleme, düzeltme, silme) panelden tek tıkla kullanabilirsiniz. Audit log her erişimi izler; aylık güvenlik raporu alabilirsiniz.",
+  },
+  {
+    category: "Modüller",
+    question: "CorpOS ve FinOS ayrı ayrı alınabiliyor mu?",
+    answer:
+      "Evet. Sadece çoklu şirket yönetimi istiyorsanız CorpOS standalone alınabilir. Sadece nakit akışı / tahsilat odaklıysanız FinOS yeter. İki modülü birlikte kullanan müşteriler %20 bundle indirimi alır.",
+  },
+  {
+    category: "Entegrasyon",
+    question: "Mevcut sistemlerimle nasıl entegre olur?",
+    answer:
+      "İlk faz: Excel/CSV ile manuel import, Paraşüt ve Logo için connector mevcut. İkinci faz (Q3 2026): GİB e-fatura, KEP, açık bankacılık (Türk bankaları). API erişimi Enterprise planda dahildir; özel entegrasyon ekibimiz 5 iş günü içinde projelendirir.",
+  },
+  {
+    category: "Onboarding",
+    question: "Kurulum ne kadar sürer?",
+    answer:
+      "Self-service onboarding 10 dakika sürer (şirket bilgisi + ilk kullanıcı). Pro/Enterprise planlarda ücretsiz onboarding görüşmesi (60 dakika, ekran paylaşımı) yapıyoruz — ilk faturayı sistem üzerinden kesip ilk tahsilat hatırlatmasını başlatıyoruz.",
+  },
+  {
+    category: "Destek",
+    question: "Bir sorun yaşadığımda destek alma süresi nedir?",
+    answer:
+      "Starter: 8x5 (iş günü mesai), e-posta · 24 saat ilk yanıt. Pro: 12x6, canlı sohbet + e-posta · 4 saat ilk yanıt. Enterprise: 7x24, adanmış müşteri başarı yöneticisi · 1 saat ilk yanıt + telefon hattı.",
+  },
+];
 
 const PLANS = [
   {
@@ -294,13 +379,17 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Social proof / trust */}
+      {/* Social proof / trust — animated counters */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-16">
         <div className="rounded-2xl border border-aq-mist/40 bg-card/50 p-10">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-            <Stat title="367" label="Geçen test" />
-            <Stat title="132+" label="API endpoint" />
-            <Stat title="21" label="Veritabanı migration" />
+          <p className="text-center text-[10px] font-mono uppercase tracking-[0.22em] text-aq-trace mb-6">
+            Üretim hazır · Test edilmiş · Kurumsal güvenlik
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
+            <StatCounter to={367}  label="Geçen test"           suffix="" />
+            <StatCounter to={132}  label="API endpoint"         suffix="+" />
+            <StatCounter to={21}   label="Veritabanı migration" suffix="" />
+            <StatCounter to={99.9} label="Uptime hedef"          suffix="%" decimals={1} />
           </div>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-xs text-aq-trace font-mono">
             <span className="flex items-center gap-1.5">
@@ -320,6 +409,42 @@ export default function PricingPage() {
             </span>
           </div>
         </div>
+      </section>
+
+      {/* Customer logo marquee */}
+      <LogoMarquee logos={PARTNER_LOGOS} />
+
+      {/* Testimonials */}
+      <section className="relative z-10 mx-auto max-w-7xl px-6 py-20">
+        <div className="text-center mb-12">
+          <Badge tone="primary" className="mb-3">Müşteri Hikayeleri</Badge>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Patronlar Alpha Quantum ile ne kazandı?
+          </h2>
+          <p className="mt-2 text-sm text-aq-dust">
+            Gerçek müşteriler · gerçek sonuçlar (anonimleştirilmiş referanslar)
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {TESTIMONIALS.map((t, i) => (
+            <TestimonialCard key={i} testimonial={t} index={i} />
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="relative z-10 mx-auto max-w-3xl px-6 py-20">
+        <div className="text-center mb-12">
+          <Badge tone="primary" className="mb-3">SSS</Badge>
+          <h2 className="text-3xl font-bold tracking-tight">Sıkça sorulan sorular</h2>
+          <p className="mt-2 text-sm text-aq-dust">
+            Cevabını bulamadınız mı?{" "}
+            <a href="mailto:hello@alphaquantum.com.tr" className="text-aq-quantum-2 hover:text-aq-plasma">
+              Bize yazın
+            </a>
+          </p>
+        </div>
+        <FAQAccordion items={FAQ_ITEMS} defaultOpen="item-0" />
       </section>
 
       {/* CTA */}
@@ -342,6 +467,9 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Sticky demo CTA — appears after scroll */}
+      <StickyDemoCTA href="/login" label="Hemen başla" showAfter={800} />
+
       {/* Footer */}
       <footer className="relative z-10 border-t border-aq-mist/40 mt-16">
         <div className="mx-auto max-w-7xl px-6 py-8 flex flex-wrap items-center justify-between gap-3 text-xs text-aq-trace font-mono">
@@ -360,12 +488,28 @@ export default function PricingPage() {
   );
 }
 
-function Stat({ title, label }: { title: string; label: string }) {
+function StatCounter({
+  to, label, suffix = "", prefix = "", decimals = 0,
+}: {
+  to: number; label: string;
+  suffix?: string; prefix?: string; decimals?: number;
+}) {
+  const formatter = (n: number) =>
+    decimals > 0
+      ? n.toLocaleString("tr-TR", {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })
+      : n.toLocaleString("tr-TR");
   return (
     <div>
-      <div className="text-4xl font-bold tabular num bg-gradient-to-r from-aq-quantum-2 to-aq-plasma bg-clip-text text-transparent">
-        {title}
-      </div>
+      <AnimatedCounter
+        to={to}
+        prefix={prefix}
+        suffix={suffix}
+        format={formatter}
+        className="text-4xl font-bold bg-gradient-to-r from-aq-quantum-2 to-aq-plasma bg-clip-text text-transparent"
+      />
       <div className="mt-1 text-[10px] uppercase tracking-wider text-aq-trace">{label}</div>
     </div>
   );

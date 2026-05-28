@@ -47,6 +47,7 @@ from app.engines import (
     CompanyEngine,
     ComparisonEngine,
     ConnectorEngine,
+    ConsolidationEngine,
     CRMEngine,
     DashboardEngine,
     DeliveryEngine,
@@ -153,6 +154,11 @@ def create_app() -> FastAPI:
     app.state.holding_engine = HoldingEngine(
         app.state.holding_repository,
         app.state.company_repository,
+    )
+    # G1.2: Konsolide P&L motor (intercompany eliminasyonlu)
+    app.state.consolidation_engine = ConsolidationEngine(
+        finance_repo=app.state.finance_repository,
+        holding_repo=app.state.holding_repository,
     )
     app.state.connector_repository = ConnectorRepository(settings.database_path)
     app.state.connector_engine = ConnectorEngine(app.state.connector_repository)

@@ -137,6 +137,54 @@ class FinanceRepository:
     def today(self) -> str:
         return date.today().isoformat()
 
+    # ── G1.2: Consolidation aggregate ─────────────────────────────────────
+    #
+    # ConsolidationEngine için tek sorguda holding-wide breakdown.
+    # SQL tarafında SUM(CASE WHEN ...) ile external vs intercompany ayrılır,
+    # Python tarafında loop yapılmaz — büyük ledger'da kritik.
+    def aggregate_pl_for_companies(
+        self,
+        *,
+        company_names: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> list[dict[str, Any]]:
+        """Return per-company P&L breakdown for the given companies and date range.
+
+        Each row contains:
+          - company_name
+          - entry_type (income/expense)
+          - external_total (intercompany_flag = 0)
+          - intercompany_total (intercompany_flag = 1)
+
+        Empty company list returns empty list (no SQL hit).
+        """
+        if not company_names:
+            return []
+
+        # SQLite parametrized IN clause — placeholder per company
+        placeholders = ",".join("?" * len(company_names))
+        query = f"""
+            SELECT
+                company_name,
+                entry_type,
+                COALESCE(SUM(CASE WHEN intercompany_flag = 0 THEN amount ELSE 0 END), 0)
+                    AS external_total,
+                COALESCE(SUM(CASE WHEN intercompany_flag = 1 THEN amount ELSE 0 END), 0)
+                    AS intercompany_total
+            FROM finance_ledger_entries
+            WHERE company_name IN ({placeholders})
+              AND entry_date >= ?
+              AND entry_date <= ?
+            GROUP BY company_name, entry_type
+        """
+        params: list[Any] = [*company_names, start_date, end_date]
+
+        with self._lock:
+            rows = self._conn.execute(query, params).fetchall()
+
+        return [dict(row) for row in rows]
+
     # ── Recurring entries ─────────────────────────────────────────────────────
 
     def create_recurring_entry(

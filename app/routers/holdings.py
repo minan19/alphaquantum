@@ -33,6 +33,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.models import (
+    ConsolidatedPLResponse,
     EcosystemActivationRequest,
     EcosystemActivationResponse,
     EcosystemPortfolioActivationRequest,
@@ -51,6 +52,7 @@ from app.models import (
     UserProfile,
 )
 from app.routers._deps import (
+    _consolidation_engine,
     _ecosystem_engine,
     _ensure_company_scope,
     _holding_engine,
@@ -300,3 +302,41 @@ def onboard_holding_bulk(
             status_code=status.HTTP_409_CONFLICT,
             detail="Holding already exists",
         ) from exc
+
+
+# ── G1.2: Konsolide P&L (intercompany eliminasyonlu) ─────────────────────────
+
+
+@router.get(
+    "/api/v1/holdings/{holding_id}/consolidated-pl",
+    response_model=ConsolidatedPLResponse,
+    tags=["holding"],
+)
+def get_consolidated_pl(
+    holding_id: int,
+    start_date: str,
+    end_date: str,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_holdings")),
+) -> ConsolidatedPLResponse:
+    """Holding'in konsolide P&L'i — intercompany kalemler ELİMİNE edilmiş.
+
+    Karma holding (inşaat + lojistik + gıda + emlak) için kritik yetenek:
+    grup-içi alışverişler ("Lojistik AŞ Gıda AŞ'ye nakliye faturalandırıyor")
+    konsolide rakamdan düşülür, sadece üçüncü taraflarla yapılan iş kalır.
+
+    Sahne 2 ("10:30 - Yönetim toplantısı, Konsolide P&L") burayı çağırır.
+
+    Query params:
+      - start_date: ISO YYYY-MM-DD (inclusive)
+      - end_date:   ISO YYYY-MM-DD (inclusive, ≥ start_date)
+    """
+    del user
+    try:
+        return _consolidation_engine(request).consolidated_pl(
+            holding_id=holding_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as exc:
+        raise _value_error_to_http(exc) from exc

@@ -884,7 +884,6 @@ def health(request: Request) -> HealthResponse:
 from app.routers._deps import (  # noqa: E402
     _ensure_company_scope,
     _is_holding_scope,
-    _user_has_company_scope,
 )
 
 

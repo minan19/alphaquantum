@@ -160,8 +160,23 @@ export default function CashflowPage() {
                       }}
                       formatter={(v: number) => fmtTRY(v)}
                     />
-                    <Bar dataKey="expected_income"  fill="url(#gIncome)"  radius={[6, 6, 0, 0]} name="Gelir" />
-                    <Bar dataKey="expected_expense" fill="url(#gExpense)" radius={[6, 6, 0, 0]} name="Gider" />
+                    <Bar
+                      dataKey="expected_income"
+                      fill="url(#gIncome)"
+                      radius={[6, 6, 0, 0]}
+                      name="Gelir"
+                      animationDuration={1000}
+                      animationEasing="ease-out"
+                    />
+                    <Bar
+                      dataKey="expected_expense"
+                      fill="url(#gExpense)"
+                      radius={[6, 6, 0, 0]}
+                      name="Gider"
+                      animationDuration={1000}
+                      animationBegin={120}
+                      animationEasing="ease-out"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

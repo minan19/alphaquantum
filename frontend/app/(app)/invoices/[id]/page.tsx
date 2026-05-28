@@ -267,7 +267,7 @@ export default function InvoiceDetailPage() {
               <div>
                 <div className="flex items-baseline justify-between mb-1.5 text-xs">
                   <span className="text-aq-dust">Ödeme ilerlemesi</span>
-                  <span className="font-mono tabular num">{progress.toFixed(0)}%</span>
+                  <span className="font-mono num">{progress.toFixed(0)}%</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-aq-mist">
                   <motion.div

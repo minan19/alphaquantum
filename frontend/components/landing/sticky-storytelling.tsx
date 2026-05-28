@@ -204,6 +204,11 @@ export function StickyStorytelling() {
               5 sahne — sabah 08:00&apos;den akşam 17:00&apos;ye. Alpha Quantum
               ile yönetilen üç şirketli bir holding patronu için.
             </p>
+            {/* G1.6: API contract uyumluluk göstergesi — "vapor demo" değil */}
+            <div className="mt-4 inline-flex items-center gap-2 rounded-md border border-aq-fusion/25 bg-aq-fusion/5 px-2.5 py-1 text-[10px] font-mono text-aq-fusion/90">
+              <span className="grid h-1.5 w-1.5 place-items-center rounded-full bg-aq-fusion animate-pulse" />
+              Atlas Holding örneği · tüm rakamlar gerçek API contract&apos;ı ile uyumlu
+            </div>
           </header>
 
           <div className="space-y-12">

@@ -38,6 +38,7 @@ from app.models import (
     EcosystemActivationResponse,
     EcosystemPortfolioActivationRequest,
     EcosystemPortfolioActivationResponse,
+    GroupFXPositionResponse,
     HoldingBulkOnboardRequest,
     HoldingBulkOnboardResponse,
     HoldingCreateRequest,
@@ -55,6 +56,7 @@ from app.routers._deps import (
     _consolidation_engine,
     _ecosystem_engine,
     _ensure_company_scope,
+    _group_fx_engine,
     _holding_engine,
     _international_engine,
     _repo,
@@ -337,6 +339,42 @@ def get_consolidated_pl(
             holding_id=holding_id,
             start_date=start_date,
             end_date=end_date,
+        )
+    except ValueError as exc:
+        raise _value_error_to_http(exc) from exc
+
+
+# ── G1.4: Group FX Net Position ──────────────────────────────────────────────
+
+
+@router.get(
+    "/api/v1/holdings/{holding_id}/fx-position",
+    response_model=GroupFXPositionResponse,
+    tags=["holding"],
+)
+def get_group_fx_position(
+    holding_id: int,
+    request: Request,
+    as_of_date: str | None = Query(
+        default=None,
+        description="ISO YYYY-MM-DD; default = today",
+    ),
+    user: UserProfile = Depends(require_permissions("read_holdings")),
+) -> GroupFXPositionResponse:
+    """Holding-wide multi-currency net pozisyon + sensitivity scenarios.
+
+    Karma holding'te alt şirketler farklı para birimlerinde ticaret yapar:
+    Gıda AŞ USD ithalatı (short), İnşaat AŞ EUR ihracatı (long). Bu endpoint
+    holding seviyesinde net pozisyonu, TL devalüasyon senaryolarını ve
+    risk seviyesini döner.
+
+    Sahne 1 ("08:00 - Sabah kahvesi, FX değişimi") burayı çağırır.
+    """
+    del user
+    try:
+        return _group_fx_engine(request).group_fx_position(
+            holding_id=holding_id,
+            as_of_date=as_of_date,
         )
     except ValueError as exc:
         raise _value_error_to_http(exc) from exc

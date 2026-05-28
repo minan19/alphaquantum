@@ -13,6 +13,7 @@ from app.engines.feasibility_engine import FeasibilityEngine
 from app.engines.finance_engine import FinanceEngine
 from app.engines.financial_instrument_engine import FinancialInstrumentEngine
 from app.engines.global_analysis_engine import GlobalAnalysisEngine
+from app.engines.group_fx_engine import GroupFXEngine
 from app.engines.holding_engine import HoldingEngine
 from app.engines.intercompany_transfer_engine import IntercompanyTransferEngine
 from app.engines.international_operations_engine import InternationalOperationsEngine
@@ -45,6 +46,7 @@ __all__ = [
     "InternationalOperationsEngine",
     "MarketDataEngine",
     "GlobalAnalysisEngine",
+    "GroupFXEngine",
     "HoldingEngine",
     "IntercompanyTransferEngine",
     "InstitutionWebEngine",

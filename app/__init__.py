@@ -57,6 +57,7 @@ from app.engines import (
     FinanceEngine,
     FinancialInstrumentEngine,
     GlobalAnalysisEngine,
+    GroupFXEngine,
     HoldingEngine,
     IntercompanyTransferEngine,
     InternationalOperationsEngine,
@@ -218,6 +219,13 @@ def create_app() -> FastAPI:
     app.state.crm_repository = CRMRepository(settings.database_path)
     app.state.task_repository = TaskRepository(settings.database_path)
     app.state.invoice_repository = InvoiceRepository(settings.database_path)
+    # G1.4: Holding-wide multi-currency net pozisyon + sensitivity analysis
+    # Bağımlılıklar: invoice (AR), intercompany_transfer (cross-currency flow), holding
+    app.state.group_fx_engine = GroupFXEngine(
+        holding_repo=app.state.holding_repository,
+        invoice_repo=app.state.invoice_repository,
+        transfer_repo=app.state.intercompany_transfer_repository,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path

@@ -42,6 +42,7 @@ from app.engines import (
     FinanceEngine,
     FinancialInstrumentEngine,
     GlobalAnalysisEngine,
+    GroupFXEngine,
     HoldingEngine,
     InstitutionWebEngine,
     InternationalOperationsEngine,
@@ -171,6 +172,10 @@ def _intercompany_transfer_engine(request: Request) -> IntercompanyTransferEngin
         IntercompanyTransferEngine,
         request.app.state.intercompany_transfer_engine,
     )
+
+
+def _group_fx_engine(request: Request) -> GroupFXEngine:
+    return cast(GroupFXEngine, request.app.state.group_fx_engine)
 
 
 def _crm_engine(request: Request) -> CRMEngine:

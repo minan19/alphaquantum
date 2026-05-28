@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -742,7 +744,7 @@ class InternationalOperationsEngine:
         return "\n".join(lines)
 
     @staticmethod
-    def _to_stored_response(row: dict) -> InternationalProjectStoredResponse:
+    def _to_stored_response(row: dict[str, Any]) -> InternationalProjectStoredResponse:
         report = InternationalProjectReportResponse(**(row.get("report") or {}))
         return InternationalProjectStoredResponse(
             id=int(row["id"]),

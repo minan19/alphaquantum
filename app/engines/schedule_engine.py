@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from typing import Any
 import time
 from app.scheduled_report_repository import ScheduledReportRepository
 from app.models import (
@@ -55,7 +57,7 @@ class ScheduleEngine:
         return self._to_read(updated)
 
     @staticmethod
-    def _to_read(row: dict) -> ScheduledReportRead:
+    def _to_read(row: dict[str, Any]) -> ScheduledReportRead:
         import json as _json
         params = row.get("params_json")
         if isinstance(params, str):

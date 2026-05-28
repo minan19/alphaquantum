@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from typing import Any
+
+
 from datetime import datetime, timezone
 
 from app.engines.market_data_engine import MarketDataEngine
@@ -204,8 +207,8 @@ class GlobalAnalysisEngine:
         *,
         central_banks: list[CentralBankRateSnapshot],
         world_bank: list[WorldBankIndicatorSnapshot],
-        bank_signals: list,
-        index_signals: list,
+        bank_signals: list[Any],
+        index_signals: list[Any],
     ) -> str:
         score = 0
         for item in bank_signals + index_signals:
@@ -235,8 +238,8 @@ class GlobalAnalysisEngine:
         *,
         risk_level: str,
         central_banks: list[CentralBankRateSnapshot],
-        bank_signals: list,
-        index_signals: list,
+        bank_signals: list[Any],
+        index_signals: list[Any],
     ) -> str:
         hawkish = sum(1 for item in central_banks if item.trend == "UP")
         sell_count = sum(1 for item in (bank_signals + index_signals) if item.signal == "SELL")
@@ -257,8 +260,8 @@ class GlobalAnalysisEngine:
         executive_summary: str,
         central_banks: list[CentralBankRateSnapshot],
         world_bank: list[WorldBankIndicatorSnapshot],
-        bank_signals: list,
-        index_signals: list,
+        bank_signals: list[Any],
+        index_signals: list[Any],
     ) -> str:
         lines: list[str] = []
         lines.append("# Global Financial Intelligence Report")

@@ -20,10 +20,13 @@ incremental migration.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import HTTPException, Request, status
 from fastapi.responses import Response
 
 from app.audit_repository import AuditRepository
+from app.config import Settings
 from app.auth_service import AuthService
 from app.engines import (
     CollectionsEngine,
@@ -36,6 +39,7 @@ from app.engines import (
     FeasibilityEngine,
     FinanceEngine,
     FinancialInstrumentEngine,
+    GlobalAnalysisEngine,
     HoldingEngine,
     InstitutionWebEngine,
     InternationalOperationsEngine,
@@ -118,7 +122,7 @@ def _audit_repo(request: Request) -> AuditRepository:
     return request.app.state.audit_repository
 
 
-def _settings(request: Request):
+def _settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
@@ -188,7 +192,7 @@ def _market_intelligence_engine(request: Request) -> MarketIntelligenceEngine:
     return request.app.state.market_intelligence_engine
 
 
-def _global_engine(request: Request):
+def _global_engine(request: Request) -> GlobalAnalysisEngine:
     return request.app.state.global_analysis_engine
 
 
@@ -230,7 +234,7 @@ def _emit_audit_event(
     request: Request,
     user: UserProfile,
     event_type: str,
-    event_detail: dict | None = None,
+    event_detail: dict[str, Any] | None = None,
 ) -> None:
     """Write an audit log entry for a security-relevant action."""
     request_id = getattr(request.state, "request_id", "")

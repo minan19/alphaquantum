@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from collections import defaultdict
 from datetime import datetime, timezone
 import re
@@ -176,7 +178,7 @@ class ProcurementEngine:
             raise ValueError("Unsupported procurement strategy")
 
         candidates = self._repo.list_quote_candidates(request_id)
-        candidates_by_item: dict[int, list[dict]] = defaultdict(list)
+        candidates_by_item: dict[int, list[dict[str, Any]]] = defaultdict(list)
         for row in candidates:
             candidates_by_item[int(row["request_item_id"])].append(row)
 
@@ -358,7 +360,7 @@ class ProcurementEngine:
         if not selected_recommendations:
             raise ValueError("No recommended items found for purchase order generation.")
 
-        lines_by_vendor: dict[str, list[dict]] = defaultdict(list)
+        lines_by_vendor: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for item in selected_recommendations:
             selected_vendor = item.selected_vendor
             selected_unit_price = item.selected_unit_price
@@ -382,7 +384,7 @@ class ProcurementEngine:
 
         approved_at = int(time.time()) if payload.auto_approve else None
         status = "approved" if payload.auto_approve else "draft"
-        order_rows: list[dict] = []
+        order_rows: list[dict[str, Any]] = []
         for vendor_name, lines in lines_by_vendor.items():
             total_amount = round(sum(float(line["line_total"]) for line in lines), 2)
             order_rows.append(
@@ -477,7 +479,7 @@ class ProcurementEngine:
         )
 
 
-def _to_request_read(row: dict) -> ProcurementRequestRead:
+def _to_request_read(row: dict[str, Any]) -> ProcurementRequestRead:
     return ProcurementRequestRead(
         id=int(row["id"]),
         company=str(row["company_name"]),
@@ -507,7 +509,7 @@ def _to_request_read(row: dict) -> ProcurementRequestRead:
     )
 
 
-def _to_vendor_quote_read(row: dict) -> ProcurementVendorQuoteRead:
+def _to_vendor_quote_read(row: dict[str, Any]) -> ProcurementVendorQuoteRead:
     return ProcurementVendorQuoteRead(
         id=int(row["id"]),
         request_id=int(row["request_id"]),
@@ -535,7 +537,7 @@ def _to_vendor_quote_read(row: dict) -> ProcurementVendorQuoteRead:
     )
 
 
-def _to_purchase_order_read(row: dict) -> ProcurementPurchaseOrderRead:
+def _to_purchase_order_read(row: dict[str, Any]) -> ProcurementPurchaseOrderRead:
     return ProcurementPurchaseOrderRead(
         id=int(row["id"]),
         request_id=int(row["request_id"]),

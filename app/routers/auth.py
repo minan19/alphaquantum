@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 
@@ -89,7 +90,7 @@ def _raise_auth_limiter_unavailable(
     )
 
 
-def _to_role_read(row: dict) -> RoleRead:
+def _to_role_read(row: dict[str, Any]) -> RoleRead:
     return RoleRead(
         id=int(row["id"]),
         name=str(row["name"]),
@@ -100,7 +101,7 @@ def _to_role_read(row: dict) -> RoleRead:
 
 
 def _to_user_read(
-    row: dict, *, company_scopes: list[str] | None = None
+    row: dict[str, Any], *, company_scopes: list[str] | None = None
 ) -> UserRead:
     role = row.get("role_name", row.get("role"))
     scopes = company_scopes or ["*"]
@@ -117,7 +118,7 @@ def _to_user_read(
     )
 
 
-def _to_permission_read(row: dict) -> PermissionRead:
+def _to_permission_read(row: dict[str, Any]) -> PermissionRead:
     return PermissionRead(
         id=int(row["id"]),
         name=str(row["name"]),

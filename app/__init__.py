@@ -10,10 +10,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router
+from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
 from app.routers.collections import router as collections_router
 from app.routers.connectors import router as connectors_router
 from app.routers.crm import router as crm_router
+from app.routers.dashboard import router as dashboard_router
 from app.routers.finance import router as finance_router
 from app.routers.financial_instruments import router as financial_instruments_router
 from app.routers.holdings import router as holdings_router
@@ -21,6 +23,8 @@ from app.routers.kvkk import router as kvkk_router
 from app.routers.market import router as market_router
 from app.routers.notifications import router as notifications_router
 from app.routers.procurement import router as procurement_router
+from app.routers.reports import router as reports_router
+from app.routers.system import router as system_router
 from app.routers.schedule import router as schedule_router
 from app.routers.tasks import router as tasks_router
 from app.audit_repository import AuditRepository
@@ -275,10 +279,12 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(router)
+    app.include_router(admin_router)
     app.include_router(auth_router)
     app.include_router(collections_router)
     app.include_router(connectors_router)
     app.include_router(crm_router)
+    app.include_router(dashboard_router)
     app.include_router(finance_router)
     app.include_router(financial_instruments_router)
     app.include_router(holdings_router)
@@ -286,7 +292,9 @@ def create_app() -> FastAPI:
     app.include_router(market_router)
     app.include_router(notifications_router)
     app.include_router(procurement_router)
+    app.include_router(reports_router)
     app.include_router(schedule_router)
+    app.include_router(system_router)
     app.include_router(tasks_router)
 
     return app

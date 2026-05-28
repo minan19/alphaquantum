@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -2019,3 +2021,120 @@ class DispatchResponse(BaseModel):
     failed: int = 0
     skipped: int = 0
     attempts: list[DispatchAttempt] = Field(default_factory=list)
+
+
+# ─── A4: KVKK Uyum API Modelleri ─────────────────────────────────────────────
+
+class KVKKConsentRequest(BaseModel):
+    """User'ın kendi KVKK onay versiyonunu güncellemek için."""
+    consent_version: str = Field(default="v1", max_length=20)
+
+
+class KVKKConsentStatusResponse(BaseModel):
+    """User'ın mevcut KVKK consent durumu."""
+    user_id: int
+    consent_at: int = 0
+    consent_version: str = ""
+    last_data_access_at: int | None = None
+    last_data_export_at: int | None = None
+    anonymized_at: int | None = None
+
+
+class KVKKDataExportResponse(BaseModel):
+    """GET /me/data — kullanıcının kendi kişisel verilerinin JSON dökümü.
+
+    KVKK madde 11(b) — bilgi talep etme hakkı.
+    """
+    user_id: int
+    username: str
+    role: str
+    company_scopes: list[str] = Field(default_factory=list)
+    created_at: int
+    updated_at: int
+    kvkk_consent: dict[str, Any] = Field(default_factory=dict)
+    audit_trail: list[dict[str, Any]] = Field(default_factory=list)
+    related_records: dict[str, int] = Field(default_factory=dict)
+    exported_at: int                       # KVKK madde 12 izlenebilirlik
+    export_signature: str                  # HMAC-SHA256 (immutable proof)
+
+
+class KVKKDeletionRequestCreate(BaseModel):
+    reason: str = Field(default="", max_length=1000)
+
+
+class KVKKDeletionRequestRead(BaseModel):
+    id: int
+    user_id: int
+    requested_at: int
+    reason: str = ""
+    status: str                            # pending|approved|rejected|completed
+    decision_at: int | None = None
+    decision_by: int | None = None
+    decision_note: str = ""
+    completed_at: int | None = None
+    anonymized_fields: list[str] = Field(default_factory=list)
+    created_at: int
+    updated_at: int
+
+
+class KVKKDeletionRequestListResponse(BaseModel):
+    total: int
+    requests: list[KVKKDeletionRequestRead] = Field(default_factory=list)
+
+
+class KVKKDeletionDecisionRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approved|rejected)$")
+    decision_note: str = Field(default="", max_length=1000)
+
+
+class KVKKDataProcessingActivity(BaseModel):
+    """KVKK madde 13 — aydınlatma metni öğesi.
+
+    Sistemdeki her veri işleme aktivitesi için bir kayıt.
+    """
+    activity: str                          # örn. "Müşteri tahsilat takibi"
+    purpose: str                           # işleme amacı
+    legal_basis: str                       # KVKK madde 5/6 hukuki dayanak
+    data_categories: list[str]             # işlenen veri kategorileri
+    retention_period: str                  # saklama süresi
+    third_party_sharing: bool = False
+
+
+class KVKKDataProcessingActivitiesResponse(BaseModel):
+    company: str | None = None
+    activities: list[KVKKDataProcessingActivity] = Field(default_factory=list)
+    last_updated: str                      # ISO date
+
+
+class KVKKSecurityIncidentCreate(BaseModel):
+    """KVKK madde 12 — veri ihlali raporu açma."""
+    incident_type: str = Field(..., min_length=2, max_length=100)
+    severity: str = Field(..., pattern="^(low|medium|high|critical)$")
+    description: str = Field(..., min_length=10, max_length=4000)
+    affected_user_id: int | None = None
+    affected_record_count: int = Field(default=0, ge=0)
+
+
+class KVKKSecurityIncidentRead(BaseModel):
+    id: int
+    incident_type: str
+    severity: str
+    affected_user_id: int | None = None
+    affected_record_count: int = 0
+    description: str
+    reported_by: int | None = None
+    reported_at: int
+    kvkk_notification_required: bool = False
+    kvkk_notification_sent_at: int | None = None
+    kvkk_notification_reference: str = ""
+    data_subject_notified_at: int | None = None
+    resolution_status: str = "open"
+    resolution_summary: str = ""
+    resolved_at: int | None = None
+    created_at: int
+    updated_at: int
+
+
+class KVKKSecurityIncidentListResponse(BaseModel):
+    total: int
+    incidents: list[KVKKSecurityIncidentRead] = Field(default_factory=list)

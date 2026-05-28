@@ -4,6 +4,7 @@ from app.engines.comparison_engine import ComparisonEngine
 from app.engines.crm_engine import CRMEngine
 from app.engines.dashboard_engine import DashboardEngine
 from app.engines.delivery_engine import DeliveryEngine
+from app.engines.kvkk_engine import KVKKEngine
 from app.engines.reporting_engine import ReportingEngine
 from app.engines.task_engine import TaskEngine
 from app.engines.connector_engine import ConnectorEngine
@@ -30,6 +31,7 @@ __all__ = [
     "CRMEngine",
     "DashboardEngine",
     "DeliveryEngine",
+    "KVKKEngine",
     "ReportingEngine",
     "TaskEngine",
     "ConnectorEngine",

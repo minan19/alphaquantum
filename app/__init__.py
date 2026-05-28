@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router
+from app.routers.kvkk import router as kvkk_router
 from app.audit_repository import AuditRepository
 from app.auth_limiter import build_auth_attempt_limiter
 from app.auth_service import AuthService
@@ -23,6 +24,7 @@ from app.invoice_repository import InvoiceRepository
 from app.financial_instrument_repository import FinancialInstrumentRepository
 from app.notification_repository import NotificationRepository
 from app.delivery_log_repository import DeliveryLogRepository
+from app.kvkk_repository import KVKKRepository
 from app.engines import (
     CollectionsEngine,
     CompanyEngine,
@@ -40,6 +42,7 @@ from app.engines import (
     InternationalOperationsEngine,
     InventoryEngine,
     InstitutionWebEngine,
+    KVKKEngine,
     MarketDataEngine,
     MarketIntelligenceEngine,
     NotificationEngine,
@@ -186,6 +189,7 @@ def create_app() -> FastAPI:
         settings.database_path
     )
     app.state.delivery_log_repository = DeliveryLogRepository(settings.database_path)
+    app.state.kvkk_repository = KVKKRepository(settings.database_path)
     app.state.crm_engine = CRMEngine(app.state.crm_repository)
     app.state.task_engine = TaskEngine(app.state.task_repository)
     app.state.collections_engine = CollectionsEngine(app.state.invoice_repository)
@@ -201,6 +205,10 @@ def create_app() -> FastAPI:
         notification_repo=app.state.notification_repository,
         crm_repo=app.state.crm_repository,
         invoice_repo=app.state.invoice_repository,
+    )
+    app.state.kvkk_engine = KVKKEngine(
+        kvkk_repo=app.state.kvkk_repository,
+        identity_repo=app.state.identity_repository,
     )
     app.state.scheduled_report_repository = ScheduledReportRepository(settings.database_path)
     app.state.schedule_engine = ScheduleEngine(app.state.scheduled_report_repository)
@@ -255,6 +263,7 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(router)
+    app.include_router(kvkk_router)
 
     return app
 
@@ -296,6 +305,7 @@ def _close_app_resources(app: FastAPI) -> None:
         "notification_repository",
         "financial_instrument_repository",
         "delivery_log_repository",
+        "kvkk_repository",
         "auth_limiter",
         "migration_manager",
     )

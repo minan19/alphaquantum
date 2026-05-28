@@ -18,6 +18,7 @@ from app.routers.finance import router as finance_router
 from app.routers.holdings import router as holdings_router
 from app.routers.kvkk import router as kvkk_router
 from app.routers.market import router as market_router
+from app.routers.procurement import router as procurement_router
 from app.routers.schedule import router as schedule_router
 from app.routers.tasks import router as tasks_router
 from app.audit_repository import AuditRepository
@@ -280,6 +281,7 @@ def create_app() -> FastAPI:
     app.include_router(holdings_router)
     app.include_router(kvkk_router)
     app.include_router(market_router)
+    app.include_router(procurement_router)
     app.include_router(schedule_router)
     app.include_router(tasks_router)
 

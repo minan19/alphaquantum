@@ -18,7 +18,6 @@
 
 import { useRef } from "react";
 import {
-  AnimatePresence,
   motion,
   useScroll,
   useTransform,
@@ -390,25 +389,38 @@ function SceneMockupCrossfade({
 }: {
   sceneIndex: ReturnType<typeof useTransform<number, number>>;
 }) {
-  // Read current value into state via motion's onChange — but for simplicity
-  // use motion.div with key-based AnimatePresence
+  // FIX (B1-FIX-v2): Eski strateji `AnimatePresence mode="wait"` + tek key'li
+  // motion.div idi — scroll-driven sceneIndex hızla değişince exit animation
+  // tamamlanmadan enter başlamıyordu, mockup opacity 0'da takılıyordu.
+  //
+  // Yeni strateji: TÜM mockup'ları mount et, sadece aktif olanın opacity'sini
+  // 1 yap, diğerleri 0. CSS-only crossfade — hiçbir mount/unmount yok, animation
+  // hiçbir zaman "yarıda" kalmaz. Daha pahalı (5 mockup hep DOM'da) ama
+  // güvenilir + smooth. Compositor layer'lar stabil — scroll-driven UX'te kritik.
   const currentScene = useReactiveSceneIndex(sceneIndex);
-  const scene = SCENES[currentScene];
 
   return (
     <div className="relative h-full">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={scene.mockup}
-          initial={{ opacity: 0, scale: 0.96, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.98, y: -12 }}
-          transition={{ duration: 0.6, ease: easeEnterprise }}
-          className="absolute inset-0"
-        >
-          <DashboardMockup variant={scene.mockup} accent={scene.accent} />
-        </motion.div>
-      </AnimatePresence>
+      {SCENES.map((scene, idx) => {
+        const isActive = idx === currentScene;
+        return (
+          <motion.div
+            key={scene.mockup}
+            initial={false}
+            animate={{
+              opacity: isActive ? 1 : 0,
+              scale: isActive ? 1 : 0.97,
+              y: isActive ? 0 : 8,
+            }}
+            transition={{ duration: 0.5, ease: easeEnterprise }}
+            className="absolute inset-0"
+            style={{ pointerEvents: isActive ? "auto" : "none" }}
+            aria-hidden={!isActive}
+          >
+            <DashboardMockup variant={scene.mockup} accent={scene.accent} />
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
@@ -418,9 +430,22 @@ import { useEffect, useState } from "react";
 function useReactiveSceneIndex(
   motionValue: ReturnType<typeof useTransform<number, number>>,
 ): number {
-  const [val, setVal] = useState(motionValue.get());
+  // FIX (B1-FIX-v2): useTransform interpolated float dönebilir (1.0 → 1.5 →
+  // 1.99 gibi). Eski kod her float değişimde setVal çağırıyordu — animation
+  // cycle sürekli reset ediliyordu. Çözüm: Math.floor + clamp + functional
+  // update guard. Yalnızca tam sayı index değişiminde setState tetiklenir.
+  const [val, setVal] = useState(() => {
+    const v = motionValue.get();
+    return Math.min(Math.max(Math.floor(v), 0), SCENES.length - 1);
+  });
   useEffect(() => {
-    const unsub = motionValue.on("change", (v) => setVal(v));
+    const unsub = motionValue.on("change", (v) => {
+      const rounded = Math.min(
+        Math.max(Math.floor(v), 0),
+        SCENES.length - 1,
+      );
+      setVal((prev) => (prev !== rounded ? rounded : prev));
+    });
     return () => unsub();
   }, [motionValue]);
   return val;

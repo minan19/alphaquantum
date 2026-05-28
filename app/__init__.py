@@ -14,6 +14,7 @@ from app.routers.auth import router as auth_router
 from app.routers.crm import router as crm_router
 from app.routers.kvkk import router as kvkk_router
 from app.routers.schedule import router as schedule_router
+from app.routers.tasks import router as tasks_router
 from app.audit_repository import AuditRepository
 from app.auth_limiter import build_auth_attempt_limiter
 from app.auth_service import AuthService
@@ -270,6 +271,7 @@ def create_app() -> FastAPI:
     app.include_router(crm_router)
     app.include_router(kvkk_router)
     app.include_router(schedule_router)
+    app.include_router(tasks_router)
 
     return app
 

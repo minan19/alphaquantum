@@ -307,6 +307,91 @@ class IntercompanyTransferListResponse(BaseModel):
     transfers: list[IntercompanyTransferRead]
 
 
+# ── G1.4: Group FX Net Position ────────────────────────────────────────────
+#
+# Karma sektörlü holding'in en kritik finansal risk göstergesi: çoklu para
+# birimindeki net açık pozisyon. Bir alt şirket gıda ithalatı USD üzerinden,
+# diğer alt şirket inşaat ihracatı EUR üzerinden yapabilir. Holding seviyesinde
+# net pozisyon: USD short (ithalat>ihracat), EUR long (ihracat>ithalat).
+#
+# Hesaplama kaynakları:
+#   1. Invoices: open_amount (amount - paid_amount) — AR (receivable) pozisyon
+#   2. Intercompany transfers: completed cross-currency transfer'lar
+#   3. Sensitivity: TL devalüasyonu senaryolarında (%5/%10/%20) impact
+
+class FXCurrencyExposure(BaseModel):
+    """Tek para birimi için holding-wide net pozisyon."""
+
+    currency: str = Field(min_length=3, max_length=3)
+    fx_rate_to_try: float = Field(gt=0, description="1 unit currency = N TRY")
+
+    # AR (Accounts Receivable) breakdown
+    receivable_open: float = Field(ge=0, description="Toplam açık alacak (FX cinsi)")
+    receivable_overdue: float = Field(ge=0, description="Overdue açık alacak")
+
+    # Intercompany pozisyon (cross-currency transfer'lar)
+    intercompany_inflow: float = Field(ge=0)
+    intercompany_outflow: float = Field(ge=0)
+
+    # Net pozisyon (long = pozitif, short = negatif)
+    net_position_fx: float = Field(description="FX cinsinden net (long+/short-)")
+    net_position_try: float = Field(description="TRY karşılığı")
+
+    # Risk göstergesi
+    position_type: str = Field(
+        description="long | short | flat — net_position_fx işaretine göre"
+    )
+
+
+class FXSensitivityScenario(BaseModel):
+    """TL devalüasyonu senaryosunda holding-wide impact."""
+
+    scenario_name: str  # e.g. "TL %10 değer kaybı"
+    devaluation_pct: float = Field(description="0.05, 0.10, 0.20 gibi")
+    total_impact_try: float = Field(
+        description=(
+            "Senaryo gerçekleşirse holding-wide TRY etkisi. "
+            "Long pozisyonlar artar (+), short pozisyonlar büyür (-)."
+        )
+    )
+
+
+class GroupFXPositionResponse(BaseModel):
+    """Holding-wide FX net pozisyon raporu (sahne 1 dashboard widget'ı)."""
+
+    holding_id: int
+    holding_name: str
+    as_of_date: str  # ISO YYYY-MM-DD
+
+    # Per-currency breakdown (sıralı: |net_position_try| desc)
+    exposures: list[FXCurrencyExposure]
+
+    # Holding seviyesi özet
+    total_long_try: float = Field(
+        description="Pozitif net pozisyonların TRY toplamı"
+    )
+    total_short_try: float = Field(
+        description="Negatif net pozisyonların TRY mutlak toplamı"
+    )
+    net_exposure_try: float = Field(
+        description="total_long - total_short (holding-wide net)"
+    )
+
+    # Sensitivity analizi (3 standart senaryo)
+    sensitivity_scenarios: list[FXSensitivityScenario]
+
+    # Mali sağlık göstergesi
+    risk_level: str = Field(
+        description=(
+            "balanced | moderate | concentrated | critical — "
+            "|net_exposure_try| / (total_long + total_short) yüzdesine göre"
+        )
+    )
+
+    # Kural-tabanlı öneriler (Elite Foundation'da AI ile zenginleştirilecek)
+    recommendations: list[str]
+
+
 class FinanceRecurringEntryCreateRequest(BaseModel):
     company: str = Field(min_length=1)
     entry_type: str = Field(pattern="^(income|expense)$")

@@ -24,6 +24,8 @@ Frontend yeni endpoint'leri kullanır (/api/v1/analysis vs /analyze_all).
 """
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Request
 
 from app.models import (
@@ -115,7 +117,7 @@ def simulate_update(
 
 
 @router.get("/", tags=["legacy"])
-def root(request: Request) -> dict:
+def root(request: Request) -> dict[str, Any]:
     companies = _repo(request).list_companies()
     return {
         "message": "Alpha Quantum aktif",

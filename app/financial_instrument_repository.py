@@ -61,7 +61,7 @@ class FinancialInstrumentRepository:
             )
             row_id = int(cur.lastrowid)
             self._conn.commit()
-            return self._fetch(row_id)  # type: ignore[return-value]
+            return self._fetch(row_id)
 
     def get(self, instrument_id: int) -> dict[str, Any] | None:
         with self._lock:

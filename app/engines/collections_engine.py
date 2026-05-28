@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from datetime import date
 
 from app.currency_converter import CurrencyConverter
@@ -126,7 +128,7 @@ class CollectionsEngine:
         self,
         *,
         company: str | None,
-        recurring_rows: list[dict] | None = None,
+        recurring_rows: list[dict[str, Any]] | None = None,
     ) -> CashflowProjectionResponse:
         """S-332 — 30/60/90-day forward cashflow projection.
 
@@ -398,7 +400,7 @@ class CollectionsEngine:
         }.get(frequency, amount)
 
     @staticmethod
-    def _to_read(row: dict) -> InvoiceRead:
+    def _to_read(row: dict[str, Any]) -> InvoiceRead:
         return InvoiceRead(
             id=int(row["id"]),
             company=str(row["company_name"]),

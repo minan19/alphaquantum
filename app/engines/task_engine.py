@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app.task_repository import TaskRepository
 from app.models import (
     TaskCreateRequest,
@@ -80,7 +82,7 @@ class TaskEngine:
         )
 
     @staticmethod
-    def _to_read(row: dict) -> TaskRead:
+    def _to_read(row: dict[str, Any]) -> TaskRead:
         return TaskRead(
             id=int(row["id"]),
             company=str(row["company_name"]),

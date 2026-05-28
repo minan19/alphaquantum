@@ -55,7 +55,7 @@ class DeliveryLogRepository:
             )
             row_id = int(cur.lastrowid)
             self._conn.commit()
-            return self._fetch(row_id)  # type: ignore[return-value]
+            return self._fetch(row_id)
 
     def _fetch(self, log_id: int) -> dict[str, Any] | None:
         row = self._conn.execute(

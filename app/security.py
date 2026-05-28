@@ -6,7 +6,7 @@ import hmac
 import json
 import os
 import time
-from typing import Callable
+from typing import Any, Callable
 from uuid import uuid4
 
 from fastapi import Depends, HTTPException, Request, status
@@ -81,7 +81,7 @@ def create_access_token(
     return f"{encoded_header}.{encoded_payload}.{signature}"
 
 
-def decode_access_token(token: str, *, secret: str) -> dict:
+def decode_access_token(token: str, *, secret: str) -> dict[str, Any]:
     parts = token.split(".")
     if len(parts) != 3:
         raise HTTPException(
@@ -168,7 +168,7 @@ def get_current_user(
     return user
 
 
-def require_roles(*allowed_roles: str) -> Callable:
+def require_roles(*allowed_roles: str) -> Callable[..., Any]:
     def dependency(user: UserProfile = Depends(get_current_user)) -> UserProfile:
         if user.role not in allowed_roles:
             raise HTTPException(
@@ -180,7 +180,7 @@ def require_roles(*allowed_roles: str) -> Callable:
     return dependency
 
 
-def require_permissions(*required_permissions: str) -> Callable:
+def require_permissions(*required_permissions: str) -> Callable[..., Any]:
     def dependency(
         request: Request,
         user: UserProfile = Depends(get_current_user),

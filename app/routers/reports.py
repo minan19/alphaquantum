@@ -15,10 +15,12 @@ RBAC: read_finance (queries). `_ensure_company_scope` per-call.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 
-from app.models import UserProfile
+from app.models import FinanceBudgetVsActualResponse, UserProfile
 from app.routers._deps import (
     _build_export_response,
     _ensure_company_scope,
@@ -108,7 +110,9 @@ def export_ledger_pdf(
 # ── Budget vs Actual exports ─────────────────────────────────────────────────
 
 
-def _budget_vs_actual_payload(report) -> tuple[list[dict], dict]:
+def _budget_vs_actual_payload(
+    report: FinanceBudgetVsActualResponse,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Convert engine report to (items, totals) tuple — shared by XLSX/PDF."""
     items = [i.model_dump() for i in report.items]
     totals = {

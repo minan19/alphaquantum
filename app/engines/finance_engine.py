@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from datetime import date, timedelta
 
 from app.finance_repository import FinanceRepository
@@ -186,7 +188,7 @@ class FinanceEngine:
             raise ValueError("Date must be YYYY-MM-DD") from exc
 
     @staticmethod
-    def _to_ledger_read(row: dict) -> FinanceLedgerEntryRead:
+    def _to_ledger_read(row: dict[str, Any]) -> FinanceLedgerEntryRead:
         return FinanceLedgerEntryRead(
             id=int(row["id"]),
             company=str(row["company_name"]),
@@ -250,7 +252,7 @@ class FinanceEngine:
 
         for recurring in due:
             frequency = str(recurring["frequency"])
-            last_date_str: str | None = recurring.get("last_generated_date")  # type: ignore[assignment]
+            last_date_str: str | None = recurring.get("last_generated_date")
             start_date_str = str(recurring["start_date"])
 
             # Determine the next date to generate from
@@ -309,7 +311,7 @@ class FinanceEngine:
         raise ValueError(f"Unknown frequency: {frequency}")
 
     @staticmethod
-    def _to_recurring_read(row: dict) -> FinanceRecurringEntryRead:
+    def _to_recurring_read(row: dict[str, Any]) -> FinanceRecurringEntryRead:
         return FinanceRecurringEntryRead(
             id=int(row["id"]),
             company=str(row["company_name"]),
@@ -421,7 +423,7 @@ class FinanceEngine:
         )
 
     @staticmethod
-    def _to_budget_read(row: dict) -> FinanceBudgetRead:
+    def _to_budget_read(row: dict[str, Any]) -> FinanceBudgetRead:
         return FinanceBudgetRead(
             id=int(row["id"]),
             company=str(row["company_name"]),

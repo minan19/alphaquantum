@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.models import CompanyComparisonResponse, CompanyFinanceSnapshot
+from app.models import Company, CompanyComparisonResponse, CompanyFinanceSnapshot
 
 
 class ComparisonEngine:
@@ -9,7 +9,7 @@ class ComparisonEngine:
     @staticmethod
     def build_comparison(
         *,
-        companies: list,
+        companies: list[Company],
         cashflows: dict[str, object],
         budget_reports: dict[str, object],
         year: int | None,

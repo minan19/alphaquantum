@@ -78,7 +78,7 @@ class RedisAuthLimiterBackend:
             return
 
         try:
-            import redis  # type: ignore
+            import redis
         except ImportError as exc:
             raise RuntimeError(
                 "Redis backend requested but 'redis' package is not installed."

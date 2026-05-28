@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app.holding_repository import HoldingRepository
 from app.models import (
     HoldingBulkOnboardRequest,
@@ -162,7 +164,7 @@ def _recommendation_for_onboarding_status(status: str) -> str:
     return "Block onboarding until critical remediation plan is completed."
 
 
-def _to_holding_read(row: dict) -> HoldingRead:
+def _to_holding_read(row: dict[str, Any]) -> HoldingRead:
     return HoldingRead(
         id=int(row["id"]),
         name=str(row["name"]),
@@ -174,7 +176,7 @@ def _to_holding_read(row: dict) -> HoldingRead:
     )
 
 
-def _to_holding_company_read(row: dict) -> HoldingCompanyRead:
+def _to_holding_company_read(row: dict[str, Any]) -> HoldingCompanyRead:
     return HoldingCompanyRead(
         id=int(row["id"]),
         holding_id=int(row["holding_id"]),

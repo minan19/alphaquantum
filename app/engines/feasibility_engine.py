@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import math
@@ -687,7 +689,7 @@ class FeasibilityEngine:
         return "\n".join(lines)
 
     @staticmethod
-    def _to_stored_response(row: dict) -> FeasibilityReportStoredResponse:
+    def _to_stored_response(row: dict[str, Any]) -> FeasibilityReportStoredResponse:
         report_dict = row.get("report") or {}
         report = FeasibilityReportResponse(**report_dict)
         return FeasibilityReportStoredResponse(

@@ -1496,7 +1496,7 @@ class ScheduledReportCreateRequest(BaseModel):
     report_type: str = Field(..., pattern="^(ledger|budget_vs_actual)$")
     format: str = Field(..., pattern="^(xlsx|pdf)$")
     company_name: str | None = None
-    params_json: dict = Field(default_factory=dict)
+    params_json: dict[str, Any] = Field(default_factory=dict)
     schedule_cron: str = Field(..., min_length=1, max_length=60)
     recipient: str = Field(default="", max_length=255)
 
@@ -1506,7 +1506,7 @@ class ScheduledReportRead(BaseModel):
     report_type: str
     format: str
     company_name: str | None = None
-    params_json: dict = Field(default_factory=dict)
+    params_json: dict[str, Any] = Field(default_factory=dict)
     schedule_cron: str
     recipient: str
     is_active: bool

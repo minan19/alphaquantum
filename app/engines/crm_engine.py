@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app.crm_repository import CRMRepository
 from app.models import (
     CustomerCreateRequest,
@@ -146,7 +148,7 @@ class CRMEngine:
         return self._to_customer_read(row) if row else None
 
     @staticmethod
-    def _to_customer_read(row: dict) -> CustomerRead:
+    def _to_customer_read(row: dict[str, Any]) -> CustomerRead:
         return CustomerRead(
             id=int(row["id"]),
             company=str(row["company_name"]),
@@ -166,7 +168,7 @@ class CRMEngine:
         )
 
     @staticmethod
-    def _to_proposal_read(row: dict) -> ProposalRead:
+    def _to_proposal_read(row: dict[str, Any]) -> ProposalRead:
         return ProposalRead(
             id=int(row["id"]),
             company=str(row["company_name"]),

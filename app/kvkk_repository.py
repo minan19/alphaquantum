@@ -55,7 +55,7 @@ class KVKKRepository:
             )
             row_id = int(cur.lastrowid or 0)
             self._conn.commit()
-            return self._fetch_deletion(row_id)  # type: ignore[return-value]
+            return self._fetch_deletion(row_id)
 
     def get_deletion_request(self, request_id: int) -> dict[str, Any] | None:
         with self._lock:
@@ -171,7 +171,7 @@ class KVKKRepository:
             )
             row_id = int(cur.lastrowid or 0)
             self._conn.commit()
-            return self._fetch_incident(row_id)  # type: ignore[return-value]
+            return self._fetch_incident(row_id)
 
     def _fetch_incident(self, incident_id: int) -> dict[str, Any] | None:
         row = self._conn.execute(

@@ -10,8 +10,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router
-from app.routers.schedule import router as schedule_router
+from app.routers.auth import router as auth_router
 from app.routers.kvkk import router as kvkk_router
+from app.routers.schedule import router as schedule_router
 from app.audit_repository import AuditRepository
 from app.auth_limiter import build_auth_attempt_limiter
 from app.auth_service import AuthService
@@ -264,6 +265,7 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(router)
+    app.include_router(auth_router)
     app.include_router(kvkk_router)
     app.include_router(schedule_router)
 

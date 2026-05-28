@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router
 from app.routers.auth import router as auth_router
+from app.routers.collections import router as collections_router
 from app.routers.crm import router as crm_router
 from app.routers.kvkk import router as kvkk_router
 from app.routers.schedule import router as schedule_router
@@ -268,6 +269,7 @@ def create_app() -> FastAPI:
 
     app.include_router(router)
     app.include_router(auth_router)
+    app.include_router(collections_router)
     app.include_router(crm_router)
     app.include_router(kvkk_router)
     app.include_router(schedule_router)

@@ -14,6 +14,7 @@ from app.routers.auth import router as auth_router
 from app.routers.collections import router as collections_router
 from app.routers.crm import router as crm_router
 from app.routers.finance import router as finance_router
+from app.routers.holdings import router as holdings_router
 from app.routers.kvkk import router as kvkk_router
 from app.routers.schedule import router as schedule_router
 from app.routers.tasks import router as tasks_router
@@ -273,6 +274,7 @@ def create_app() -> FastAPI:
     app.include_router(collections_router)
     app.include_router(crm_router)
     app.include_router(finance_router)
+    app.include_router(holdings_router)
     app.include_router(kvkk_router)
     app.include_router(schedule_router)
     app.include_router(tasks_router)

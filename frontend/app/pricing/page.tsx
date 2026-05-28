@@ -29,6 +29,7 @@ import { ComparisonTable } from "@/components/landing/comparison-table";
 import { SegmentCards } from "@/components/landing/segment-cards";
 import { ScrollIndicator } from "@/components/landing/scroll-indicator";
 import { CaseStudiesGrid } from "@/components/landing/case-studies-grid";
+import { NewsletterSignup } from "@/components/landing/newsletter-signup";
 import { cn } from "@/lib/cn";
 
 const PARTNER_LOGOS = [
@@ -484,6 +485,11 @@ export default function PricingPage() {
           </p>
         </div>
         <FAQAccordion items={FAQ_ITEMS} defaultOpen="item-0" />
+      </section>
+
+      {/* Newsletter signup — bydecor inspired, KVKK-compliant */}
+      <section className="relative z-10 mx-auto max-w-3xl px-6 py-12">
+        <NewsletterSignup />
       </section>
 
       {/* CTA */}

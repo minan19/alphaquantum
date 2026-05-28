@@ -31,11 +31,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSpotlight } from "@/lib/use-spotlight";
 
-// Mock 30-day cashflow data — replaced by real API later
+// Mock 30-day cashflow data — replaced by real API later.
+// Deterministic pseudo-random (sin-based) to keep server + client renders
+// identical and avoid React hydration mismatches.
 const MOCK_CASHFLOW = Array.from({ length: 30 }).map((_, i) => {
   const day = i + 1;
-  const inflow = 12_000 + Math.sin(i / 3) * 4_000 + Math.random() * 3_000;
-  const outflow = 9_000 + Math.cos(i / 4) * 2_500 + Math.random() * 2_000;
+  const noise1 = (Math.sin(i * 12.9898) * 43758.5453) % 1;
+  const noise2 = (Math.sin(i * 78.233) * 43758.5453) % 1;
+  const inflow = 12_000 + Math.sin(i / 3) * 4_000 + Math.abs(noise1) * 3_000;
+  const outflow = 9_000 + Math.cos(i / 4) * 2_500 + Math.abs(noise2) * 2_000;
   return {
     day: `${day}.gün`,
     gelir: Math.round(inflow),

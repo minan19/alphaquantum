@@ -9,10 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, Response
 
 # Engine + service + audit accessors `app/routers/_deps.py`'den import ediliyor (A5.1).
-# Sadece doğrudan class metodu olarak kullanılan engine'ler burada kalır:
+# Sadece doğrudan class metodu olarak kullanılan engine burada kalır:
 #   - FinanceEngine.build_overview() — sync class method
-#   - ReportingEngine() — direct instantiation
-from app.engines import FinanceEngine, ReportingEngine
+# (ReportingEngine kullanımı A5.6'da `_build_export_response` üzerinden _deps.py'a taşındı.)
+from app.engines import FinanceEngine
 from app.models import (
     AnalysisResult,
     AuditLogRead,

@@ -57,7 +57,7 @@ class ScheduledReportRepository:
         report_type: str,
         format: str,
         company_name: str | None,
-        params_json: dict,
+        params_json: dict[str, Any],
         schedule_cron: str,
         recipient: str,
         created_by: str,

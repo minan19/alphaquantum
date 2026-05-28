@@ -18,6 +18,8 @@ Admin (manage_users):
 """
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.engines import KVKKEngine
@@ -43,7 +45,7 @@ router = APIRouter()
 
 
 def _kvkk_engine(request: Request) -> KVKKEngine:
-    return request.app.state.kvkk_engine
+    return cast(KVKKEngine, request.app.state.kvkk_engine)
 
 
 # ── Self-service endpoints (madde 11 user rights) ───────────────────────────

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 from threading import Lock
 from typing import Any
@@ -50,7 +52,7 @@ class NotificationRepository:
                  window_key, title, message, now, now),
             )
             self._conn.commit()
-            return int(cur.lastrowid) if cur.rowcount > 0 else None
+            return new_row_id(cur) if cur.rowcount > 0 else None
 
     def get(self, notification_id: int) -> dict[str, Any] | None:
         with self._lock:

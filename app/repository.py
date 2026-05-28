@@ -6,6 +6,8 @@ from threading import Lock
 import random
 import sqlite3
 
+from app._sqlite_helpers import new_row_id
+
 from app.models import Company, InventoryItem
 
 
@@ -92,7 +94,7 @@ class CompanyRepository:
                     "INSERT INTO companies(name, balance) VALUES(?, ?)",
                     (normalized, float(initial_balance)),
                 )
-                company_id = int(cursor.lastrowid)
+                company_id = new_row_id(cursor)
             else:
                 company_id = int(row["id"])
 
@@ -166,7 +168,7 @@ class CompanyRepository:
                 "INSERT INTO companies(name, balance) VALUES(?, ?)",
                 (company.name, company.balance),
             )
-            company_id = int(company_cursor.lastrowid)
+            company_id = new_row_id(company_cursor)
 
             for item in company.inventory:
                 self._conn.execute(

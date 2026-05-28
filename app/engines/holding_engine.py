@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypedDict
 
 from app.holding_repository import HoldingRepository
 from app.models import (
@@ -199,7 +199,15 @@ def _to_holding_company_read(row: dict[str, Any]) -> HoldingCompanyRead:
     )
 
 
-def _build_holding_summary(items: list[HoldingCompanyRead]) -> dict[str, float | int]:
+class _HoldingSummary(TypedDict):
+    total_companies: int
+    go_count: int
+    conditional_go_count: int
+    block_count: int
+    average_readiness_score: float
+
+
+def _build_holding_summary(items: list[HoldingCompanyRead]) -> _HoldingSummary:
     total = len(items)
     go_count = sum(1 for item in items if item.onboarding_status == "GO")
     conditional_count = sum(1 for item in items if item.onboarding_status == "CONDITIONAL_GO")
@@ -214,12 +222,12 @@ def _build_holding_summary(items: list[HoldingCompanyRead]) -> dict[str, float |
     }
 
 
-def _build_holding_recommendations(summary: dict[str, float | int]) -> list[str]:
-    total = int(summary["total_companies"])
-    go_count = int(summary["go_count"])
-    conditional_count = int(summary["conditional_go_count"])
-    block_count = int(summary["block_count"])
-    avg_score = float(summary["average_readiness_score"])
+def _build_holding_recommendations(summary: _HoldingSummary) -> list[str]:
+    total = summary["total_companies"]
+    go_count = summary["go_count"]
+    conditional_count = summary["conditional_go_count"]
+    block_count = summary["block_count"]
+    avg_score = summary["average_readiness_score"]
 
     notes = [
         f"Portfolio readiness average: {avg_score:.2f}/100",

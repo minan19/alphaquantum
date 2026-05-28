@@ -4,6 +4,8 @@ import json
 from threading import Lock
 from typing import Any
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 
 
@@ -67,7 +69,7 @@ class ProcurementRepository:
                     now,
                 ),
             )
-            request_id = int(cursor.lastrowid)
+            request_id = new_row_id(cursor)
 
             for item in items:
                 self._conn.execute(
@@ -251,7 +253,7 @@ class ProcurementRepository:
                     now,
                 ),
             )
-            quote_id = int(cursor.lastrowid)
+            quote_id = new_row_id(cursor)
 
             for item in quote_items:
                 request_item_id = int(item["request_item_id"])
@@ -460,7 +462,7 @@ class ProcurementRepository:
                         order.get("approved_at"),
                     ),
                 )
-                purchase_order_id = int(cursor.lastrowid)
+                purchase_order_id = new_row_id(cursor)
                 for line in order["lines"]:
                     self._conn.execute(
                         """

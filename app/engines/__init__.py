@@ -1,6 +1,7 @@
 from app.engines.collections_engine import CollectionsEngine
 from app.engines.company_engine import CompanyEngine
 from app.engines.comparison_engine import ComparisonEngine
+from app.engines.consolidation_engine import ConsolidationEngine
 from app.engines.crm_engine import CRMEngine
 from app.engines.dashboard_engine import DashboardEngine
 from app.engines.delivery_engine import DeliveryEngine
@@ -28,6 +29,7 @@ __all__ = [
     "CollectionsEngine",
     "CompanyEngine",
     "ComparisonEngine",
+    "ConsolidationEngine",
     "CRMEngine",
     "DashboardEngine",
     "DeliveryEngine",

@@ -157,6 +157,81 @@ class FinanceForecastResponse(BaseModel):
     model: str
 
 
+# ── G1.2: Konsolide P&L (intercompany eliminasyonlu) ──────────────────────
+#
+# Karma sektörlü holding için temel raporlama yeteneği. Her şirketin gelir/gider'i
+# iki bileşene ayrılır: external (üçüncü taraf) + intercompany (grup içi).
+# Konsolide P&L = sum(external) — yani intercompany kalemler ELİMİNE EDİLİR
+# çünkü holding seviyesinde grup-içi alışveriş "net sıfır" sonucu doğurur.
+#
+# Mimari: ledger entry'lerde intercompany_flag (migration 023) ile ayırt edilir.
+
+
+class ConsolidatedPLLine(BaseModel):
+    """Holding'e bağlı bir şirketin P&L breakdown'ı."""
+
+    company: str
+    gross_income: float = Field(ge=0, description="external + intercompany toplamı")
+    intercompany_income: float = Field(ge=0)
+    external_income: float = Field(ge=0)
+
+    gross_expense: float = Field(ge=0)
+    intercompany_expense: float = Field(ge=0)
+    external_expense: float = Field(ge=0)
+
+    net_total: float = Field(description="gross_income - gross_expense (eliminasyon öncesi)")
+    net_external: float = Field(description="external_income - external_expense (konsolide katkı)")
+
+
+class ConsolidatedPLElimination(BaseModel):
+    """Eliminasyon detayı — şeffaflık için ayrı raporlanır."""
+
+    total_intercompany_income: float = Field(ge=0)
+    total_intercompany_expense: float = Field(ge=0)
+    elimination_amount: float = Field(
+        description=(
+            "Tutarlı bir grupta intercompany_income ≈ intercompany_expense olmalı. "
+            "Aradaki fark veri tutarsızlığına işaret eder (raporlanır)."
+        )
+    )
+    is_balanced: bool = Field(
+        description=(
+            "True ise intercompany income vs expense epsilon (₺0.01) içinde — "
+            "G1.3 atomic write garanti eder. False ise legacy/manuel entry sorunu."
+        )
+    )
+
+
+class ConsolidatedPLResponse(BaseModel):
+    """Holding'in konsolide P&L raporu — intercompany eliminasyonlu."""
+
+    holding_id: int
+    holding_name: str
+    period_start: str  # ISO YYYY-MM-DD
+    period_end: str
+
+    # Per-company breakdown (sıralı: gross_income desc)
+    lines: list[ConsolidatedPLLine]
+
+    # Holding seviyesi toplam (eliminasyon öncesi)
+    gross_total_income: float
+    gross_total_expense: float
+    gross_net: float
+
+    # Holding seviyesi toplam (eliminasyon sonrası — GERÇEK konsolide rakam)
+    consolidated_income: float
+    consolidated_expense: float
+    consolidated_net: float
+
+    # Eliminasyon detayı (şeffaflık)
+    elimination: ConsolidatedPLElimination
+
+    # Mali sağlık göstergesi
+    health_status: str = Field(
+        description="strong | stable | watch | risk — consolidated_net'e göre"
+    )
+
+
 class FinanceRecurringEntryCreateRequest(BaseModel):
     company: str = Field(min_length=1)
     entry_type: str = Field(pattern="^(income|expense)$")

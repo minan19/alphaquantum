@@ -26,6 +26,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.responses import Response
 
 from app.audit_repository import AuditRepository
+from app.balance_service import BalanceService
 from app.config import Settings
 from app.auth_service import AuthService
 from app.engines import (
@@ -107,6 +108,11 @@ def _build_export_response(
 
 def _repo(request: Request) -> CompanyRepository:
     return cast(CompanyRepository, request.app.state.company_repository)
+
+
+def _balance_service(request: Request) -> BalanceService:
+    """G1.5: ledger-derived authoritative balance computation."""
+    return cast(BalanceService, request.app.state.balance_service)
 
 
 def _analysis_service(request: Request) -> AnalysisService:

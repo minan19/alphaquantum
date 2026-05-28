@@ -31,6 +31,7 @@ from app.routers.schedule import router as schedule_router
 from app.routers.tasks import router as tasks_router
 from app.audit_repository import AuditRepository
 from app.auth_limiter import build_auth_attempt_limiter
+from app.balance_service import BalanceService
 from app.auth_service import AuthService
 from app.connector_adapters import ConnectorAdapterRegistry
 from app.connector_repository import ConnectorRepository
@@ -154,6 +155,11 @@ def create_app() -> FastAPI:
     app.state.company_engine = CompanyEngine()
     app.state.inventory_engine = InventoryEngine()
     app.state.finance_engine = FinanceEngine(app.state.finance_repository)
+    # G1.5: Ledger-derived authoritative balance (Critical Finding #2 fix)
+    app.state.balance_service = BalanceService(
+        company_repo=app.state.company_repository,
+        finance_repo=app.state.finance_repository,
+    )
     app.state.holding_repository = HoldingRepository(settings.database_path)
     app.state.holding_engine = HoldingEngine(
         app.state.holding_repository,

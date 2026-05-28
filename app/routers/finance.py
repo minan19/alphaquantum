@@ -53,6 +53,7 @@ from app.models import (
     UserProfile,
 )
 from app.routers._deps import (
+    _balance_service,
     _collections_engine,
     _ensure_company_scope,
     _filter_companies_by_user_scope,
@@ -122,6 +123,41 @@ def finance_engine_overview(
         _repo(request).list_companies(),
     )
     return _finance_engine(request).build_overview(companies)
+
+
+# ── G1.5: Ledger-derived authoritative overview ──────────────────────────────
+
+
+@router.get(
+    "/api/v1/finance-engine/overview/ledger-derived",
+    response_model=FinanceOverviewResponse,
+    tags=["finance_engine"],
+)
+def finance_engine_overview_ledger_derived(
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_finance")),
+) -> FinanceOverviewResponse:
+    """Ledger-derived authoritative finance overview.
+
+    G1.5 — Critical Finding #2 fix. Mevcut `/overview` endpoint companies
+    tablosundaki statik balance field'ını kullanıyor. Bu endpoint
+    BalanceService ile her şirketin balance'ını ledger'dan türetir:
+
+        balance = initial_balance (companies.balance) + Σ income − Σ expense
+
+    Aynı response model (FinanceOverviewResponse) — frontend için
+    transparant. Veri tutarsızlığı yok, tek source of truth.
+    """
+    companies = _filter_companies_by_user_scope(
+        request,
+        user,
+        _repo(request).list_companies(),
+    )
+    # Ledger-derived balance ile companies'i güncelle
+    updated = _balance_service(request).compute_companies_with_ledger_balance(
+        companies
+    )
+    return _finance_engine(request).build_overview(updated)
 
 
 # ── Ledger (CRUD) ────────────────────────────────────────────────────────────

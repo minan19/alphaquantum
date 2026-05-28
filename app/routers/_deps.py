@@ -22,6 +22,21 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request, status
 
+# ── Common HTTP helpers ──────────────────────────────────────────────────────
+
+
+def _value_error_to_http(exc: ValueError) -> HTTPException:
+    """Translate engine-layer ValueError into FastAPI HTTPException.
+
+    Convention: "not found" → 404, everything else → 400. Engines should raise
+    ValueError with descriptive text; this helper preserves the message in
+    `detail` so the API client can surface it.
+    """
+    text = str(exc)
+    if "not found" in text.lower():
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=text)
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=text)
+
 from app.audit_repository import AuditRepository
 from app.auth_service import AuthService
 from app.engines import (

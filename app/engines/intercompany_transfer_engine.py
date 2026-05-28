@@ -22,6 +22,8 @@ Mimari notlar:
 """
 from __future__ import annotations
 
+from typing import Any
+
 from app.holding_repository import HoldingRepository
 from app.intercompany_transfer_repository import IntercompanyTransferRepository
 from app.models import (
@@ -189,7 +191,7 @@ class IntercompanyTransferEngine:
         )
 
 
-def _to_read(row: dict) -> IntercompanyTransferRead:
+def _to_read(row: dict[str, Any]) -> IntercompanyTransferRead:
     """SQLite row → Pydantic IntercompanyTransferRead."""
     return IntercompanyTransferRead(
         id=int(row["id"]),

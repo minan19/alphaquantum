@@ -116,7 +116,6 @@ logger = logging.getLogger("alpha_quantum.auth")
 from app.routers._deps import (  # noqa: E402  (configured imports after router init)
     _analysis_service,
     _audit_repo,
-    _collections_engine,
     _company_engine,
     _comparison_engine,
     _connector_engine,
@@ -1952,7 +1951,6 @@ def _parse_symbols_csv(raw: str) -> list[str]:
 # Scope helpers `app/routers/_deps.py`'den import ediliyor (A5.1)
 from app.routers._deps import (  # noqa: E402
     _ensure_company_scope,
-    _filter_companies_by_user_scope,
     _is_holding_scope,
     _user_has_company_scope,
 )

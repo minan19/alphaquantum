@@ -384,3 +384,101 @@ export function fetchFxSummary(
     params: { company },
   });
 }
+
+// ── KVKK / Data subject rights (A4) ────────────────────────────────────────
+
+export interface KVKKConsentStatus {
+  user_id: number;
+  consent_at: number;            // epoch seconds (0 = no consent yet)
+  consent_version: string;
+  last_data_access_at: number | null;
+  last_data_export_at: number | null;
+  anonymized_at: number | null;
+}
+
+export function fetchConsentStatus(): Promise<KVKKConsentStatus> {
+  return apiRequest<KVKKConsentStatus>("/api/v1/me/consent");
+}
+
+export function recordConsent(version = "v1"): Promise<KVKKConsentStatus> {
+  return apiRequest<KVKKConsentStatus>("/api/v1/me/consent", {
+    method: "POST",
+    body: { consent_version: version },
+  });
+}
+
+export interface KVKKDataExport {
+  user_id: number;
+  username: string;
+  role: string;
+  company_scopes: string[];
+  created_at: number;
+  updated_at: number;
+  kvkk_consent: {
+    consent_at: number;
+    consent_version: string;
+    last_export_at: number;
+  };
+  audit_trail: unknown[];
+  related_records: Record<string, number>;
+  exported_at: number;
+  export_signature: string;     // "hmac-sha256=…"
+}
+
+export function fetchMyDataExport(): Promise<KVKKDataExport> {
+  return apiRequest<KVKKDataExport>("/api/v1/me/data");
+}
+
+export interface KVKKDeletionRequest {
+  id: number;
+  user_id: number;
+  requested_at: number;
+  reason: string;
+  status: "pending" | "approved" | "rejected" | "completed";
+  decision_at: number | null;
+  decision_by: number | null;
+  decision_note: string;
+  completed_at: number | null;
+  anonymized_fields: string[];
+  created_at: number;
+  updated_at: number;
+}
+
+export interface KVKKDeletionRequestList {
+  total: number;
+  requests: KVKKDeletionRequest[];
+}
+
+export function createDeletionRequest(
+  reason: string,
+): Promise<KVKKDeletionRequest> {
+  return apiRequest<KVKKDeletionRequest>("/api/v1/me/deletion-request", {
+    method: "POST",
+    body: { reason },
+  });
+}
+
+export function fetchMyDeletionRequests(): Promise<KVKKDeletionRequestList> {
+  return apiRequest<KVKKDeletionRequestList>("/api/v1/me/deletion-request");
+}
+
+export interface KVKKProcessingActivity {
+  activity: string;
+  purpose: string;
+  legal_basis: string;
+  data_categories: string[];
+  retention_period: string;
+  third_party_sharing: boolean;
+}
+
+export interface KVKKProcessingActivitiesResponse {
+  company: string | null;
+  activities: KVKKProcessingActivity[];
+  last_updated: string;
+}
+
+export function fetchProcessingActivities(): Promise<KVKKProcessingActivitiesResponse> {
+  return apiRequest<KVKKProcessingActivitiesResponse>(
+    "/api/v1/data-processing-activities",
+  );
+}

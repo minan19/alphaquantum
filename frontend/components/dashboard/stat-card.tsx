@@ -57,7 +57,7 @@ export function StatCard({
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-aq-dust">{label}</p>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-bold tabular num tracking-tight">
+              <span className="text-3xl font-bold num tracking-tight">
                 {value}
               </span>
               {unit && (
@@ -80,7 +80,7 @@ export function StatCard({
             ) : (
               <ArrowDownRight className="h-3.5 w-3.5 text-aq-fission" />
             )}
-            <span className={cn("font-mono tabular num", delta >= 0 ? "text-aq-fusion" : "text-aq-fission")}>
+            <span className={cn("font-mono num", delta >= 0 ? "text-aq-fusion" : "text-aq-fission")}>
               {delta >= 0 ? "+" : ""}{delta.toFixed(1)}%
             </span>
             <span className="text-aq-trace">geçen aya göre</span>

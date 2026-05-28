@@ -144,8 +144,10 @@
       rgba(20, 32, 58, 0.65),
       rgba(10, 18, 38, 0.55)
     );
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    /* Premium fintech blur — Mercury/Ramp seviyesi. Saturate 180% renkleri
+       canlandırır, blur 20px doc önerisi. */
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid rgba(91, 71, 251, 0.12);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.04) inset,
@@ -251,14 +253,88 @@
 
 @layer utilities {
   /* Physics-inspired easing curves */
-  .ease-quantum { transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1); }
-  .ease-orbit   { transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
-  .ease-warp    { transition-timing-function: cubic-bezier(0.87, 0, 0.13, 1); }
+  .ease-quantum    { transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1); }
+  .ease-orbit      { transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  .ease-warp       { transition-timing-function: cubic-bezier(0.87, 0, 0.13, 1); }
+  /* Enterprise-grade easeOutExpo — for slow, premium entrance reveals.
+     Used by section reveals, hero cascade. Slower & gentler than ease-quantum. */
+  .ease-enterprise { transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
 
-  /* Mono numerals for stats */
+  /* Mono numerals for stats — finansal hizalama */
   .num {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
+  }
+
+  /* CTA fill — sol→sağ doldurma efekti (magnetic YOK, enterprise için).
+     Use: <button class="cta-fill"><span>Demo Talep Et</span></button>
+     Renk override: .cta-fill::before background ile değiştir. */
+  .cta-fill {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .cta-fill::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.12);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: -1;
+  }
+  .cta-fill:hover::before {
+    transform: scaleX(1);
+  }
+  .cta-fill > * {
+    position: relative;
+  }
+
+  /* Spotlight card — cursor-following radial-gradient (Linear/Vercel stil).
+     Subtle 0.08 opacity, enterprise calm. Mouse pozisyonu --mx, --my CSS
+     variable'ları ile beslenir (mousemove handler gerekli). */
+  .spotlight-card {
+    position: relative;
+    isolation: isolate;
+  }
+  .spotlight-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      400px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(124, 96, 255, 0.08),
+      transparent 40%
+    );
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  .spotlight-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Form input underline — focus'ta sol→sağ çizilme (4. katman 8.3). */
+  .underline-input {
+    position: relative;
+  }
+  .underline-input::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: rgb(var(--aq-quantum));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .underline-input:focus-within::after {
+    transform: scaleX(1);
   }
 }
 

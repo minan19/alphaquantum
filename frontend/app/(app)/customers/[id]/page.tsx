@@ -203,7 +203,7 @@ export default function CustomerDetailPage() {
                 <>
                   <div className="flex items-end justify-between mb-3">
                     <div>
-                      <div className="text-4xl font-bold tabular num">{risk.score.toFixed(0)}</div>
+                      <div className="text-4xl font-bold num">{risk.score.toFixed(0)}</div>
                       <div className="text-[10px] uppercase tracking-wider text-aq-trace mt-0.5">
                         / 100
                       </div>

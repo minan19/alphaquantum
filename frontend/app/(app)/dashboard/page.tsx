@@ -24,11 +24,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ApiError, fetchLiveSignals, type DashboardLiveSignalsResponse } from "@/lib/api";
+import { ApiError, fetchLiveSignals, type DashboardLiveSignalsResponse, type DashboardSignal } from "@/lib/api";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useSpotlight } from "@/lib/use-spotlight";
 
 // Mock 30-day cashflow data — replaced by real API later
 const MOCK_CASHFLOW = Array.from({ length: 30 }).map((_, i) => {
@@ -233,6 +234,8 @@ export default function DashboardPage() {
                     stroke="rgb(34 197 94)"
                     strokeWidth={1.5}
                     fill="url(#grad-gelir)"
+                    animationDuration={1200}
+                    animationEasing="ease-out"
                   />
                   <Area
                     type="monotone"
@@ -240,6 +243,9 @@ export default function DashboardPage() {
                     stroke="rgb(239 68 68)"
                     strokeWidth={1.5}
                     fill="url(#grad-gider)"
+                    animationDuration={1200}
+                    animationBegin={150}
+                    animationEasing="ease-out"
                   />
                   <Area
                     type="monotone"
@@ -247,6 +253,9 @@ export default function DashboardPage() {
                     stroke="rgb(91 71 251)"
                     strokeWidth={2}
                     fill="url(#grad-net)"
+                    animationDuration={1400}
+                    animationBegin={300}
+                    animationEasing="ease-out"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -285,49 +294,9 @@ export default function DashboardPage() {
 
         {data && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.signals.map((s, i) => {
-              const meta = SIGNAL_MAP[s.source] ?? SIGNAL_MAP.market;
-              const Icon = meta.icon;
-              const tone =
-                s.status === "ALERT" ? "alert" :
-                s.status === "WARN"  ? "warn"  :
-                "ok";
-              return (
-                <motion.div
-                  key={`${s.source}-${s.label}-${i}`}
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.35, delay: 0.04 * i, ease: [0.32, 0.72, 0, 1] }}
-                >
-                  <Card variant="glass" className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-aq-trace">
-                          <Icon className="h-3 w-3" />
-                          {meta.label}
-                        </div>
-                        <p className="text-sm font-medium">{s.label}</p>
-                        <p className="text-2xl font-bold tabular num">
-                          {s.value ?? "—"}
-                          {s.unit && (
-                            <span className="ml-1 text-xs font-normal text-aq-dust">{s.unit}</span>
-                          )}
-                        </p>
-                      </div>
-                      <Badge
-                        tone={tone === "alert" ? "critical" : tone === "warn" ? "warn" : "success"}
-                        withDot
-                      >
-                        {s.status}
-                      </Badge>
-                    </div>
-                    {s.detail && (
-                      <p className="mt-2 text-[11px] text-aq-trace">{s.detail}</p>
-                    )}
-                  </Card>
-                </motion.div>
-              );
-            })}
+            {data.signals.map((s, i) => (
+              <SignalCard key={`${s.source}-${s.label}-${i}`} signal={s} index={i} />
+            ))}
           </div>
         )}
 
@@ -343,5 +312,55 @@ export default function DashboardPage() {
         )}
       </section>
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────── */
+
+function SignalCard({ signal, index }: { signal: DashboardSignal; index: number }) {
+  const meta = SIGNAL_MAP[signal.source] ?? SIGNAL_MAP.market;
+  const Icon = meta.icon;
+  const tone =
+    signal.status === "ALERT" ? "alert" :
+    signal.status === "WARN"  ? "warn"  :
+    "ok";
+  const { ref, onMouseMove } = useSpotlight<HTMLDivElement>();
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={onMouseMove}
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.35, delay: 0.04 * index, ease: [0.32, 0.72, 0, 1] }}
+      className="spotlight-card rounded-lg"
+    >
+      <Card variant="glass" className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-aq-trace">
+              <Icon className="h-3 w-3" />
+              {meta.label}
+            </div>
+            <p className="text-sm font-medium">{signal.label}</p>
+            <p className="text-2xl font-bold num">
+              {signal.value ?? "—"}
+              {signal.unit && (
+                <span className="ml-1 text-xs font-normal text-aq-dust">{signal.unit}</span>
+              )}
+            </p>
+          </div>
+          <Badge
+            tone={tone === "alert" ? "critical" : tone === "warn" ? "warn" : "success"}
+            withDot
+          >
+            {signal.status}
+          </Badge>
+        </div>
+        {signal.detail && (
+          <p className="mt-2 text-[11px] text-aq-trace">{signal.detail}</p>
+        )}
+      </Card>
+    </motion.div>
   );
 }

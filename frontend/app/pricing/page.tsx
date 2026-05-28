@@ -213,7 +213,10 @@ const FEATURES = [
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    // FIX B1: root'tan `overflow-hidden` kaldırıldı — sticky storytelling'in
+    // ancestor scrolling container'ını kırpıyordu, sahneler viewport'ta görünmüyordu.
+    // mesh-bg zaten kendi içinde `overflow: hidden` taşıyor (bkz. globals.css .mesh-bg).
+    <div className="min-h-screen relative">
       <div className="mesh-bg" aria-hidden="true" />
 
       {/* Top nav */}

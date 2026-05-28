@@ -26,6 +26,9 @@ import { StickyDemoCTA } from "@/components/landing/sticky-demo-cta";
 import { LogoMarquee } from "@/components/landing/logo-marquee";
 import { RoiCalculator } from "@/components/landing/roi-calculator";
 import { ComparisonTable } from "@/components/landing/comparison-table";
+import { SegmentCards } from "@/components/landing/segment-cards";
+import { ScrollIndicator } from "@/components/landing/scroll-indicator";
+import { CaseStudiesGrid } from "@/components/landing/case-studies-grid";
 import { cn } from "@/lib/cn";
 
 const PARTNER_LOGOS = [
@@ -272,8 +275,18 @@ export default function PricingPage() {
           <p className="mt-6 text-xs text-aq-trace font-mono">
             30 gün ücretsiz · kart bilgisi istemez · KVKK aydınlatma metni
           </p>
+
+          {/* Scroll indicator — bydecor pattern */}
+          <div className="mt-14 flex justify-center">
+            <ScrollIndicator label="Aşağı kaydır" targetId="segments" />
+          </div>
         </motion.div>
       </section>
+
+      {/* Müşteri segmenti kartları — bydecor 3-card pattern */}
+      <div id="segments" className="py-10">
+        <SegmentCards />
+      </div>
 
       {/* Pricing cards */}
       <section id="pricing" className="relative z-10 mx-auto max-w-7xl px-6 py-12">
@@ -401,6 +414,9 @@ export default function PricingPage() {
           <ComparisonTable />
         </div>
       </section>
+
+      {/* Filterable case studies grid — bydecor portfolio pattern */}
+      <CaseStudiesGrid />
 
       {/* Social proof / trust — animated counters */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-16">

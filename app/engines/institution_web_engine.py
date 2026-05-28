@@ -274,7 +274,9 @@ class _HTMLExtractor(HTMLParser):
     def table_rows(self) -> list[list[str]]:
         return [row[:] for row in self._table_rows]
 
-    def handle_starttag(self, tag: str, attrs) -> None:
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
         lowered = tag.lower()
         if lowered in {"script", "style", "noscript"}:
             self._ignored_depth += 1

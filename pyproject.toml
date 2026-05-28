@@ -27,35 +27,31 @@ ignore = []
 ]
 
 [tool.mypy]
-# Pre-existing type debt'i kabul ediyoruz. Kod tabanı tip kontrol edilmeden
-# büyümüş; çoğu hata `int | None` cast'leri (cur.lastrowid → int) ve `dict
-# | None` return type uyumsuzlukları. Hepsini düzeltmek 2-3 günlük F1 sprint
-# işi — ayrı planlı. O zamana kadar mypy:
-#   - import bulunamayan yerleri görmezden gelsin (3rd party stub yok)
-#   - strict-optional kapalı (None'lar geçsin)
-#   - bilinen pre-existing error code'larını disable etsin
-# Type sözleşmesi yeni yazılan kodda anlamlı; mevcut kod legacy.
+# F1.1 + F1.2 sprintlerinde temizlenen alanlar:
+# - Tüm dict/list/Callable generic args düzeltildi (37 hata)
+# - Tüm unused type:ignore temizlendi (6 hata)
+# - _deps.py engine accessor'larına cast() eklendi (31 yer)
+# - __init__.py lifespan + middleware annotations
+# - security.py + kvkk.py cast() ile no-any-return temizlendi
+# Cumulative: 88 strict error → 0 (--strict --ignore-missing-imports modunda)
+#
+# `strict = true` global olarak aktive edildi.
+#
+# Korunan istisnalar (pre-existing legacy debt, F2+ sprint için):
+# - `arg-type`: SQLite cursor.lastrowid `int | None` cast'leri (yaygın)
+# - `return-value`: _fetch return type uyumsuzlukları
+# - `assignment`: bazı Pydantic field assignment'ları
+# - `attr-defined`: bazı conditional attr access'ler
+# - `misc`: Pydantic v2 stub eksikliği (BaseModel Any)
 python_version = "3.11"
+strict = true
 ignore_missing_imports = true
 no_error_summary = true
 warn_unused_configs = true
-strict_optional = false
 disable_error_code = [
     "arg-type",
     "return-value",
     "assignment",
-    "var-annotated",
     "attr-defined",
-    "union-attr",
-    "index",
-    "operator",
-    "call-overload",
-    "no-redef",
-    "import-untyped",
+    "misc",
 ]
-
-# Yeni yazılan modüller burada listelendiğinde strict mode'a alınır
-# (F1 sprint başlangıcı için). Şu an boş — bütün kod tabanı legacy modda.
-[[tool.mypy.overrides]]
-module = []
-disallow_untyped_defs = false

@@ -6,7 +6,7 @@ import hmac
 import json
 import os
 import time
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from uuid import uuid4
 
 from fastapi import Depends, HTTPException, Request, status
@@ -120,7 +120,7 @@ def decode_access_token(token: str, *, secret: str) -> dict[str, Any]:
             detail="Token expired",
         )
 
-    return payload
+    return cast(dict[str, Any], payload)
 
 
 def get_current_user(
@@ -165,7 +165,7 @@ def get_current_user(
 
     request.state.auth_user = user
     request.state.access_token_payload = payload
-    return user
+    return cast(UserProfile, user)
 
 
 def require_roles(*allowed_roles: str) -> Callable[..., Any]:

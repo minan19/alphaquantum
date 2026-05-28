@@ -13,6 +13,7 @@ from app.engines.exchange_source_catalog import (
 from app.engines.institution_web_engine import InstitutionWebEngine
 from app.engines.market_data_engine import MarketDataEngine
 from app.models import (
+    InstitutionPageFinding,
     InstitutionPageRequest,
     InstitutionReportRequest,
     MarketAnalysisResponse,
@@ -216,7 +217,7 @@ class MarketIntelligenceEngine:
         return merged_pages
 
     @staticmethod
-    def _extract_symbols_from_page(page) -> list[str]:
+    def _extract_symbols_from_page(page: InstitutionPageFinding) -> list[str]:
         pool: list[str] = []
         if page.title:
             pool.append(page.title)
@@ -236,7 +237,7 @@ class MarketIntelligenceEngine:
         return sorted(candidates)
 
     @staticmethod
-    def _extract_numbers_from_page(page) -> list[str]:
+    def _extract_numbers_from_page(page: InstitutionPageFinding) -> list[str]:
         pool: list[str] = []
         pool.append(page.summary)
         pool.extend(page.matched_snippets)

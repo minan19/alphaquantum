@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 import logging
 from pathlib import Path
 import time
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router
@@ -97,7 +98,7 @@ def create_app() -> FastAPI:
     logger = logging.getLogger("alpha_quantum")
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         _start_background_workers(app)
         try:
             yield
@@ -232,7 +233,10 @@ def create_app() -> FastAPI:
     app.state.audit_repository = AuditRepository(settings.database_path)
 
     @app.middleware("http")
-    async def request_logging_middleware(request: Request, call_next):
+    async def request_logging_middleware(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         request_id = uuid4().hex[:10]
         start = time.perf_counter()
 

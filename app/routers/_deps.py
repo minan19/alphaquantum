@@ -20,7 +20,7 @@ incremental migration.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import HTTPException, Request, status
 from fastapi.responses import Response
@@ -103,129 +103,129 @@ def _build_export_response(
 # ── Repository / Service accessors ───────────────────────────────────────────
 
 def _repo(request: Request) -> CompanyRepository:
-    return request.app.state.company_repository
+    return cast(CompanyRepository, request.app.state.company_repository)
 
 
 def _analysis_service(request: Request) -> AnalysisService:
-    return request.app.state.analysis_service
+    return cast(AnalysisService, request.app.state.analysis_service)
 
 
 def _dashboard_service(request: Request) -> DashboardService:
-    return request.app.state.dashboard_service
+    return cast(DashboardService, request.app.state.dashboard_service)
 
 
 def _auth_service(request: Request) -> AuthService:
-    return request.app.state.auth_service
+    return cast(AuthService, request.app.state.auth_service)
 
 
 def _audit_repo(request: Request) -> AuditRepository:
-    return request.app.state.audit_repository
+    return cast(AuditRepository, request.app.state.audit_repository)
 
 
 def _settings(request: Request) -> Settings:
-    return request.app.state.settings
+    return cast(Settings, request.app.state.settings)
 
 
 def _migration_manager(request: Request) -> MigrationManager:
-    return request.app.state.migration_manager
+    return cast(MigrationManager, request.app.state.migration_manager)
 
 
 # ── Engine accessors ─────────────────────────────────────────────────────────
 
 def _company_engine(request: Request) -> CompanyEngine:
-    return request.app.state.company_engine
+    return cast(CompanyEngine, request.app.state.company_engine)
 
 
 def _connector_engine(request: Request) -> ConnectorEngine:
-    return request.app.state.connector_engine
+    return cast(ConnectorEngine, request.app.state.connector_engine)
 
 
 def _inventory_engine(request: Request) -> InventoryEngine:
-    return request.app.state.inventory_engine
+    return cast(InventoryEngine, request.app.state.inventory_engine)
 
 
 def _finance_engine(request: Request) -> FinanceEngine:
-    return request.app.state.finance_engine
+    return cast(FinanceEngine, request.app.state.finance_engine)
 
 
 def _reporting_engine(request: Request) -> ReportingEngine:
-    return request.app.state.reporting_engine
+    return cast(ReportingEngine, request.app.state.reporting_engine)
 
 
 def _dashboard_engine(request: Request) -> DashboardEngine:
-    return request.app.state.dashboard_engine
+    return cast(DashboardEngine, request.app.state.dashboard_engine)
 
 
 def _comparison_engine(request: Request) -> ComparisonEngine:
-    return request.app.state.comparison_engine
+    return cast(ComparisonEngine, request.app.state.comparison_engine)
 
 
 def _crm_engine(request: Request) -> CRMEngine:
-    return request.app.state.crm_engine
+    return cast(CRMEngine, request.app.state.crm_engine)
 
 
 def _task_engine(request: Request) -> TaskEngine:
-    return request.app.state.task_engine
+    return cast(TaskEngine, request.app.state.task_engine)
 
 
 def _collections_engine(request: Request) -> CollectionsEngine:
-    return request.app.state.collections_engine
+    return cast(CollectionsEngine, request.app.state.collections_engine)
 
 
 def _notification_engine(request: Request) -> NotificationEngine:
-    return request.app.state.notification_engine
+    return cast(NotificationEngine, request.app.state.notification_engine)
 
 
 def _financial_instrument_engine(request: Request) -> FinancialInstrumentEngine:
-    return request.app.state.financial_instrument_engine
+    return cast(FinancialInstrumentEngine, request.app.state.financial_instrument_engine)
 
 
 def _delivery_engine(request: Request) -> DeliveryEngine:
-    return request.app.state.delivery_engine
+    return cast(DeliveryEngine, request.app.state.delivery_engine)
 
 
 def _market_engine(request: Request) -> MarketDataEngine:
-    return request.app.state.market_data_engine
+    return cast(MarketDataEngine, request.app.state.market_data_engine)
 
 
 def _market_intelligence_engine(request: Request) -> MarketIntelligenceEngine:
-    return request.app.state.market_intelligence_engine
+    return cast(MarketIntelligenceEngine, request.app.state.market_intelligence_engine)
 
 
 def _global_engine(request: Request) -> GlobalAnalysisEngine:
-    return request.app.state.global_analysis_engine
+    return cast(GlobalAnalysisEngine, request.app.state.global_analysis_engine)
 
 
 def _institution_engine(request: Request) -> InstitutionWebEngine:
-    return request.app.state.institution_web_engine
+    return cast(InstitutionWebEngine, request.app.state.institution_web_engine)
 
 
 def _tender_engine(request: Request) -> TenderEngine:
-    return request.app.state.tender_engine
+    return cast(TenderEngine, request.app.state.tender_engine)
 
 
 def _procurement_engine(request: Request) -> ProcurementEngine:
-    return request.app.state.procurement_engine
+    return cast(ProcurementEngine, request.app.state.procurement_engine)
 
 
 def _feasibility_engine(request: Request) -> FeasibilityEngine:
-    return request.app.state.feasibility_engine
+    return cast(FeasibilityEngine, request.app.state.feasibility_engine)
 
 
 def _international_engine(request: Request) -> InternationalOperationsEngine:
-    return request.app.state.international_operations_engine
+    return cast(InternationalOperationsEngine, request.app.state.international_operations_engine)
 
 
 def _ecosystem_engine(request: Request) -> StrategicEcosystemEngine:
-    return request.app.state.strategic_ecosystem_engine
+    return cast(StrategicEcosystemEngine, request.app.state.strategic_ecosystem_engine)
 
 
 def _holding_engine(request: Request) -> HoldingEngine:
-    return request.app.state.holding_engine
+    return cast(HoldingEngine, request.app.state.holding_engine)
 
 
 def _schedule_engine(request: Request) -> ScheduleEngine:
-    return request.app.state.schedule_engine
+    return cast(ScheduleEngine, request.app.state.schedule_engine)
 
 
 # ── Audit ────────────────────────────────────────────────────────────────────

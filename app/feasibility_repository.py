@@ -4,6 +4,8 @@ import json
 from threading import Lock
 from typing import Any
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 
 
@@ -64,7 +66,7 @@ class FeasibilityRepository:
                     now,
                 ),
             )
-            report_id = int(cursor.lastrowid)
+            report_id = new_row_id(cursor)
             self._conn.commit()
 
         return self.get_report(report_id)

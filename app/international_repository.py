@@ -4,6 +4,8 @@ import json
 from threading import Lock
 from typing import Any
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 
 
@@ -80,7 +82,7 @@ class InternationalProjectRepository:
                     now,
                 ),
             )
-            project_id = int(cursor.lastrowid)
+            project_id = new_row_id(cursor)
             self._conn.commit()
 
         return self.get_project(project_id)

@@ -4,6 +4,8 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 
 
@@ -132,7 +134,7 @@ class IdentityRepository:
                 """,
                 (name, description, now, now),
             )
-            role_id = int(cursor.lastrowid)
+            role_id = new_row_id(cursor)
             self._conn.commit()
         return self.get_role(role_id)
 
@@ -415,7 +417,7 @@ class IdentityRepository:
                     now,
                 ),
             )
-            user_id = int(cursor.lastrowid)
+            user_id = new_row_id(cursor)
             self._conn.commit()
 
         user = self.get_user_by_id(user_id)

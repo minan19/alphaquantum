@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 from threading import Lock
 from typing import Any
@@ -49,7 +51,7 @@ class CRMRepository:
                 (company_name, full_name, email, phone, sector,
                  tags_json, notes, now, now),
             )
-            row_id = int(cur.lastrowid)
+            row_id = new_row_id(cur)
             self._conn.commit()
             return self._fetch_customer(row_id)
 
@@ -182,7 +184,7 @@ class CRMRepository:
                 (company_name, customer_id, title, amount, currency,
                  valid_until, description, now, now),
             )
-            row_id = int(cur.lastrowid)
+            row_id = new_row_id(cur)
             self._conn.commit()
             return self._fetch_proposal(row_id)
 

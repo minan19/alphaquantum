@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 from threading import Lock
 from typing import Any
@@ -86,7 +88,7 @@ class ScheduledReportRepository:
                     now,
                 ),
             )
-            row_id = int(cursor.lastrowid)
+            row_id = new_row_id(cursor)
             self._conn.commit()
 
             row = self._conn.execute(

@@ -5,6 +5,8 @@ from threading import Lock
 from typing import Any
 import json
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 
 
@@ -158,7 +160,7 @@ class ConnectorRepository:
         base_url: str | None,
         auth_mode: str,
         config: dict[str, object],
-        mapping: dict[str, object],
+        mapping: dict[str, str],
         status: str,
         readiness_score: float,
         mapping_coverage_score: float,
@@ -204,7 +206,7 @@ class ConnectorRepository:
                     now,
                 ),
             )
-            connector_id = int(cursor.lastrowid)
+            connector_id = new_row_id(cursor)
             self._conn.commit()
 
         row = self.get_connector(connector_id)
@@ -354,7 +356,7 @@ class ConnectorRepository:
                     now,
                 ),
             )
-            job_id = int(cursor.lastrowid)
+            job_id = new_row_id(cursor)
             self._conn.commit()
 
         row = self.get_sync_job(job_id)

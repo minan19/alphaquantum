@@ -54,6 +54,8 @@ class ScheduleEngine:
             raise ValueError(f"Scheduled report job {job_id} not found")
         self._repo.deactivate_job(job_id)
         updated = self._repo.get_job(job_id)
+        if updated is None:
+            raise ValueError("Scheduled job not found after deactivate")
         return self._to_read(updated)
 
     @staticmethod

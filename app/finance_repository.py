@@ -4,6 +4,8 @@ from datetime import date
 from threading import Lock
 from typing import Any
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 
 
@@ -59,7 +61,7 @@ class FinanceRepository:
                     now,
                 ),
             )
-            entry_id = int(cursor.lastrowid)
+            entry_id = new_row_id(cursor)
             self._conn.commit()
 
             row = self._conn.execute(
@@ -163,7 +165,7 @@ class FinanceRepository:
                 (company_name, entry_type, amount, category, description,
                  frequency, start_date, end_date, now),
             )
-            row_id = int(cursor.lastrowid)
+            row_id = new_row_id(cursor)
             self._conn.commit()
         return self.get_recurring_entry(row_id)
 

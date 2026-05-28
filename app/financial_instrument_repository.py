@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 from threading import Lock
 from typing import Any
@@ -59,7 +61,7 @@ class FinancialInstrumentRepository:
                     now, now,
                 ),
             )
-            row_id = int(cur.lastrowid)
+            row_id = new_row_id(cur)
             self._conn.commit()
             return self._fetch(row_id)
 

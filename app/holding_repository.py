@@ -4,6 +4,8 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 import sqlite3
+
+from app._sqlite_helpers import new_row_id
 import time
 
 
@@ -99,7 +101,7 @@ class HoldingRepository:
                 """,
                 (name, code, description, status, now, now),
             )
-            holding_id = int(cursor.lastrowid)
+            holding_id = new_row_id(cursor)
             self._conn.commit()
         row = self.get_holding(holding_id)
         if row is None:

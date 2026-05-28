@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypedDict
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -46,6 +46,25 @@ _SECTOR_DEFAULTS: dict[str, _SectorDefaults] = {
     "tourism": _SectorDefaults(0.03, 0.03, 1.14, 0.19),
     "software": _SectorDefaults(0.05, 0.01, 1.07, 0.34),
 }
+
+
+class _ScenarioEval(TypedDict):
+    """Output shape of `FeasibilityEngine._evaluate_scenario()`.
+
+    Mixed scalar types — TypedDict gives mypy precise per-key types so
+    downstream code (FeasibilityScenarioRow(**eval), FeasibilityFinancialMetrics
+    construction) doesn't trip arg-type.
+    """
+    scenario: str
+    annual_revenue: float
+    annual_opex: float
+    annual_ebitda: float
+    npv: float
+    irr: float | None
+    payback_year: float | None
+    break_even_revenue: float
+    profitability_index: float
+    average_ebitda_margin: float
 
 
 class FeasibilityEngine:
@@ -217,7 +236,7 @@ class FeasibilityEngine:
         opex_growth: float,
         revenue_multiplier: float,
         opex_multiplier: float,
-    ) -> dict[str, float | str | None]:
+    ) -> _ScenarioEval:
         years = payload.project_lifetime_years
         tax_rate = payload.tax_rate
         discount_rate = payload.discount_rate
@@ -272,7 +291,7 @@ class FeasibilityEngine:
             "average_ebitda_margin": round(avg_ebitda_margin, 4),
         }
 
-    def _build_sensitivity(self, payload: FeasibilityReportRequest, base_eval: dict[str, float | str | None]) -> list[FeasibilitySensitivityItem]:
+    def _build_sensitivity(self, payload: FeasibilityReportRequest, base_eval: _ScenarioEval) -> list[FeasibilitySensitivityItem]:
         baseline_npv = float(base_eval["npv"])
         checks = [
             ("Revenue", "-10%", dict(revenue_multiplier=0.9, opex_multiplier=1.0, implementation_delta=0)),
@@ -486,15 +505,15 @@ class FeasibilityEngine:
         self,
         *,
         payload: FeasibilityReportRequest,
-        base_eval: dict[str, float | str | None],
-        downside_eval: dict[str, float | str | None],
+        base_eval: _ScenarioEval,
+        downside_eval: _ScenarioEval,
         risk_register: list[FeasibilityRiskItem],
         sector_defaults: _SectorDefaults,
     ) -> tuple[str, float]:
         npv = float(base_eval["npv"])
         irr = float(base_eval["irr"]) if base_eval["irr"] is not None else 0.0
         payback = float(base_eval["payback_year"]) if base_eval["payback_year"] is not None else 999.0
-        downside_npv = float(downside_eval["npv"])
+        downside_npv = downside_eval["npv"]
         avg_margin = float(base_eval["average_ebitda_margin"])
 
         score = 0

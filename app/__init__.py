@@ -20,6 +20,7 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.finance import router as finance_router
 from app.routers.financial_instruments import router as financial_instruments_router
 from app.routers.holdings import router as holdings_router
+from app.routers.intercompany import router as intercompany_router
 from app.routers.kvkk import router as kvkk_router
 from app.routers.market import router as market_router
 from app.routers.notifications import router as notifications_router
@@ -57,6 +58,7 @@ from app.engines import (
     FinancialInstrumentEngine,
     GlobalAnalysisEngine,
     HoldingEngine,
+    IntercompanyTransferEngine,
     InternationalOperationsEngine,
     InventoryEngine,
     InstitutionWebEngine,
@@ -76,6 +78,7 @@ from app.scheduled_report_repository import ScheduledReportRepository
 from app.identity_repository import IdentityRepository
 from app.international_repository import InternationalProjectRepository
 from app.holding_repository import HoldingRepository
+from app.intercompany_transfer_repository import IntercompanyTransferRepository
 from app.market_repository import MarketDataRepository
 from app.migration_manager import MigrationManager
 from app.procurement_repository import ProcurementRepository
@@ -158,6 +161,14 @@ def create_app() -> FastAPI:
     # G1.2: Konsolide P&L motor (intercompany eliminasyonlu)
     app.state.consolidation_engine = ConsolidationEngine(
         finance_repo=app.state.finance_repository,
+        holding_repo=app.state.holding_repository,
+    )
+    # G1.3: Intercompany transfer + 4-eyes onay
+    app.state.intercompany_transfer_repository = IntercompanyTransferRepository(
+        settings.database_path
+    )
+    app.state.intercompany_transfer_engine = IntercompanyTransferEngine(
+        transfer_repo=app.state.intercompany_transfer_repository,
         holding_repo=app.state.holding_repository,
     )
     app.state.connector_repository = ConnectorRepository(settings.database_path)
@@ -298,6 +309,7 @@ def create_app() -> FastAPI:
     app.include_router(finance_router)
     app.include_router(financial_instruments_router)
     app.include_router(holdings_router)
+    app.include_router(intercompany_router)
     app.include_router(kvkk_router)
     app.include_router(market_router)
     app.include_router(notifications_router)

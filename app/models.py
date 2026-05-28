@@ -232,6 +232,81 @@ class ConsolidatedPLResponse(BaseModel):
     )
 
 
+# ── G1.3: IntercompanyTransferEngine + 4-eyes onay ─────────────────────────
+#
+# Karma holding'in en kritik operasyonel feature'ı: grup içi transfer.
+# Örnek: "Lojistik A.Ş.'den Gıda A.Ş.'ye Q4 kaynak desteği — ₺500.000".
+#
+# Atomic double-entry: tek transaction içinde 2 ledger entry oluşturulur
+# (kaynak: expense, hedef: income), her ikisi de aynı transfer_id'ye
+# bağlanır ve intercompany_flag=1 işaretlenir. Konsolide P&L bu kalemleri
+# elimine eder.
+#
+# 4-eyes onay: işlemi talep eden ve onaylayan AYNI KİŞİ olamaz. Bu
+# enterprise security feature'ı (SOC 2, ISO 27001 zorunlu) hile/yanlışlık
+# riskini azaltır. Yüksek tutarlı kararlarda tek imzalı işlem riski sıfırlanır.
+
+
+class IntercompanyTransferRequestCreate(BaseModel):
+    """Yeni intercompany transfer talebi — pending kaydı oluşturur."""
+
+    from_company: str = Field(min_length=1)
+    to_company: str = Field(min_length=1)
+    amount: float = Field(gt=0)
+    currency: str = Field(default="TRY", min_length=3, max_length=3)
+    description: str = Field(default="", max_length=500)
+    # Cross-currency için opsiyonel
+    target_amount: float | None = Field(default=None, gt=0)
+    fx_rate: float | None = Field(default=None, gt=0)
+
+
+class IntercompanyTransferApproveRequest(BaseModel):
+    """2. göz onayı — approver_user_id requester ile aynı olamaz."""
+
+    approver_user_id: str = Field(min_length=1)
+
+
+class IntercompanyTransferRejectRequest(BaseModel):
+    """2. göz reddi — sebep zorunlu (audit log için)."""
+
+    approver_user_id: str = Field(min_length=1)
+    reject_reason: str = Field(min_length=1, max_length=500)
+
+
+class IntercompanyTransferRead(BaseModel):
+    """Tam transfer state'i — pending, approved, rejected, completed."""
+
+    id: int
+    holding_id: int
+    from_company: str
+    to_company: str
+    amount: float
+    currency: str
+    target_amount: float | None = None
+    fx_rate: float | None = None
+    description: str
+
+    requested_by: str
+    requested_at: int
+
+    approval_status: str  # pending | approved | rejected | completed
+    approved_by: str | None = None
+    approved_at: int | None = None
+    reject_reason: str | None = None
+    completed_at: int | None = None
+
+    # Atomic write sonrası ledger entry referansları
+    ledger_entry_from_id: int | None = None
+    ledger_entry_to_id: int | None = None
+
+
+class IntercompanyTransferListResponse(BaseModel):
+    """Liste response (pending kuyruk, geçmiş, vs.)."""
+
+    total: int
+    transfers: list[IntercompanyTransferRead]
+
+
 class FinanceRecurringEntryCreateRequest(BaseModel):
     company: str = Field(min_length=1)
     entry_type: str = Field(pattern="^(income|expense)$")

@@ -14,6 +14,7 @@ from app.engines.finance_engine import FinanceEngine
 from app.engines.financial_instrument_engine import FinancialInstrumentEngine
 from app.engines.global_analysis_engine import GlobalAnalysisEngine
 from app.engines.holding_engine import HoldingEngine
+from app.engines.intercompany_transfer_engine import IntercompanyTransferEngine
 from app.engines.international_operations_engine import InternationalOperationsEngine
 from app.engines.inventory_engine import InventoryEngine
 from app.engines.institution_web_engine import InstitutionWebEngine
@@ -45,6 +46,7 @@ __all__ = [
     "MarketDataEngine",
     "GlobalAnalysisEngine",
     "HoldingEngine",
+    "IntercompanyTransferEngine",
     "InstitutionWebEngine",
     "MarketIntelligenceEngine",
     "NotificationEngine",

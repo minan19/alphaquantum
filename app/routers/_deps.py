@@ -34,6 +34,7 @@ from app.engines import (
     ComparisonEngine,
     ConsolidationEngine,
     ConnectorEngine,
+    IntercompanyTransferEngine,
     CRMEngine,
     DashboardEngine,
     DeliveryEngine,
@@ -163,6 +164,13 @@ def _comparison_engine(request: Request) -> ComparisonEngine:
 
 def _consolidation_engine(request: Request) -> ConsolidationEngine:
     return cast(ConsolidationEngine, request.app.state.consolidation_engine)
+
+
+def _intercompany_transfer_engine(request: Request) -> IntercompanyTransferEngine:
+    return cast(
+        IntercompanyTransferEngine,
+        request.app.state.intercompany_transfer_engine,
+    )
 
 
 def _crm_engine(request: Request) -> CRMEngine:

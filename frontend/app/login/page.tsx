@@ -39,10 +39,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Session ID — generated client-only to avoid SSR/CSR hydration mismatch.
+  const [sessionId, setSessionId] = useState<string>("");
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) router.replace("/dashboard");
   }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    setSessionId(Math.random().toString(36).slice(2, 10).toUpperCase());
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -225,7 +231,7 @@ export default function LoginPage() {
           {/* Trust strip */}
           <div className="mt-10 pt-6 border-t border-aq-mist/40">
             <p className="text-xs text-aq-trace text-center font-mono">
-              Bu oturum TLS 1.3 ile şifrelenmiştir · ID-{Math.random().toString(36).slice(2, 10).toUpperCase()}
+              Bu oturum TLS 1.3 ile şifrelenmiştir{sessionId && ` · ID-${sessionId}`}
             </p>
           </div>
         </motion.div>

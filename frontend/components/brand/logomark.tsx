@@ -1,3 +1,6 @@
+"use client";
+
+import { useId } from "react";
 import { cn } from "@/lib/cn";
 
 /**
@@ -7,6 +10,11 @@ import { cn } from "@/lib/cn";
  * orbital. The orbital is drawn with three rings at different phase angles
  * to suggest probability density. Rendered as inline SVG so we can color it
  * via CSS variables (gradients, hover states, dark/light themes).
+ *
+ * NOTE: React's useId() is used for the gradient ID. Earlier we used
+ * Math.random() which caused SSR/CSR hydration mismatches (each render
+ * generated a different ID). useId() is stable across server + client and
+ * unique per instance — exactly what SVG defs need.
  */
 export function Logomark({
   className,
@@ -17,7 +25,10 @@ export function Logomark({
   size?: number;
   animated?: boolean;
 }) {
-  const id = `aq-gradient-${Math.random().toString(36).slice(2, 8)}`;
+  const rawId = useId();
+  // useId() returns ":r1:" style values — SVG attribute names can't contain
+  // colons in some renderers, so strip them.
+  const id = `aq-gradient-${rawId.replace(/:/g, "")}`;
   return (
     <svg
       width={size}

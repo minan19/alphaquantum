@@ -147,7 +147,9 @@ export default function CompaniesPage() {
                     {/* Mini sparkline placeholder */}
                     <div className="flex items-end gap-0.5 h-6">
                       {Array.from({ length: 14 }).map((_, idx) => {
-                        const h = 30 + Math.sin((idx + i) / 2) * 25 + Math.random() * 20;
+                        // Deterministic noise (sin-based) for SSR/CSR consistency.
+                        const noise = Math.abs((Math.sin((idx + i) * 12.9898) * 43758.5453) % 1);
+                        const h = 30 + Math.sin((idx + i) / 2) * 25 + noise * 20;
                         return (
                           <div
                             key={idx}

@@ -51,9 +51,13 @@ type Step = 1 | 2 | 3;
 export function LogoImportWizard({
   onComplete,
   className,
+  connectorType = "logo_tiger",
+  title = "Logo Tiger İçe Aktar",
 }: {
   onComplete?: (job: ConnectorImportJob) => void;
   className?: string;
+  connectorType?: string;
+  title?: string;
 }) {
   const [step, setStep] = useState<Step>(1);
   const [mode, setMode] = useState<ConnectorMode>("xml");
@@ -80,7 +84,7 @@ export function LogoImportWizard({
     setLoading(true);
     setError(null);
     try {
-      const result = await previewConnectorImport("logo_tiger", file, mode);
+      const result = await previewConnectorImport(connectorType, file, mode);
       setJob(result);
       setStep(3);
     } catch (err) {
@@ -125,7 +129,7 @@ export function LogoImportWizard({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-aq-quantum-2" />
-            Logo Tiger İçe Aktar
+            {title}
           </CardTitle>
           <StepIndicator current={step} />
         </div>

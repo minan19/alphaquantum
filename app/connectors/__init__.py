@@ -8,6 +8,7 @@ from app.connectors.base import (
     BaseConnector,
 )
 from app.connectors.logo_tiger import LogoTigerConnector
+from app.connectors.mikro import MikroConnector
 from app.connectors.registry import CONNECTOR_REGISTRY, get_connector
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "ParseResult",
     "BaseConnector",
     "LogoTigerConnector",
+    "MikroConnector",
     "CONNECTOR_REGISTRY",
     "get_connector",
 ]

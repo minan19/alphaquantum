@@ -66,7 +66,7 @@ export default function ConnectorsPage() {
         </p>
       </motion.header>
 
-      <LogoImportWizard onComplete={() => void refresh()} />
+      <ErpWizardTabs onComplete={() => void refresh()} />
 
       <StagingReview />
 
@@ -136,6 +136,52 @@ export default function ConnectorsPage() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+
+function ErpWizardTabs({ onComplete }: { onComplete: () => void }) {
+  const [active, setActive] = useState<"logo_tiger" | "mikro">("logo_tiger");
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setActive("logo_tiger")}
+          className={
+            "px-3 py-1.5 rounded-full text-xs transition-colors " +
+            (active === "logo_tiger"
+              ? "bg-aq-quantum/20 text-aq-quantum-2 border border-aq-quantum/30"
+              : "bg-aq-orbital/40 text-aq-dust border border-aq-mist/30 hover:border-aq-mist/60")
+          }
+        >
+          Logo Tiger
+        </button>
+        <button
+          type="button"
+          onClick={() => setActive("mikro")}
+          className={
+            "px-3 py-1.5 rounded-full text-xs transition-colors " +
+            (active === "mikro"
+              ? "bg-aq-quantum/20 text-aq-quantum-2 border border-aq-quantum/30"
+              : "bg-aq-orbital/40 text-aq-dust border border-aq-mist/30 hover:border-aq-mist/60")
+          }
+        >
+          Mikro ERP
+        </button>
+        <span className="text-[10px] text-aq-trace ml-auto">
+          Daha fazla ERP yakında
+        </span>
+      </div>
+      <LogoImportWizard
+        key={active}
+        connectorType={active}
+        title={
+          active === "logo_tiger" ? "Logo Tiger İçe Aktar" : "Mikro ERP İçe Aktar"
+        }
+        onComplete={onComplete}
+      />
     </div>
   );
 }

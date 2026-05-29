@@ -5,10 +5,12 @@ from typing import cast
 
 from app.connectors.base import BaseConnector
 from app.connectors.logo_tiger import LogoTigerConnector
+from app.connectors.mikro import MikroConnector
 
 
 CONNECTOR_REGISTRY: dict[str, type] = {
     "logo_tiger": LogoTigerConnector,
+    "mikro": MikroConnector,
 }
 
 

@@ -23,6 +23,7 @@ from app.routers.holdings import router as holdings_router
 from app.routers.intercompany import router as intercompany_router
 from app.routers.kvkk import router as kvkk_router
 from app.routers.market import router as market_router
+from app.routers.realtime import router as realtime_router
 from app.routers.notifications import router as notifications_router
 from app.routers.procurement import router as procurement_router
 from app.routers.reports import router as reports_router
@@ -83,6 +84,7 @@ from app.international_repository import InternationalProjectRepository
 from app.holding_repository import HoldingRepository
 from app.intercompany_transfer_repository import IntercompanyTransferRepository
 from app.llm_service import create_llm_service
+from app.websocket_manager import WebSocketConnectionManager
 from app.market_repository import MarketDataRepository
 from app.migration_manager import MigrationManager
 from app.observability import (
@@ -255,6 +257,8 @@ def create_app() -> FastAPI:
         intercompany_engine=app.state.intercompany_transfer_engine,
         llm_service=app.state.llm_service,
     )
+    # G+2: WebSocket Connection Manager (holding-scoped real-time broadcast)
+    app.state.ws_connection_manager = WebSocketConnectionManager()
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -359,6 +363,7 @@ def create_app() -> FastAPI:
     app.include_router(kvkk_router)
     app.include_router(market_router)
     app.include_router(notifications_router)
+    app.include_router(realtime_router)
     app.include_router(procurement_router)
     app.include_router(reports_router)
     app.include_router(schedule_router)

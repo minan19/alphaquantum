@@ -27,6 +27,7 @@ from app.routers.dashboard_layout import router as dashboard_layout_router
 from app.routers.anomalies import router as anomalies_router
 from app.routers.cashflow_forecast import router as cashflow_forecast_router
 from app.routers.connectors_import import router as connectors_import_router
+from app.routers.staging_promotion import router as staging_promotion_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -310,6 +311,11 @@ def create_app() -> FastAPI:
         repo=app.state.connector_import_repository,
         ledger_db_path=settings.database_path,
     )
+    # I2: Staging → CRM/Invoice/Ledger promotion
+    from app.engines.staging_promotion_engine import StagingPromotionEngine
+    app.state.staging_promotion_engine = StagingPromotionEngine(
+        database_path=settings.database_path,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -417,6 +423,7 @@ def create_app() -> FastAPI:
     app.include_router(anomalies_router)
     app.include_router(cashflow_forecast_router)
     app.include_router(connectors_import_router)
+    app.include_router(staging_promotion_router)
     app.include_router(notifications_router)
     app.include_router(onboarding_router)
     app.include_router(procurement_router)

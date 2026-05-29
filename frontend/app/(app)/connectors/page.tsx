@@ -8,6 +8,7 @@ import {
   type ConnectorImportJob,
 } from "@/lib/connectors-api";
 import { LogoImportWizard } from "@/components/connectors/logo-import-wizard";
+import { StagingReview } from "@/components/connectors/staging-review";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +67,8 @@ export default function ConnectorsPage() {
       </motion.header>
 
       <LogoImportWizard onComplete={() => void refresh()} />
+
+      <StagingReview />
 
       <Card className="p-6" variant="glass">
         <CardHeader className="p-0 pb-3 flex-row items-center justify-between">

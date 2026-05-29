@@ -460,7 +460,7 @@ class ApiAuthTests(unittest.TestCase):
         )
         self.assertEqual(admin_status.status_code, 200)
         versions = [row["version"] for row in admin_status.json()]
-        self.assertEqual(versions, list(range(1, 29)))
+        self.assertEqual(versions, list(range(1, 30)))
 
         manager_token = self._login_access_token("manager", "manager12345")
         manager_status = self.client.get(

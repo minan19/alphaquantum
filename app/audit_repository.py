@@ -188,3 +188,154 @@ class AuditRepository:
                         row_dict["event_detail"] = None
                 result.append(row_dict)
             return result
+
+    # ── SEC1: Advanced search + summary ────────────────────────────────
+
+    def search_logs(
+        self,
+        *,
+        username: str | None = None,
+        method: str | None = None,
+        path_contains: str | None = None,
+        status_code_min: int | None = None,
+        status_code_max: int | None = None,
+        from_ts: int | None = None,
+        to_ts: int | None = None,
+        event_type: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Audit log için filtreli arama. Admin UI için optimize.
+
+        path_contains: SQL LIKE '%X%' — tehlikeli karakterleri escape ediyor.
+        """
+        clauses: list[str] = []
+        params: list[Any] = []
+        if username is not None:
+            clauses.append("username = ?")
+            params.append(username)
+        if method is not None:
+            clauses.append("method = ?")
+            params.append(method.upper())
+        if path_contains:
+            # LIKE escape: backslash convention
+            safe_path = path_contains.replace("\\", "\\\\").replace(
+                "%", r"\%"
+            ).replace("_", r"\_")
+            clauses.append("path LIKE ? ESCAPE '\\'")
+            params.append(f"%{safe_path}%")
+        if status_code_min is not None:
+            clauses.append("status_code >= ?")
+            params.append(int(status_code_min))
+        if status_code_max is not None:
+            clauses.append("status_code <= ?")
+            params.append(int(status_code_max))
+        if from_ts is not None:
+            clauses.append("created_at >= ?")
+            params.append(int(from_ts))
+        if to_ts is not None:
+            clauses.append("created_at <= ?")
+            params.append(int(to_ts))
+        if event_type is not None:
+            clauses.append("event_type = ?")
+            params.append(event_type)
+
+        sql = """
+            SELECT id, request_id, username, role, method, path,
+                   status_code, ip_address, user_agent, duration_ms,
+                   created_at, event_type, event_detail
+            FROM audit_logs
+        """
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        safe_limit = max(1, min(limit, 500))
+        sql += " ORDER BY id DESC LIMIT ?"
+        params.append(safe_limit)
+
+        with self._lock:
+            rows = self._conn.execute(sql, tuple(params)).fetchall()
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            d = dict(row)
+            raw = d.get("event_detail")
+            if raw:
+                try:
+                    d["event_detail"] = json.loads(str(raw))
+                except (TypeError, ValueError):
+                    d["event_detail"] = None
+            out.append(d)
+        return out
+
+    def summary(
+        self, *, window_hours: int = 24,
+    ) -> dict[str, Any]:
+        """Son N saatte ne oldu? Admin dashboard için."""
+        now = int(time.time())
+        from_ts = now - window_hours * 3600
+        with self._lock:
+            total = self._conn.execute(
+                "SELECT COUNT(*) AS n FROM audit_logs WHERE created_at >= ?",
+                (from_ts,),
+            ).fetchone()
+            error_rate = self._conn.execute(
+                """
+                SELECT
+                    SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) AS errors,
+                    COUNT(*) AS total
+                FROM audit_logs WHERE created_at >= ?
+                """,
+                (from_ts,),
+            ).fetchone()
+            by_method = self._conn.execute(
+                """
+                SELECT method, COUNT(*) AS n FROM audit_logs
+                WHERE created_at >= ?
+                GROUP BY method ORDER BY n DESC LIMIT 10
+                """,
+                (from_ts,),
+            ).fetchall()
+            by_user = self._conn.execute(
+                """
+                SELECT username, COUNT(*) AS n FROM audit_logs
+                WHERE created_at >= ? AND username IS NOT NULL
+                GROUP BY username ORDER BY n DESC LIMIT 10
+                """,
+                (from_ts,),
+            ).fetchall()
+            slow_routes = self._conn.execute(
+                """
+                SELECT path, AVG(duration_ms) AS avg_ms, COUNT(*) AS n
+                FROM audit_logs
+                WHERE created_at >= ? AND duration_ms > 0
+                GROUP BY path
+                HAVING n >= 3
+                ORDER BY avg_ms DESC LIMIT 10
+                """,
+                (from_ts,),
+            ).fetchall()
+
+        total_n = int(total["n"]) if total else 0
+        errors_n = int(error_rate["errors"] or 0) if error_rate else 0
+        return {
+            "window_hours": window_hours,
+            "total_events": total_n,
+            "error_count": errors_n,
+            "error_rate_pct": (
+                (errors_n / total_n * 100) if total_n > 0 else 0.0
+            ),
+            "events_by_method": [
+                {"method": str(r["method"]), "count": int(r["n"])}
+                for r in by_method
+            ],
+            "events_by_user": [
+                {"username": str(r["username"]), "count": int(r["n"])}
+                for r in by_user
+            ],
+            "slow_routes": [
+                {
+                    "path": str(r["path"]),
+                    "avg_duration_ms": float(r["avg_ms"]),
+                    "request_count": int(r["n"]),
+                }
+                for r in slow_routes
+            ],
+        }

@@ -114,3 +114,80 @@ export async function cancelConnectorImport(
     { method: "POST" },
   );
 }
+
+// ── I2: Staging → CRM/Invoice/Ledger promotion ─────────────────────────
+
+export type PromotionPolicy = "create_new" | "update_existing" | "skip";
+
+export interface StagedRecord {
+  signature_hash: string;
+  payload: Record<string, unknown>;
+  created_at: number;
+}
+
+export interface StagingList {
+  customers: StagedRecord[];
+  invoices: StagedRecord[];
+  customer_count: number;
+  invoice_count: number;
+}
+
+export interface PromotionPlanRecord {
+  signature_hash: string;
+  source_code: string | null;
+  source_no: string | null;
+  customer_source_code: string | null;
+  name: string | null;
+  tax_number: string | null;
+  issue_date: string | null;
+  amount: number | null;
+  direction: string | null;
+  existing_id: number | null;
+  planned_action: string;
+}
+
+export interface PromotionPlan {
+  new_customers: number;
+  new_invoices: number;
+  conflict_customers: number;
+  conflict_invoices: number;
+  already_promoted_customers: number;
+  already_promoted_invoices: number;
+  ledger_entries_to_create: number;
+  customer_details: PromotionPlanRecord[];
+  invoice_details: PromotionPlanRecord[];
+}
+
+export interface PromotionResult {
+  customers_created: number;
+  customers_updated: number;
+  customers_skipped: number;
+  invoices_created: number;
+  invoices_skipped: number;
+  ledger_entries_created: number;
+  errors: string[];
+}
+
+export async function listStaging(limit = 200): Promise<StagingList> {
+  return apiRequest<StagingList>(`/api/v1/connectors/staging?limit=${limit}`);
+}
+
+export async function previewStagingPromotion(
+  companyName: string,
+  policy: PromotionPolicy = "create_new",
+): Promise<PromotionPlan> {
+  return apiRequest<PromotionPlan>("/api/v1/connectors/staging/preview", {
+    method: "POST",
+    body: { company_name: companyName, policy },
+  });
+}
+
+export async function promoteStaging(
+  companyName: string,
+  policy: PromotionPolicy = "create_new",
+): Promise<PromotionResult> {
+  return apiRequest<PromotionResult>("/api/v1/connectors/staging/promote", {
+    method: "POST",
+    body: { company_name: companyName, policy },
+  });
+}

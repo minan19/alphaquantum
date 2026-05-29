@@ -2702,6 +2702,71 @@ class ConnectorTypeInfo(BaseModel):
     supported_modes: list[str]
 
 
+# ── I2: Staging → CRM/Invoice Promotion ────────────────────────────────
+
+class StagedRecord(BaseModel):
+    """Stage edilmiş Logo verisinin frontend formatı."""
+
+    signature_hash: str
+    payload: dict[str, Any]
+    created_at: int
+
+
+class StagingListResponse(BaseModel):
+    customers: list[StagedRecord] = Field(default_factory=list)
+    invoices: list[StagedRecord] = Field(default_factory=list)
+    customer_count: int = Field(ge=0)
+    invoice_count: int = Field(ge=0)
+
+
+class PromotionPreviewRequest(BaseModel):
+    company_name: str = Field(min_length=1, max_length=120)
+    policy: str = Field(
+        default="create_new",
+        pattern="^(create_new|update_existing|skip)$",
+    )
+
+
+class PromotionPlanRecord(BaseModel):
+    signature_hash: str
+    source_code: str | None = None
+    source_no: str | None = None
+    customer_source_code: str | None = None
+    name: str | None = None
+    tax_number: str | None = None
+    issue_date: str | None = None
+    amount: float | None = None
+    direction: str | None = None
+    existing_id: int | None = None
+    planned_action: str
+
+
+class PromotionPlanResponse(BaseModel):
+    """preview_promotion() çıktısı."""
+
+    new_customers: int = Field(ge=0)
+    new_invoices: int = Field(ge=0)
+    conflict_customers: int = Field(ge=0)
+    conflict_invoices: int = Field(ge=0)
+    already_promoted_customers: int = Field(ge=0)
+    already_promoted_invoices: int = Field(ge=0)
+    ledger_entries_to_create: int = Field(ge=0)
+    customer_details: list[PromotionPlanRecord] = Field(default_factory=list)
+    invoice_details: list[PromotionPlanRecord] = Field(default_factory=list)
+
+
+class PromotionResultResponse(BaseModel):
+    """promote() çıktısı."""
+
+    customers_created: int = Field(ge=0)
+    customers_updated: int = Field(ge=0)
+    customers_skipped: int = Field(ge=0)
+    invoices_created: int = Field(ge=0)
+    invoices_skipped: int = Field(ge=0)
+    ledger_entries_created: int = Field(ge=0)
+    errors: list[str] = Field(default_factory=list)
+
+
 class AnomalyCalibrationOverview(BaseModel):
     """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
 

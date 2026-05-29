@@ -2870,6 +2870,44 @@ class SampleDataClearResponse(BaseModel):
     anomalies_deleted: int = Field(ge=0)
 
 
+# ── A4: AI Invoice OCR ─────────────────────────────────────────────────
+
+class OcrJobResponse(BaseModel):
+    id: int
+    user_id: str
+    source_filename: str | None
+    status: str = Field(
+        pattern="^(pending|processing|extracted|confirmed|failed|cancelled)$"
+    )
+    extract: dict[str, Any] = Field(default_factory=dict)
+    confidence_pct: float = Field(ge=0, le=100)
+    ledger_entry_id: int | None = None
+    error_message: str | None = None
+    created_at: int
+    extracted_at: int | None = None
+    confirmed_at: int | None = None
+
+
+class OcrConfirmRequest(BaseModel):
+    company_name: str = Field(min_length=1, max_length=120)
+    # User edits — overrides extracted fields
+    vendor_name: str | None = Field(default=None, max_length=255)
+    invoice_no: str | None = Field(default=None, max_length=50)
+    issue_date: str | None = Field(
+        default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"
+    )
+    total_amount: float | None = Field(default=None, ge=0)
+    direction: str | None = Field(
+        default=None, pattern="^(outgoing|incoming)$"
+    )
+    category: str | None = Field(default=None, max_length=50)
+
+
+class OcrJobListResponse(BaseModel):
+    jobs: list[OcrJobResponse] = Field(default_factory=list)
+    total: int = Field(ge=0)
+
+
 class AnomalyCalibrationOverview(BaseModel):
     """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
 

@@ -94,7 +94,7 @@ def verify_entry(entry: dict[str, Any]) -> bool:
     if not stored_hash:
         return False
     recomputed = compute_entry_hash(entry)
-    return stored_hash == recomputed
+    return bool(stored_hash == recomputed)
 
 
 def verify_chain_link(

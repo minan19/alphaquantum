@@ -235,7 +235,8 @@ class AuditRepository:
         ).fetchone()
         if row is None:
             return None
-        return row["entry_hash"]
+        value = row["entry_hash"]
+        return str(value) if value is not None else None
 
     def verify_chain(self, *, limit: int = 10_000) -> dict[str, Any]:
         """Verify the entire hash chain.

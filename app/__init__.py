@@ -26,6 +26,7 @@ from app.routers.market import router as market_router
 from app.routers.realtime import router as realtime_router
 from app.routers.dashboard_layout import router as dashboard_layout_router
 from app.routers.anomalies import router as anomalies_router
+from app.routers.cashflow_forecast import router as cashflow_forecast_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -292,6 +293,16 @@ def create_app() -> FastAPI:
         ledger_db_path=settings.database_path,
         calibration=app.state.anomaly_calibration_engine,
     )
+    # A3: Adaptive cashflow forecasting (Holt-Winters)
+    from app.cashflow_forecast_repository import CashflowForecastRepository
+    from app.engines.cashflow_forecast_engine import CashflowForecastEngine
+    app.state.cashflow_forecast_repository = CashflowForecastRepository(
+        settings.database_path
+    )
+    app.state.cashflow_forecast_engine = CashflowForecastEngine(
+        repo=app.state.cashflow_forecast_repository,
+        ledger_db_path=settings.database_path,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -397,6 +408,7 @@ def create_app() -> FastAPI:
     app.include_router(market_router)
     app.include_router(dashboard_layout_router)
     app.include_router(anomalies_router)
+    app.include_router(cashflow_forecast_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)
     app.include_router(onboarding_router)

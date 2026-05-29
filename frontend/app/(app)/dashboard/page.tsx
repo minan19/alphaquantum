@@ -28,6 +28,7 @@ import { ApiError, fetchLiveSignals, type DashboardLiveSignalsResponse, type Das
 import { StatCard } from "@/components/dashboard/stat-card";
 import { CustomizeDashboardTrigger } from "@/components/dashboard/customize-modal";
 import { AnomalySignalsWidget } from "@/components/dashboard/anomaly-signals-widget";
+import { CashflowForecastWidget } from "@/components/dashboard/cashflow-forecast-widget";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -170,15 +171,25 @@ export default function DashboardPage() {
         />
       </section>
 
-      {/* Anomaly Detection — CorpOS pillar widget */}
-      <motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, delay: 0.1, ease: [0.32, 0.72, 0, 1] }}
-        aria-label="Anomali sinyalleri"
-      >
-        <AnomalySignalsWidget />
-      </motion.section>
+      {/* Anomaly Detection + Cashflow Forecast — CorpOS + FinOS pillars */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.1, ease: [0.32, 0.72, 0, 1] }}
+          aria-label="Anomali sinyalleri"
+        >
+          <AnomalySignalsWidget />
+        </motion.section>
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.15, ease: [0.32, 0.72, 0, 1] }}
+          aria-label="Nakit akışı tahmini"
+        >
+          <CashflowForecastWidget />
+        </motion.section>
+      </div>
 
       {/* Cashflow Chart */}
       <motion.section

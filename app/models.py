@@ -2588,6 +2588,74 @@ class AnomalyCalibrationDetectorMetric(BaseModel):
     )
 
 
+class CashflowForecastPoint(BaseModel):
+    """Tek bir gelecek günün tahmini + güven bantları."""
+
+    day_offset: int = Field(ge=1)
+    point_estimate: float
+    ci80_low: float
+    ci80_high: float
+    ci95_low: float
+    ci95_high: float
+
+
+class CashflowForecastModelMeta(BaseModel):
+    """Eğitilmiş model parametreleri — şeffaflık için frontend'e gönderilir."""
+
+    alpha: float = Field(ge=0, le=1)
+    beta: float = Field(ge=0, le=1)
+    gamma: float = Field(ge=0, le=1)
+    period_days: int = Field(ge=1)
+    level: float
+    trend: float
+
+
+class CashflowForecastResponse(BaseModel):
+    """A3 forecast endpoint çıktısı."""
+
+    horizon_days: int = Field(ge=1)
+    points: list[CashflowForecastPoint] = Field(default_factory=list)
+    history_used: int = Field(ge=0)
+    mape: float | None = Field(default=None, description="Backtest %")
+    rmse: float | None = Field(default=None)
+    is_reliable: bool
+    model: CashflowForecastModelMeta | None = None
+    generated_at: int
+    cached: bool = False
+    unreliable_reason: str | None = None
+    narrative: str | None = Field(
+        default=None, description="LLM gerekçe (opsiyonel)"
+    )
+
+
+class CashflowForecastFeedbackRequest(BaseModel):
+    """User: 'forecast doğru çıktı / yanılttı' feedback."""
+
+    snapshot_date: str = Field(
+        pattern=r"^\d{4}-\d{2}-\d{2}$", description="YYYY-MM-DD"
+    )
+    feedback: str = Field(pattern="^(accurate|misleading)$")
+    scope_key: str = Field(default="*", max_length=100)
+
+
+class CashflowAccuracyHistoryEntry(BaseModel):
+    snapshot_date: str
+    mape: float
+    rmse: float
+    test_size: int = Field(ge=0)
+    user_feedback: str | None = None
+    user_feedback_at: int | None = None
+
+
+class CashflowAccuracyHistoryResponse(BaseModel):
+    entries: list[CashflowAccuracyHistoryEntry] = Field(default_factory=list)
+    median_mape_last_30d: float | None = None
+    feedback_accuracy_ratio: float | None = Field(
+        default=None,
+        description="user_feedback='accurate' / total feedback. None = veri yok."
+    )
+
+
 class AnomalyCalibrationOverview(BaseModel):
     """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
 

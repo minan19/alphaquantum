@@ -29,6 +29,7 @@ from app.routers.anomalies import router as anomalies_router
 from app.routers.cashflow_forecast import router as cashflow_forecast_router
 from app.routers.connectors_import import router as connectors_import_router
 from app.routers.staging_promotion import router as staging_promotion_router
+from app.routers.community import router as community_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -320,6 +321,11 @@ def create_app() -> FastAPI:
     app.state.staging_promotion_engine = StagingPromotionEngine(
         database_path=settings.database_path,
     )
+    # BZ3: Public changelog + roadmap voting
+    from app.engines.community_engine import CommunityEngine
+    app.state.community_engine = CommunityEngine(
+        database_path=settings.database_path,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -428,6 +434,7 @@ def create_app() -> FastAPI:
     app.include_router(cashflow_forecast_router)
     app.include_router(connectors_import_router)
     app.include_router(staging_promotion_router)
+    app.include_router(community_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)
     app.include_router(onboarding_router)

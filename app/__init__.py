@@ -83,6 +83,11 @@ from app.holding_repository import HoldingRepository
 from app.intercompany_transfer_repository import IntercompanyTransferRepository
 from app.market_repository import MarketDataRepository
 from app.migration_manager import MigrationManager
+from app.observability import (
+    StructuredFormatter,
+    get_performance_counter,
+    is_json_logging_enabled,
+)
 from app.procurement_repository import ProcurementRepository
 from app.repository import CompanyRepository, default_companies
 from app.security import validate_security_settings
@@ -91,6 +96,13 @@ from app.services import AnalysisService, DashboardService
 
 def _configure_logging(log_level: str) -> None:
     level = getattr(logging, log_level.upper(), logging.INFO)
+    # G+5: Production'da AQ_LOG_JSON=1 → JSON structured output (Loki/Datadog
+    # uyumlu). Dev'de fallback text format (insan-okunabilir).
+    if is_json_logging_enabled():
+        handler = logging.StreamHandler()
+        handler.setFormatter(StructuredFormatter())
+        logging.basicConfig(level=level, handlers=[handler], force=True)
+        return
     logging.basicConfig(
         level=level,
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -296,13 +308,22 @@ def create_app() -> FastAPI:
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Cache-Control"] = "no-store"
+        # G+5: Performance counter — in-memory metrics. /system/metrics ile export.
+        get_performance_counter().record(
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+        )
+        # Structured log (extra fields → StructuredFormatter JSON'a yansır)
         logger.info(
-            "request_id=%s method=%s path=%s status=%s duration_ms=%.2f",
-            request_id,
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration_ms,
+            "request",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "duration_ms": round(duration_ms, 2),
+            },
         )
         _write_audit_log(
             app=app,

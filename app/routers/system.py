@@ -38,6 +38,7 @@ from app.models import (
     UpdateResult,
     UserProfile,
 )
+from app.observability import get_performance_counter
 from app.routers._deps import (
     _analysis_service,
     _company_engine,
@@ -156,3 +157,31 @@ def auto_update_legacy(
     del user
     _repo(request).update_random()
     return LegacyUpdateResult(message="Sistem guncellendi")
+
+
+# ── G+5: Operational metrics (admin-only) ────────────────────────────────────
+
+
+@router.get(
+    "/api/v1/system/metrics",
+    tags=["system"],
+)
+def system_metrics(
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_users")),
+) -> dict[str, Any]:
+    """G+5: Operational metrics snapshot.
+
+    In-memory request counter (PerformanceCounter): uptime, request count,
+    error rate, status breakdown (2xx/3xx/4xx/5xx), latency p50/p95/p99,
+    top 20 path by traffic.
+
+    RBAC: manage_users (admin yetkisi). Production'da Prometheus/Grafana
+    için ayrı public scrape endpoint G+5.2'de eklenecek (yetkilendirme
+    farklı pattern).
+
+    Restart'ta sıfırlanır (in-memory) — bu pilot için yeterli, scale için
+    Prometheus pull model.
+    """
+    del request, user
+    return get_performance_counter().snapshot()

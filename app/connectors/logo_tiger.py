@@ -48,13 +48,13 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any
+from typing import Any, Iterator
 
 # xml.etree.ElementTree expat'a bağımlı; bazı Python kurulumlarında
 # (Homebrew Python örneği) expat yüklenemez. Pure-Python fallback ile
 # bu durumu nazikçe halleder.
 try:
-    from xml.etree import ElementTree as ET  # type: ignore[import-not-found]
+    from xml.etree import ElementTree as ET
     _ETREE_AVAILABLE = True
 except ImportError:
     _ETREE_AVAILABLE = False
@@ -96,7 +96,7 @@ class _MiniXMLElement:
             out.extend(c._descendants(tag))
         return out
 
-    def __iter__(self):
+    def __iter__(self) -> "Iterator[_MiniXMLElement]":
         return iter(self.children)
 
     def __len__(self) -> int:
@@ -410,7 +410,8 @@ class LogoTigerConnector(BaseConnector):
         for k in keys:
             child = node.find(k)
             if child is not None and child.text:
-                return child.text.strip()
+                text: str = child.text.strip()
+                return text
         return None
 
     def _first_float(self, node: Any, keys: tuple[str, ...]) -> float | None:

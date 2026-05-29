@@ -79,7 +79,9 @@ class IntercompanyTransferRepository:
             )
             transfer_id = new_row_id(cursor)
             self._conn.commit()
-        return self.get_transfer(transfer_id)
+        created = self.get_transfer(transfer_id)
+        assert created is not None, "Transfer disappeared after insert"
+        return created
 
     # ── READ ───────────────────────────────────────────────────────────
 

@@ -55,7 +55,9 @@ class KVKKRepository:
             )
             row_id = int(cur.lastrowid or 0)
             self._conn.commit()
-            return self._fetch_deletion(row_id)
+            created = self._fetch_deletion(row_id)
+            assert created is not None, "Deletion request disappeared after insert"
+            return created
 
     def get_deletion_request(self, request_id: int) -> dict[str, Any] | None:
         with self._lock:
@@ -171,7 +173,9 @@ class KVKKRepository:
             )
             row_id = int(cur.lastrowid or 0)
             self._conn.commit()
-            return self._fetch_incident(row_id)
+            created = self._fetch_incident(row_id)
+            assert created is not None, "Incident disappeared after insert"
+            return created
 
     def _fetch_incident(self, incident_id: int) -> dict[str, Any] | None:
         row = self._conn.execute(

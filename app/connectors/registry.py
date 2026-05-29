@@ -1,6 +1,8 @@
 """I1: Connector registry — string anahtarla connector instance al."""
 from __future__ import annotations
 
+from typing import cast
+
 from app.connectors.base import BaseConnector
 from app.connectors.logo_tiger import LogoTigerConnector
 
@@ -22,4 +24,4 @@ def get_connector(connector_type: str) -> BaseConnector:
         raise ValueError(
             f"Bilinmeyen connector: {connector_type!r}. Mevcut: {known}"
         )
-    return cls()  # type: ignore[return-value]
+    return cast(BaseConnector, cls())

@@ -63,7 +63,9 @@ class FinancialInstrumentRepository:
             )
             row_id = new_row_id(cur)
             self._conn.commit()
-            return self._fetch(row_id)
+            created = self._fetch(row_id)
+            assert created is not None, "Instrument disappeared after insert"
+            return created
 
     def get(self, instrument_id: int) -> dict[str, Any] | None:
         with self._lock:

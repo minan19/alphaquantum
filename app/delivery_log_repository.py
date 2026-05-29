@@ -57,7 +57,9 @@ class DeliveryLogRepository:
             )
             row_id = new_row_id(cur)
             self._conn.commit()
-            return self._fetch(row_id)
+            created = self._fetch(row_id)
+            assert created is not None, "Delivery log disappeared after insert"
+            return created
 
     def _fetch(self, log_id: int) -> dict[str, Any] | None:
         row = self._conn.execute(

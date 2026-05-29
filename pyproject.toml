@@ -49,7 +49,6 @@ ignore_missing_imports = true
 no_error_summary = true
 warn_unused_configs = true
 disable_error_code = [
-    "return-value",
     "assignment",
     "attr-defined",
     "misc",

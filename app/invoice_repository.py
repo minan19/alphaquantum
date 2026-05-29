@@ -54,7 +54,9 @@ class InvoiceRepository:
             )
             row_id = new_row_id(cur)
             self._conn.commit()
-            return self._fetch(row_id)
+            created = self._fetch(row_id)
+            assert created is not None, "Invoice disappeared after insert"
+            return created
 
     def get_invoice(self, invoice_id: int) -> dict[str, Any] | None:
         with self._lock:

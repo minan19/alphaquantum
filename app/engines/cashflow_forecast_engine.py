@@ -103,7 +103,7 @@ class CashflowForecastEngine:
                 user_id=user_id, scope_key=scope_key, horizon_days=horizon_days,
             )
             if cached is not None:
-                payload = cached["forecast"]
+                payload: dict[str, Any] = cached["forecast"]
                 payload["cached"] = True
                 payload["generated_at"] = cached["generated_at"]
                 return payload
@@ -135,6 +135,7 @@ class CashflowForecastEngine:
                 train_history_days=len(series),
             )
         else:
+            assert model_params is not None  # narrowed by needs_retrain
             alpha = float(model_params["alpha"])
             beta = float(model_params["beta"])
             gamma = float(model_params["gamma"])

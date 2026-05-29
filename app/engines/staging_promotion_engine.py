@@ -279,7 +279,7 @@ class StagingPromotionEngine:
                 existing = self._find_matching_customer(
                     conn, company_name=company_name, payload=payload,
                 )
-                target_id: int | None = None
+                target_id = None
                 action_taken: str = CREATE_NEW
 
                 if existing and policy == SKIP:
@@ -421,7 +421,7 @@ class StagingPromotionEngine:
                 (company_name, f"VKN:{tax_number}"),
             ).fetchone()
             if row:
-                return row
+                return row  # type: ignore[no-any-return]
         name = (payload.get("name") or "").strip()
         email = (payload.get("email") or "").strip()
         if name and email:
@@ -434,7 +434,7 @@ class StagingPromotionEngine:
                 (company_name, name, email),
             ).fetchone()
             if row:
-                return row
+                return row  # type: ignore[no-any-return]
         return None
 
     @staticmethod
@@ -443,7 +443,7 @@ class StagingPromotionEngine:
     ) -> sqlite3.Row | None:
         if not source_code:
             return None
-        return conn.execute(
+        row = conn.execute(
             """
             SELECT id FROM customers
             WHERE company_name = ? AND notes LIKE ?
@@ -451,6 +451,7 @@ class StagingPromotionEngine:
             """,
             (company_name, f"%LogoKod:{source_code}%"),
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     @staticmethod
     def _find_matching_invoice(
@@ -459,7 +460,7 @@ class StagingPromotionEngine:
         no = (payload.get("source_no") or "").strip()
         if not no:
             return None
-        return conn.execute(
+        row = conn.execute(
             """
             SELECT id FROM invoices
             WHERE company_name = ? AND invoice_number = ?
@@ -467,6 +468,7 @@ class StagingPromotionEngine:
             """,
             (company_name, no),
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     # ── Internal: writers ──────────────────────────────────────────────
 

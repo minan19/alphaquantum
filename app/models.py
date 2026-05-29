@@ -2490,3 +2490,33 @@ class OnboardingStatusResponse(BaseModel):
     user_id: str
     company_count: int
     invoice_count: int
+
+
+# ── F4: Dashboard Widget Customization ─────────────────────────────────────
+
+class DashboardWidgetConfig(BaseModel):
+    """Tek widget yerleşimi."""
+
+    widget_id: str = Field(min_length=1, max_length=50)
+    size: str = Field(
+        default="md",
+        pattern="^(sm|md|lg)$",
+        description="sm=1col, md=2col, lg=3col grid span",
+    )
+    hidden: bool = Field(default=False, description="Gizli ama sırada — kolay tekrar göster")
+    order: int = Field(ge=0, le=999)
+
+
+class DashboardLayoutResponse(BaseModel):
+    """User'ın layout'u — frontend dashboard render girdisi."""
+
+    user_id: str
+    widgets: list[DashboardWidgetConfig]
+    is_default: bool = Field(description="True ise kullanıcı henüz customize etmedi")
+    updated_at: int
+
+
+class DashboardLayoutSaveRequest(BaseModel):
+    """PUT /dashboard/layout — widgets array."""
+
+    widgets: list[DashboardWidgetConfig] = Field(min_length=0, max_length=12)

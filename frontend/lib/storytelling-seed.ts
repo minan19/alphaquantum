@@ -16,6 +16,7 @@
  */
 import type {
   ConsolidatedPLResponse,
+  ExecSummaryResponse,
   FinanceOverviewResponse,
   GroupFXPositionResponse,
   IntercompanyTransferListResponse,
@@ -216,6 +217,36 @@ export const ATLAS_HOLDING_PENDING_TRANSFERS_SEED: IntercompanyTransferListRespo
     },
   ],
 };
+
+// ── Sahne 5: Executive Summary (G+1 AI Layer) ────────────────────────────
+
+export const ATLAS_HOLDING_EXEC_SUMMARY_SEED: ExecSummaryResponse = {
+  holding_id: 1,
+  holding_name: "Atlas Holding",
+  period_start: "2026-01-01",
+  period_end: "2026-03-31",
+  generated_at: "2026-03-31",
+  narrative:
+    "Atlas Holding için 2026-01-01 - 2026-03-31 döneminde konsolide net sonuç " +
+    "₺1.780.000 (güçlü), toplam brüt gelir ₺2.800.000. FX net pozisyonu " +
+    "₺10.002.500 ile konsantre seviyede.\n\n" +
+    "Intercompany eliminasyonu dengeli. 2 adet bekleyen intercompany transfer " +
+    "4-eyes onay sırasında.\n\n" +
+    "Öneriler:\n" +
+    "• FX konsantrasyonu yüksek — hedging stratejisi (forward/swap) değerlendirilmeli.\n" +
+    "• Mevcut göstergeler sağlıklı — rutin haftalık review yeterli.",
+  highlights: [
+    "🟢 Konsolide net: ₺1.780.000 (strong)",
+    "🟠 FX net pozisyon: ₺10.002.500 (concentrated)",
+    "⏳ 2 adet intercompany transfer 4-eyes onay sırasında",
+  ],
+  health_status: "strong",
+  fx_risk_level: "concentrated",
+  consolidated_net_try: 1_780_000,
+  fx_net_exposure_try: 10_002_500,
+  pending_transfers_count: 2,
+};
+
 
 // ── Helper: TR locale formatlar ──────────────────────────────────────────
 

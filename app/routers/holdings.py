@@ -38,6 +38,8 @@ from app.models import (
     EcosystemActivationResponse,
     EcosystemPortfolioActivationRequest,
     EcosystemPortfolioActivationResponse,
+    ExecSummaryRequest,
+    ExecSummaryResponse,
     GroupFXPositionResponse,
     HoldingBulkOnboardRequest,
     HoldingBulkOnboardResponse,
@@ -56,6 +58,7 @@ from app.routers._deps import (
     _consolidation_engine,
     _ecosystem_engine,
     _ensure_company_scope,
+    _exec_summary_engine,
     _group_fx_engine,
     _holding_engine,
     _international_engine,
@@ -375,6 +378,45 @@ def get_group_fx_position(
         return _group_fx_engine(request).group_fx_position(
             holding_id=holding_id,
             as_of_date=as_of_date,
+        )
+    except ValueError as exc:
+        raise _value_error_to_http(exc) from exc
+
+
+# ── G+1: AI Executive Summary (Claude LLM) ───────────────────────────────────
+
+
+@router.post(
+    "/api/v1/holdings/{holding_id}/exec-summary",
+    response_model=ExecSummaryResponse,
+    tags=["holding"],
+)
+def generate_exec_summary(
+    holding_id: int,
+    payload: ExecSummaryRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("read_holdings")),
+) -> ExecSummaryResponse:
+    """Holding yönetici özeti — Claude LLM ile Türkçe narrative.
+
+    Sahne 5 ("17:00 günlük rapor — Exec summary") burayı çağırır.
+
+    Backend zinciri:
+      1. ConsolidationEngine.consolidated_pl (G1.2)
+      2. GroupFXEngine.group_fx_position (G1.4)
+      3. IntercompanyTransferEngine.list_pending (G1.3)
+      4. LLM narrative generation (Claude opus-4-7, prompt cached)
+
+    Production'da AQ_ANTHROPIC_API_KEY varsa Claude API. Yoksa
+    deterministic rule-based fallback (OfflineLLMService).
+
+    RBAC: read_holdings permission. Audit log: G+4 hash chain + G+5 event.
+    """
+    del user
+    try:
+        return _exec_summary_engine(request).generate_summary(
+            holding_id=holding_id,
+            payload=payload,
         )
     except ValueError as exc:
         raise _value_error_to_http(exc) from exc

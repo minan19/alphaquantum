@@ -307,6 +307,52 @@ class IntercompanyTransferListResponse(BaseModel):
     transfers: list[IntercompanyTransferRead]
 
 
+# ── G+1: Executive Summary (AI Layer) ──────────────────────────────────────
+#
+# Sahne 5 "17:00 günlük rapor" — Claude LLM ile Türkçe yönetici özeti.
+# ConsolidationEngine + GroupFXEngine + IntercompanyTransferEngine
+# çıktılarını birleştirir.
+
+class ExecSummaryRequest(BaseModel):
+    """Holding exec summary talebi."""
+
+    period_start: str = Field(
+        description="ISO YYYY-MM-DD (inclusive)",
+        min_length=10,
+        max_length=10,
+    )
+    period_end: str = Field(
+        description="ISO YYYY-MM-DD (inclusive, ≥ period_start)",
+        min_length=10,
+        max_length=10,
+    )
+
+
+class ExecSummaryResponse(BaseModel):
+    """Yönetici özeti — LLM narrative + yapısal highlights."""
+
+    holding_id: int
+    holding_name: str
+    period_start: str
+    period_end: str
+    generated_at: str = Field(description="ISO YYYY-MM-DD üretim tarihi")
+
+    # LLM narrative (2-3 paragraf Türkçe) — sahne 5 ana içerik
+    narrative: str = Field(
+        description="LLM tarafından üretilen Türkçe yönetici özeti"
+    )
+
+    # Yapısal highlights (UI bullet list için)
+    highlights: list[str]
+
+    # Kantitatif KPI özetleri (frontend grafik için)
+    health_status: str
+    fx_risk_level: str
+    consolidated_net_try: float
+    fx_net_exposure_try: float
+    pending_transfers_count: int
+
+
 # ── G1.4: Group FX Net Position ────────────────────────────────────────────
 #
 # Karma sektörlü holding'in en kritik finansal risk göstergesi: çoklu para

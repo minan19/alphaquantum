@@ -177,3 +177,34 @@ export async function approveIntercompanyTransfer(
     },
   );
 }
+
+// ── Sahne 5: Executive Summary (G+1 AI Layer) ─────────────────────────────
+
+export interface ExecSummaryResponse {
+  holding_id: number;
+  holding_name: string;
+  period_start: string;
+  period_end: string;
+  generated_at: string;
+  narrative: string;
+  highlights: string[];
+  health_status: string;
+  fx_risk_level: string;
+  consolidated_net_try: number;
+  fx_net_exposure_try: number;
+  pending_transfers_count: number;
+}
+
+export async function generateExecSummary(
+  holdingId: number,
+  periodStart: string,
+  periodEnd: string,
+): Promise<ExecSummaryResponse> {
+  return apiRequest<ExecSummaryResponse>(
+    `/api/v1/holdings/${holdingId}/exec-summary`,
+    {
+      method: "POST",
+      body: { period_start: periodStart, period_end: periodEnd },
+    },
+  );
+}

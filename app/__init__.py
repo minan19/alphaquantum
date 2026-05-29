@@ -51,6 +51,7 @@ from app.engines import (
     ConnectorEngine,
     ConsolidationEngine,
     CRMEngine,
+    ExecSummaryEngine,
     DashboardEngine,
     DeliveryEngine,
     TaskEngine,
@@ -81,6 +82,7 @@ from app.identity_repository import IdentityRepository
 from app.international_repository import InternationalProjectRepository
 from app.holding_repository import HoldingRepository
 from app.intercompany_transfer_repository import IntercompanyTransferRepository
+from app.llm_service import create_llm_service
 from app.market_repository import MarketDataRepository
 from app.migration_manager import MigrationManager
 from app.observability import (
@@ -243,6 +245,15 @@ def create_app() -> FastAPI:
         holding_repo=app.state.holding_repository,
         invoice_repo=app.state.invoice_repository,
         transfer_repo=app.state.intercompany_transfer_repository,
+    )
+    # G+1: AI Layer — Claude LLM exec summary (Sahne 5)
+    # Factory: AQ_LLM_OFFLINE=true → offline, AQ_ANTHROPIC_API_KEY → Claude
+    app.state.llm_service = create_llm_service()
+    app.state.exec_summary_engine = ExecSummaryEngine(
+        consolidation_engine=app.state.consolidation_engine,
+        group_fx_engine=app.state.group_fx_engine,
+        intercompany_engine=app.state.intercompany_transfer_engine,
+        llm_service=app.state.llm_service,
     )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(

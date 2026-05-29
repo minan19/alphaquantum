@@ -35,6 +35,7 @@ from app.engines import (
     ComparisonEngine,
     ConsolidationEngine,
     ConnectorEngine,
+    ExecSummaryEngine,
     IntercompanyTransferEngine,
     CRMEngine,
     DashboardEngine,
@@ -182,6 +183,11 @@ def _intercompany_transfer_engine(request: Request) -> IntercompanyTransferEngin
 
 def _group_fx_engine(request: Request) -> GroupFXEngine:
     return cast(GroupFXEngine, request.app.state.group_fx_engine)
+
+
+def _exec_summary_engine(request: Request) -> ExecSummaryEngine:
+    """G+1: AI Layer — sahne 5 exec summary engine."""
+    return cast(ExecSummaryEngine, request.app.state.exec_summary_engine)
 
 
 def _crm_engine(request: Request) -> CRMEngine:

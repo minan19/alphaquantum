@@ -3,6 +3,7 @@ from app.engines.company_engine import CompanyEngine
 from app.engines.comparison_engine import ComparisonEngine
 from app.engines.consolidation_engine import ConsolidationEngine
 from app.engines.crm_engine import CRMEngine
+from app.engines.exec_summary_engine import ExecSummaryEngine
 from app.engines.dashboard_engine import DashboardEngine
 from app.engines.delivery_engine import DeliveryEngine
 from app.engines.kvkk_engine import KVKKEngine
@@ -33,6 +34,7 @@ __all__ = [
     "ComparisonEngine",
     "ConsolidationEngine",
     "CRMEngine",
+    "ExecSummaryEngine",
     "DashboardEngine",
     "DeliveryEngine",
     "KVKKEngine",

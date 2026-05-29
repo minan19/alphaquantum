@@ -15,8 +15,11 @@ from typing import cast
 
 from fastapi import APIRouter, Depends, Query, Request
 
+from app.engines.adaptive_calibration_engine import AdaptiveCalibrationEngine
 from app.engines.anomaly_detection_engine import AnomalyDetectionEngine
 from app.models import (
+    AnomalyCalibrationDetectorMetric,
+    AnomalyCalibrationOverview,
     AnomalyDetectionRunResponse,
     AnomalyReviewRequest,
     AnomalySignalResponse,
@@ -33,6 +36,13 @@ def _engine(request: Request) -> AnomalyDetectionEngine:
     return cast(
         AnomalyDetectionEngine,
         request.app.state.anomaly_detection_engine,
+    )
+
+
+def _calibration(request: Request) -> AdaptiveCalibrationEngine:
+    return cast(
+        AdaptiveCalibrationEngine,
+        request.app.state.anomaly_calibration_engine,
     )
 
 
@@ -119,3 +129,32 @@ def review_anomaly(
             ValueError("Anomali bulunamadı veya zaten incelenmiş")
         )
     return AnomalySignalResponse(**result)
+
+
+@router.get(
+    "/api/v1/anomalies/calibration",
+    response_model=AnomalyCalibrationOverview,
+    tags=["anomalies"],
+)
+def get_calibration_overview(
+    request: Request,
+    _user: UserProfile = Depends(require_permissions("read_finance")),
+) -> AnomalyCalibrationOverview:
+    """A2.1: Sistem doğruluk KPI'sı — kullanıcı feedback'inden öğrenilmiş.
+
+    Dashboard'da "Bu hafta sistem doğruluğu: %X" göstergesine besler.
+    """
+    overview = _calibration(request).overall_metrics()
+    per_detector_models = {
+        k: AnomalyCalibrationDetectorMetric(**v)
+        for k, v in overview.get("per_detector", {}).items()
+    }
+    return AnomalyCalibrationOverview(
+        measured_precision=overview.get("measured_precision"),
+        total_reviews=overview.get("total_reviews", 0),
+        confirmed=overview.get("confirmed", 0),
+        dismissed=overview.get("dismissed", 0),
+        whitelisted_patterns=overview.get("whitelisted_patterns", 0),
+        is_learned=overview.get("is_learned", False),
+        per_detector=per_detector_models,
+    )

@@ -27,12 +27,14 @@ import {
 import { toast } from "sonner";
 import {
   fetchAnomalies,
+  fetchAnomalyCalibration,
   reviewAnomaly,
   runAnomalyDetection,
   severityTone,
   SEVERITY_LABEL,
   SIGNAL_TYPE_LABEL,
   type AnomaliesListResponse,
+  type AnomalyCalibrationOverview,
   type AnomalySignal,
 } from "@/lib/anomalies-api";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +51,7 @@ export function AnomalySignalsWidget({
   className?: string;
 }) {
   const [data, setData] = useState<AnomaliesListResponse | null>(null);
+  const [calibration, setCalibration] = useState<AnomalyCalibrationOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -58,12 +61,12 @@ export function AnomalySignalsWidget({
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchAnomalies({
-        holdingId,
-        minSeverity: "high",
-        limit: 10,
-      });
-      setData(result);
+      const [signals, calib] = await Promise.all([
+        fetchAnomalies({ holdingId, minSeverity: "high", limit: 10 }),
+        fetchAnomalyCalibration().catch(() => null),
+      ]);
+      setData(signals);
+      setCalibration(calib);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Yüklenemedi");
     } finally {
@@ -163,6 +166,11 @@ export function AnomalySignalsWidget({
       </CardHeader>
 
       <CardContent className="p-0 space-y-3">
+        {/* A2.1: Self-learning precision KPI */}
+        {calibration && (
+          <CalibrationBanner overview={calibration} />
+        )}
+
         {/* Summary strip */}
         {data && (
           <div className="flex items-center gap-2 text-xs">
@@ -224,6 +232,76 @@ export function AnomalySignalsWidget({
         </AnimatePresence>
       </CardContent>
     </Card>
+  );
+}
+
+
+function CalibrationBanner({
+  overview,
+}: {
+  overview: AnomalyCalibrationOverview;
+}) {
+  if (!overview.is_learned) {
+    return (
+      <div className="rounded-md border border-aq-mist/40 bg-aq-cosmos/40 px-3 py-2 text-[11px] flex items-center gap-2">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-aq-trace animate-pulse" />
+        <span className="text-aq-dust">
+          Sistem öğreniyor — {overview.total_reviews} review.
+          <span className="text-aq-trace ml-1">
+            (5+ feedback sonrası kalibrasyon başlar)
+          </span>
+        </span>
+      </div>
+    );
+  }
+  const pct = ((overview.measured_precision ?? 0) * 100).toFixed(1);
+  const numPct = parseFloat(pct);
+  const isElite = numPct >= 95;
+  return (
+    <div
+      className={cn(
+        "rounded-md border px-3 py-2 text-[11px]",
+        isElite
+          ? "border-aq-mint/40 bg-aq-mint/5"
+          : "border-aq-solar/40 bg-aq-solar/5",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            "inline-block h-1.5 w-1.5 rounded-full",
+            isElite ? "bg-aq-mint" : "bg-aq-solar",
+          )} />
+          <span className={cn(
+            "font-medium",
+            isElite ? "text-aq-mint" : "text-aq-solar",
+          )}>
+            Ölçülmüş doğruluk: %{pct}
+          </span>
+          <span className="text-aq-trace">
+            · {overview.total_reviews} review
+          </span>
+        </div>
+        <span className="text-[10px] text-aq-trace">
+          {overview.whitelisted_patterns > 0 && (
+            <>{overview.whitelisted_patterns} pattern öğrenildi · </>
+          )}
+          Her review'ün doğruluğu yükseltir
+        </span>
+      </div>
+      {/* Precision bar */}
+      <div className="mt-1.5 h-1 w-full rounded-full bg-aq-mist/20 overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${numPct}%` }}
+          transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
+          className={cn(
+            "h-full rounded-full",
+            isElite ? "bg-aq-mint" : "bg-aq-solar",
+          )}
+        />
+      </div>
+    </div>
   );
 }
 

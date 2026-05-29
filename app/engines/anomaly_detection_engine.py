@@ -45,10 +45,13 @@ from typing import Any
 from app.anomaly_signals_repository import AnomalySignalsRepository
 from app.anomaly_stats import (
     BaselineStats,
+    HIGH_Z_THRESHOLD,
+    MEDIUM_Z_THRESHOLD,
     compute_baseline,
     is_actionable,
     score_observation,
 )
+from app.engines.adaptive_calibration_engine import AdaptiveCalibrationEngine
 
 
 # ── Detector çıktı tipi ────────────────────────────────────────────────
@@ -106,9 +109,12 @@ class AnomalyDetectionEngine:
         *,
         repo: AnomalySignalsRepository,
         ledger_db_path: str,
+        calibration: AdaptiveCalibrationEngine | None = None,
     ) -> None:
         self._repo = repo
         self._ledger_db_path = ledger_db_path
+        # Calibration optional — yoksa nötr davranış (no learning)
+        self._calibration = calibration
 
     # ── Public API ─────────────────────────────────────────────────────
 
@@ -176,12 +182,92 @@ class AnomalyDetectionEngine:
         reviewed_by: str,
         note: str | None = None,
     ) -> dict[str, Any] | None:
-        return self._repo.review_signal(
+        """Sinyal feedback'i + adaptive calibration update.
+
+        Sinyal payload'ından target_key türetilir → per-pattern öğrenme.
+        """
+        result = self._repo.review_signal(
             signal_id=signal_id,
             action=action,
             reviewed_by=reviewed_by,
             note=note,
         )
+        if result is not None and self._calibration is not None:
+            target_key = self._target_key_for(result)
+            self._calibration.record_review(
+                detector_type=result["signal_type"],
+                target_key=target_key,
+                action=action,
+                signal_id=signal_id,
+            )
+        return result
+
+    @staticmethod
+    def _target_key_for(signal: dict[str, Any]) -> str:
+        """Sinyal payload'undan calibration target_key türet.
+
+        Her detector kendi key formatına sahip — calibration tablosunun
+        target_key kolonuyla uyumlu.
+        """
+        payload = signal.get("payload", {}) or {}
+        signal_type = signal.get("signal_type", "")
+        if signal_type == "intercompany_leakage":
+            return str(payload.get("counterparty", "*"))
+        if signal_type == "volume_spike":
+            company = str(payload.get("company", ""))
+            category = str(payload.get("category", ""))
+            return f"{company}::{category}"
+        if signal_type == "duplicate_payment":
+            return str(payload.get("counterparty", "*"))
+        if signal_type == "velocity_anomaly":
+            return str(payload.get("counterparty", "*"))
+        return "*"
+
+    def _apply_calibration(
+        self,
+        *,
+        detector_type: str,
+        target_key: str,
+        base_z: float,
+        base_confidence: float,
+        base_severity: str,
+    ) -> tuple[float, float, str] | None:
+        """Calibration offset + reliability uygula.
+
+        Returns: (adjusted_z, adjusted_confidence, adjusted_severity) veya
+        None (sinyal whitelist'te ise — atla).
+        """
+        if self._calibration is None:
+            return base_z, base_confidence, base_severity
+
+        # Whitelist filter — bu pattern kullanıcı tarafından "normaldir" denmiş
+        if self._calibration.is_whitelisted(
+            detector_type=detector_type, target_key=target_key
+        ):
+            return None
+
+        offset = self._calibration.get_threshold_offset(
+            detector_type=detector_type, target_key=target_key
+        )
+        adjusted_z = base_z - offset  # offset >0 → eşik yükselir → effective Z düşer
+        reliability = self._calibration.detector_reliability(
+            detector_type=detector_type
+        )
+        # Reliability multiplier sinyalin gücünü ayarlar
+        # Kritik 1.0, yüksek hassasiyet 1.5 → severity yükselir;
+        # düşük reliability 0.5 → severity düşer.
+        effective_z = adjusted_z * reliability
+
+        # Yeni severity threshold-based
+        from app.anomaly_stats import severity_from_z, confidence_from_z
+        new_severity = severity_from_z(effective_z, baseline_reliable=True)
+        new_confidence = confidence_from_z(effective_z)
+        # Severity'yi sadece base'den yukarı çekmiyoruz — koruma için
+        # base critical ise critical kalır
+        if base_severity == "critical":
+            new_severity = "critical"
+            new_confidence = max(new_confidence, base_confidence)
+        return adjusted_z, new_confidence, new_severity
 
     # ── Detector 1: Intercompany Leakage ────────────────────────────────
 
@@ -250,6 +336,18 @@ class AnomalyDetectionEngine:
                 severity = "medium"
                 confidence = 80.0
                 z = 1.9
+
+            # Calibration: whitelist check + threshold adjustment
+            adj = self._apply_calibration(
+                detector_type="intercompany_leakage",
+                target_key=counterparty,
+                base_z=z,
+                base_confidence=confidence,
+                base_severity=severity,
+            )
+            if adj is None:
+                continue  # Whitelisted — kullanıcı bu pattern'ı "normaldir" demiş
+            z, confidence, severity = adj
 
             signature = self._signature(
                 "intercompany_leakage",
@@ -336,6 +434,22 @@ class AnomalyDetectionEngine:
             if not score.is_outlier_above:
                 continue
 
+            # Calibration
+            target_key = f"{company}::{category}"
+            adj = self._apply_calibration(
+                detector_type="volume_spike",
+                target_key=target_key,
+                base_z=score.modified_z,
+                base_confidence=score.confidence_pct,
+                base_severity=score.severity,
+            )
+            if adj is None:
+                continue
+            adjusted_z, adjusted_conf, adjusted_sev = adj
+            # Adjusted severity actionable mı?
+            if adjusted_sev not in ("critical", "high"):
+                continue
+
             signature = self._signature(
                 "volume_spike",
                 company,
@@ -356,9 +470,9 @@ class AnomalyDetectionEngine:
             signals.append(DetectedSignal(
                 holding_id=holding_id,
                 signal_type="volume_spike",
-                severity=score.severity,
-                confidence_pct=score.confidence_pct,
-                modified_z=score.modified_z,
+                severity=adjusted_sev,
+                confidence_pct=adjusted_conf,
+                modified_z=adjusted_z,
                 title=title,
                 description=description,
                 baseline=asdict(baseline),
@@ -408,6 +522,17 @@ class AnomalyDetectionEngine:
             # Tarihler arası fark — hepsi 7 gün penceresinde
             dates = sorted([str(e.get("entry_date", "")) for e in entries])
             companies = sorted({str(e.get("company_name", "")) for e in entries})
+
+            # Calibration
+            adj = self._apply_calibration(
+                detector_type="duplicate_payment",
+                target_key=counterparty,
+                base_z=6.0,
+                base_confidence=99.9,
+                base_severity="critical",
+            )
+            if adj is None:
+                continue
 
             signature = self._signature(
                 "duplicate_payment",
@@ -481,6 +606,20 @@ class AnomalyDetectionEngine:
             if not score.is_outlier_above:
                 continue
 
+            # Calibration
+            adj = self._apply_calibration(
+                detector_type="velocity_anomaly",
+                target_key=counterparty,
+                base_z=score.modified_z,
+                base_confidence=score.confidence_pct,
+                base_severity=score.severity,
+            )
+            if adj is None:
+                continue
+            adjusted_z, adjusted_conf, adjusted_sev = adj
+            if adjusted_sev not in ("critical", "high"):
+                continue
+
             signature = self._signature(
                 "velocity_anomaly",
                 counterparty,
@@ -497,9 +636,9 @@ class AnomalyDetectionEngine:
             signals.append(DetectedSignal(
                 holding_id=holding_id,
                 signal_type="velocity_anomaly",
-                severity=score.severity,
-                confidence_pct=score.confidence_pct,
-                modified_z=score.modified_z,
+                severity=adjusted_sev,
+                confidence_pct=adjusted_conf,
+                modified_z=adjusted_z,
                 title=title,
                 description=description,
                 baseline=asdict(baseline),

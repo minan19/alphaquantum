@@ -273,15 +273,20 @@ def create_app() -> FastAPI:
     app.state.dashboard_layout_engine = DashboardLayoutEngine(
         repo=app.state.dashboard_layout_repository,
     )
-    # A2: Cross-company anomaly detection
+    # A2: Cross-company anomaly detection + A2.1 adaptive calibration
     from app.anomaly_signals_repository import AnomalySignalsRepository
+    from app.engines.adaptive_calibration_engine import AdaptiveCalibrationEngine
     from app.engines.anomaly_detection_engine import AnomalyDetectionEngine
     app.state.anomaly_signals_repository = AnomalySignalsRepository(
+        settings.database_path
+    )
+    app.state.anomaly_calibration_engine = AdaptiveCalibrationEngine(
         settings.database_path
     )
     app.state.anomaly_detection_engine = AnomalyDetectionEngine(
         repo=app.state.anomaly_signals_repository,
         ledger_db_path=settings.database_path,
+        calibration=app.state.anomaly_calibration_engine,
     )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(

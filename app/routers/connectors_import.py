@@ -33,6 +33,7 @@ router = APIRouter()
 # Connector type → human label (Logo Tiger gelecek versiyonlarda dahili)
 _CONNECTOR_LABELS = {
     "logo_tiger": "Logo Tiger",
+    "mikro": "Mikro ERP",
 }
 
 

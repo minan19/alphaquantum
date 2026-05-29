@@ -24,6 +24,7 @@ from app.routers.intercompany import router as intercompany_router
 from app.routers.kvkk import router as kvkk_router
 from app.routers.market import router as market_router
 from app.routers.realtime import router as realtime_router
+from app.routers.dashboard_layout import router as dashboard_layout_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -266,6 +267,15 @@ def create_app() -> FastAPI:
         company_repo=app.state.company_repository,
         invoice_repo=app.state.invoice_repository,
     )
+    # F4: Dashboard widget customization
+    from app.dashboard_layout_repository import DashboardLayoutRepository
+    from app.engines.dashboard_layout_engine import DashboardLayoutEngine
+    app.state.dashboard_layout_repository = DashboardLayoutRepository(
+        settings.database_path
+    )
+    app.state.dashboard_layout_engine = DashboardLayoutEngine(
+        repo=app.state.dashboard_layout_repository,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -369,6 +379,7 @@ def create_app() -> FastAPI:
     app.include_router(intercompany_router)
     app.include_router(kvkk_router)
     app.include_router(market_router)
+    app.include_router(dashboard_layout_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)
     app.include_router(onboarding_router)

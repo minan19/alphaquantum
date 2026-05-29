@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { ApiError, fetchLiveSignals, type DashboardLiveSignalsResponse, type DashboardSignal } from "@/lib/api";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { CustomizeDashboardTrigger } from "@/components/dashboard/customize-modal";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <CustomizeDashboardTrigger />
           <Button variant="secondary" size="sm">
             <Activity className="h-3.5 w-3.5" /> Rapor üret
           </Button>

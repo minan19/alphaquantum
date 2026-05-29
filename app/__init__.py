@@ -27,6 +27,7 @@ from app.routers.realtime import router as realtime_router
 from app.routers.dashboard_layout import router as dashboard_layout_router
 from app.routers.anomalies import router as anomalies_router
 from app.routers.cashflow_forecast import router as cashflow_forecast_router
+from app.routers.connectors_import import router as connectors_import_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -303,6 +304,16 @@ def create_app() -> FastAPI:
         repo=app.state.cashflow_forecast_repository,
         ledger_db_path=settings.database_path,
     )
+    # I1: Logo Tiger ERP connector import framework
+    from app.connector_import_repository import ConnectorImportRepository
+    from app.engines.connector_import_engine import ConnectorImportEngine
+    app.state.connector_import_repository = ConnectorImportRepository(
+        settings.database_path
+    )
+    app.state.connector_import_engine = ConnectorImportEngine(
+        repo=app.state.connector_import_repository,
+        ledger_db_path=settings.database_path,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -409,6 +420,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboard_layout_router)
     app.include_router(anomalies_router)
     app.include_router(cashflow_forecast_router)
+    app.include_router(connectors_import_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)
     app.include_router(onboarding_router)

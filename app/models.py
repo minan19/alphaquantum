@@ -2845,6 +2845,31 @@ class CommunityStatsResponse(BaseModel):
     total_votes: int = Field(ge=0)
 
 
+# ── OBS1: Sample Data Seeding ──────────────────────────────────────────
+
+class SampleDataStatusResponse(BaseModel):
+    has_sample_data: bool
+
+
+class SampleDataSeedRequest(BaseModel):
+    company_name: str | None = Field(default=None, max_length=120)
+
+
+class SampleDataSeedResponse(BaseModel):
+    customers_created: int = Field(ge=0)
+    invoices_created: int = Field(ge=0)
+    ledger_entries_created: int = Field(ge=0)
+    anomaly_signals_created: int = Field(ge=0)
+    already_seeded: bool
+
+
+class SampleDataClearResponse(BaseModel):
+    customers_deleted: int = Field(ge=0)
+    invoices_deleted: int = Field(ge=0)
+    ledger_entries_deleted: int = Field(ge=0)
+    anomalies_deleted: int = Field(ge=0)
+
+
 class AnomalyCalibrationOverview(BaseModel):
     """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
 

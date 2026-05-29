@@ -29,6 +29,7 @@ from app.routers.cashflow_forecast import router as cashflow_forecast_router
 from app.routers.connectors_import import router as connectors_import_router
 from app.routers.staging_promotion import router as staging_promotion_router
 from app.routers.community import router as community_router
+from app.routers.sample_data import router as sample_data_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -322,6 +323,11 @@ def create_app() -> FastAPI:
     app.state.community_engine = CommunityEngine(
         database_path=settings.database_path,
     )
+    # OBS1: Sample data seeder
+    from app.engines.sample_data_engine import SampleDataEngine
+    app.state.sample_data_engine = SampleDataEngine(
+        database_path=settings.database_path,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -431,6 +437,7 @@ def create_app() -> FastAPI:
     app.include_router(connectors_import_router)
     app.include_router(staging_promotion_router)
     app.include_router(community_router)
+    app.include_router(sample_data_router)
     app.include_router(notifications_router)
     app.include_router(onboarding_router)
     app.include_router(procurement_router)

@@ -47,6 +47,17 @@ export default {
           neutron:   c("aq-neutron"),
           dust:      c("aq-dust"),
           trace:     c("aq-trace"),
+
+          // F2: Sub-brand colors (tasarım doc'tan)
+          // CorpOS: ağırbaşlı holding tonu (bordo + dark accent)
+          burgundy:    c("aq-burgundy"),
+          "burgundy-2": c("aq-burgundy-2"),
+          // FinOS: enerjik KOBİ tonu (mint + akıcı)
+          mint:        c("aq-mint"),
+          "mint-2":    c("aq-mint-2"),
+          // Çatı marka: kurumsal kıvılcım (champagne gold)
+          gold:        c("aq-gold"),
+          "gold-2":    c("aq-gold-2"),
         },
       },
       borderRadius: {
@@ -65,6 +76,13 @@ export default {
           "radial-gradient(ellipse at top, rgb(var(--aq-cosmos)), rgb(var(--aq-void)))",
         "aurora":
           "conic-gradient(from 180deg at 50% 50%, rgb(var(--aq-quantum)), rgb(var(--aq-plasma)), rgb(var(--aq-quantum-2)), rgb(var(--aq-quantum)))",
+        // F2: Sub-brand gradients
+        "corpos-gradient":
+          "linear-gradient(135deg, rgb(var(--aq-burgundy)), rgb(var(--aq-burgundy-2)))",
+        "finos-gradient":
+          "linear-gradient(135deg, rgb(var(--aq-mint)), rgb(var(--aq-mint-2)))",
+        "gold-gradient":
+          "linear-gradient(135deg, rgb(var(--aq-gold)), rgb(var(--aq-gold-2)))",
       },
       animation: {
         "fade-in":     "fadeIn 400ms cubic-bezier(0.32, 0.72, 0, 1) both",
@@ -101,6 +119,10 @@ export default {
       boxShadow: {
         "quantum":     "0 0 0 1px rgba(91,71,251,0.18), 0 8px 32px -8px rgba(91,71,251,0.40)",
         "quantum-lg":  "0 0 0 1px rgba(91,71,251,0.25), 0 24px 60px -20px rgba(91,71,251,0.55)",
+        // F2: Sub-brand shadows (hover lift için)
+        "corpos":      "0 0 0 1px rgba(155,44,44,0.22), 0 12px 36px -10px rgba(155,44,44,0.45)",
+        "finos":       "0 0 0 1px rgba(16,185,129,0.22), 0 12px 36px -10px rgba(16,185,129,0.45)",
+        "gold":        "0 0 0 1px rgba(212,175,110,0.22), 0 12px 36px -10px rgba(212,175,110,0.45)",
         "glass":       "0 1px 0 rgba(255,255,255,0.04) inset, 0 0 0 1px rgba(255,255,255,0.02), 0 20px 60px -20px rgba(0,0,0,0.6)",
         "elevation-1": "0 1px 2px rgba(0,0,0,0.3)",
         "elevation-2": "0 4px 12px rgba(0,0,0,0.35)",

@@ -24,6 +24,17 @@
     --aq-dust:       148 163 184;      /* #94A3B8  muted text */
     --aq-trace:      71 85 105;        /* #475569  hint text */
 
+    /* F2: Sub-brand colors (tasarım doc'tan)
+       CorpOS: ağırbaşlı holding tonu — bordo + darker accent (otorite)
+       FinOS:  enerjik KOBİ tonu      — mint + akıcı hover (akış)
+       Çatı:   kurumsal kıvılcım       — champagne gold (sofistike) */
+    --aq-burgundy:    155 44 44;        /* #9B2C2C  CorpOS primary */
+    --aq-burgundy-2:  120 30 30;        /* #781E1E  CorpOS deep */
+    --aq-mint:         16 185 129;       /* #10B981  FinOS primary */
+    --aq-mint-2:       5 150 105;        /* #059669  FinOS deep */
+    --aq-gold:        212 175 110;       /* #D4AF6E  Çatı champagne */
+    --aq-gold-2:      184 134 80;        /* #B88650  Çatı deeper gold */
+
     /* — Semantic tokens (shadcn-compatible) — */
     --background:   var(--aq-void);
     --foreground:   var(--aq-neutron);

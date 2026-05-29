@@ -62,7 +62,11 @@ export function ComparisonTable() {
                     Alpha Quantum
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-aq-quantum-2">CorpOS + FinOS</span>
+                <span className="text-[10px] font-mono">
+                  <span className="text-aq-burgundy">CorpOS</span>
+                  <span className="text-aq-quantum-2"> + </span>
+                  <span className="text-aq-mint">FinOS</span>
+                </span>
               </div>
             </th>
           </tr>

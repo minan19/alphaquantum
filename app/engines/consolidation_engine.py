@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.decimal_utils import sum_money, to_decimal, to_float_for_storage
 from app.finance_repository import FinanceRepository
 from app.holding_repository import HoldingRepository
 from app.models import (
@@ -100,31 +101,35 @@ class ConsolidationEngine:
         lines = _build_lines(company_names, agg_rows)
         lines.sort(key=lambda line: line.gross_income, reverse=True)
 
-        # Holding seviyesi toplam (gross — eliminasyon öncesi)
-        gross_total_income = sum(line.gross_income for line in lines)
-        gross_total_expense = sum(line.gross_expense for line in lines)
-        gross_net = gross_total_income - gross_total_expense
+        # G+3: Holding seviyesi toplamlar Decimal-aware — kuruş kaybı sıfır.
+        # Eski kod `sum(...) + round(..., 2)` float toplama yapıyordu; karma
+        # holding'in 4-10 şirketinden gelen milyonluk değerler toplandığında
+        # binary IEEE 754 artifact'ı kuruş hatasına dönüşebilirdi.
+        gross_total_income_d = sum_money(line.gross_income for line in lines)
+        gross_total_expense_d = sum_money(line.gross_expense for line in lines)
+        gross_net_d = gross_total_income_d - gross_total_expense_d
 
-        # Konsolide (eliminasyon sonrası)
-        consolidated_income = sum(line.external_income for line in lines)
-        consolidated_expense = sum(line.external_expense for line in lines)
-        consolidated_net = consolidated_income - consolidated_expense
+        consolidated_income_d = sum_money(line.external_income for line in lines)
+        consolidated_expense_d = sum_money(line.external_expense for line in lines)
+        consolidated_net_d = consolidated_income_d - consolidated_expense_d
 
-        # Eliminasyon detayı + balans kontrolü
-        total_intercompany_income = sum(line.intercompany_income for line in lines)
-        total_intercompany_expense = sum(line.intercompany_expense for line in lines)
-        elimination_amount = total_intercompany_income + total_intercompany_expense
-        elimination_imbalance = abs(
-            total_intercompany_income - total_intercompany_expense
+        # Eliminasyon detayı + balans kontrolü (Decimal)
+        total_intercompany_income_d = sum_money(line.intercompany_income for line in lines)
+        total_intercompany_expense_d = sum_money(line.intercompany_expense for line in lines)
+        elimination_amount_d = total_intercompany_income_d + total_intercompany_expense_d
+        elimination_imbalance_d = abs(
+            total_intercompany_income_d - total_intercompany_expense_d
         )
-        is_balanced = elimination_imbalance <= _BALANCE_EPSILON
+        is_balanced = elimination_imbalance_d <= to_decimal(_BALANCE_EPSILON)
 
         elimination = ConsolidatedPLElimination(
-            total_intercompany_income=round(total_intercompany_income, 2),
-            total_intercompany_expense=round(total_intercompany_expense, 2),
-            elimination_amount=round(elimination_amount, 2),
+            total_intercompany_income=to_float_for_storage(total_intercompany_income_d),
+            total_intercompany_expense=to_float_for_storage(total_intercompany_expense_d),
+            elimination_amount=to_float_for_storage(elimination_amount_d),
             is_balanced=is_balanced,
         )
+
+        consolidated_net_float = to_float_for_storage(consolidated_net_d)
 
         return ConsolidatedPLResponse(
             holding_id=holding_id,
@@ -132,14 +137,14 @@ class ConsolidationEngine:
             period_start=start_date,
             period_end=end_date,
             lines=lines,
-            gross_total_income=round(gross_total_income, 2),
-            gross_total_expense=round(gross_total_expense, 2),
-            gross_net=round(gross_net, 2),
-            consolidated_income=round(consolidated_income, 2),
-            consolidated_expense=round(consolidated_expense, 2),
-            consolidated_net=round(consolidated_net, 2),
+            gross_total_income=to_float_for_storage(gross_total_income_d),
+            gross_total_expense=to_float_for_storage(gross_total_expense_d),
+            gross_net=to_float_for_storage(gross_net_d),
+            consolidated_income=to_float_for_storage(consolidated_income_d),
+            consolidated_expense=to_float_for_storage(consolidated_expense_d),
+            consolidated_net=consolidated_net_float,
             elimination=elimination,
-            health_status=_classify_health(consolidated_net),
+            health_status=_classify_health(consolidated_net_float),
         )
 
 

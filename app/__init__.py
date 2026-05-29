@@ -25,6 +25,7 @@ from app.routers.kvkk import router as kvkk_router
 from app.routers.market import router as market_router
 from app.routers.realtime import router as realtime_router
 from app.routers.notifications import router as notifications_router
+from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
 from app.routers.reports import router as reports_router
 from app.routers.system import router as system_router
@@ -53,6 +54,7 @@ from app.engines import (
     ConsolidationEngine,
     CRMEngine,
     ExecSummaryEngine,
+    OnboardingEngine,
     DashboardEngine,
     DeliveryEngine,
     TaskEngine,
@@ -259,6 +261,11 @@ def create_app() -> FastAPI:
     )
     # G+2: WebSocket Connection Manager (holding-scoped real-time broadcast)
     app.state.ws_connection_manager = WebSocketConnectionManager()
+    # BZ1: Onboarding wizard — self-service 10dk aktivasyon
+    app.state.onboarding_engine = OnboardingEngine(
+        company_repo=app.state.company_repository,
+        invoice_repo=app.state.invoice_repository,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -364,6 +371,7 @@ def create_app() -> FastAPI:
     app.include_router(market_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)
+    app.include_router(onboarding_router)
     app.include_router(procurement_router)
     app.include_router(reports_router)
     app.include_router(schedule_router)

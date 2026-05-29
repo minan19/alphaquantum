@@ -30,6 +30,10 @@ import { StickyStorytelling } from "@/components/landing/sticky-storytelling";
 import { FinosStorytelling } from "@/components/landing/finos-storytelling";
 import { ProductCards } from "@/components/landing/product-cards";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SegmentCards } from "@/components/landing/segment-cards";
+import { ScrollIndicator } from "@/components/landing/scroll-indicator";
+import { CaseStudiesGrid } from "@/components/landing/case-studies-grid";
+import { NewsletterSignup } from "@/components/landing/newsletter-signup";
 import { cn } from "@/lib/cn";
 
 const PARTNER_LOGOS = [
@@ -285,8 +289,18 @@ export default function PricingPage() {
           {/* F2: Sub-brand ürün kartları (CorpOS + FinOS).
               Çatı marka altında iki modül — ziyaretçi buradan ürüne doğru ilerler. */}
           <ProductCards />
+
+          {/* S-374: Scroll indicator — ziyaretçiyi alt bölümlere yönlendirir */}
+          <div className="mt-14 flex justify-center">
+            <ScrollIndicator label="Aşağı kaydır" targetId="segments" />
+          </div>
         </motion.div>
       </section>
+
+      {/* S-374: Müşteri segmenti kartları — 3-card grid (holding / KOBİ / kurumsal) */}
+      <div id="segments" className="py-10">
+        <SegmentCards />
+      </div>
 
       {/* B1: "Holding patronu bir günü" sticky storytelling — landing'in en güçlü dönüşüm motoru */}
       <StickyStorytelling />
@@ -421,6 +435,9 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Filterable case studies grid — bydecor portfolio pattern */}
+      <CaseStudiesGrid />
+
       {/* Social proof / trust — animated counters */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-16">
         <div className="rounded-2xl border border-aq-mist/40 bg-card/50 p-10">
@@ -487,6 +504,11 @@ export default function PricingPage() {
           </p>
         </div>
         <FAQAccordion items={FAQ_ITEMS} defaultOpen="item-0" />
+      </section>
+
+      {/* Newsletter signup — bydecor inspired, KVKK-compliant */}
+      <section className="relative z-10 mx-auto max-w-3xl px-6 py-12">
+        <NewsletterSignup />
       </section>
 
       {/* CTA */}

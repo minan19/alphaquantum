@@ -37,7 +37,7 @@ from __future__ import annotations
 import logging
 from typing import cast
 
-from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 
 from app.auth_service import AuthService
 from app.websocket_manager import WebSocketConnectionManager, build_event

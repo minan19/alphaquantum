@@ -46,6 +46,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.decimal_utils import sum_money, to_decimal, to_float_for_storage
 from app.finance_repository import FinanceRepository
 from app.models import Company
 from app.repository import CompanyRepository
@@ -66,6 +67,11 @@ class BalanceService:
     def compute_company_balance(self, company_name: str) -> float:
         """Single company: initial baseline + ledger net.
 
+        G+3: Decimal arithmetic — kuruş kaybı sıfır. Eski kod
+        `round(baseline + ledger_net, 2)` float toplama yapıyordu;
+        binary IEEE 754 artifact riski vardı. Yeni: Decimal toplama
+        + ROUND_HALF_UP banking standard.
+
         Returns 0.0 if company not found (consistent with comparison_engine
         defensive behavior).
         """
@@ -73,7 +79,7 @@ class BalanceService:
         ledger_net = self._aggregate_ledger_net(
             company_names=[company_name]
         ).get(company_name, 0.0)
-        return round(baseline + ledger_net, 2)
+        return to_float_for_storage(sum_money([baseline, ledger_net]))
 
     def compute_companies_with_ledger_balance(
         self, companies: list[Company]
@@ -92,12 +98,14 @@ class BalanceService:
         names = [c.name for c in companies]
         ledger_net_by_company = self._aggregate_ledger_net(company_names=names)
 
-        # Pydantic model_copy ile immutable update
+        # Pydantic model_copy ile immutable update.
+        # G+3: float toplama → Decimal sum + ROUND_HALF_UP.
         result: list[Company] = []
         for company in companies:
             ledger_net = ledger_net_by_company.get(company.name, 0.0)
-            new_balance = round(company.balance + ledger_net, 2)
-            # Company.balance baseline (initial), ledger_net delta
+            new_balance = to_float_for_storage(
+                sum_money([company.balance, ledger_net])
+            )
             updated = company.model_copy(update={"balance": new_balance})
             result.append(updated)
         return result
@@ -140,10 +148,11 @@ class BalanceService:
         with self._finance_repo._lock:
             rows = self._finance_repo._conn.execute(query, params).fetchall()
 
+        # G+3: SQL SUM(...) sonuçları Decimal-aware — income - expense
+        # kuruş-doğru. Float subtraction artifact'ından kaçınılır.
         result: dict[str, float] = {}
         for row in rows:
             company = str(row["company_name"])
-            income = float(row["income_total"])
-            expense = float(row["expense_total"])
-            result[company] = income - expense
+            net = to_decimal(row["income_total"]) - to_decimal(row["expense_total"])
+            result[company] = to_float_for_storage(net)
         return result

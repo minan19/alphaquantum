@@ -29,6 +29,7 @@ from datetime import date
 from typing import Any
 
 from app.currency_converter import CurrencyConverter
+from app.decimal_utils import multiply_money, sum_money, to_float_for_storage
 from app.holding_repository import HoldingRepository
 from app.intercompany_transfer_repository import IntercompanyTransferRepository
 from app.invoice_repository import InvoiceRepository
@@ -101,12 +102,18 @@ class GroupFXEngine:
         exposures = self._build_exposures(ar_by_currency, ic_by_currency)
         exposures.sort(key=lambda e: abs(e.net_position_try), reverse=True)
 
-        # 4. Holding-wide özet
-        total_long = sum(e.net_position_try for e in exposures if e.net_position_try > 0)
-        total_short = sum(
+        # 4. Holding-wide özet (G+3: Decimal — kuruş kaybı sıfır)
+        total_long_d = sum_money(
+            e.net_position_try for e in exposures if e.net_position_try > 0
+        )
+        total_short_d = sum_money(
             abs(e.net_position_try) for e in exposures if e.net_position_try < 0
         )
-        net_exposure = total_long - total_short
+        net_exposure_d = total_long_d - total_short_d
+
+        total_long = to_float_for_storage(total_long_d)
+        total_short = to_float_for_storage(total_short_d)
+        net_exposure = to_float_for_storage(net_exposure_d)
 
         # 5. Sensitivity analizi
         sensitivity = self._compute_sensitivity(exposures)
@@ -124,9 +131,9 @@ class GroupFXEngine:
             holding_name=str(holding_row["name"]),
             as_of_date=report_date,
             exposures=exposures,
-            total_long_try=round(total_long, 2),
-            total_short_try=round(total_short, 2),
-            net_exposure_try=round(net_exposure, 2),
+            total_long_try=total_long,
+            total_short_try=total_short,
+            net_exposure_try=net_exposure,
             sensitivity_scenarios=sensitivity,
             risk_level=risk_level,
             recommendations=recommendations,
@@ -264,18 +271,20 @@ class GroupFXEngine:
             # TL devalüe olursa: FX cinsinden long pozisyon TRY karşılığında
             # artar (kazanç), short pozisyon TRY karşılığında büyür (kayıp).
             # Sadece non-TRY pozisyonlar etkilenir.
-            impact = 0.0
-            for exp in exposures:
-                if exp.currency == "TRY":
-                    continue
-                # net_position_try * devaluation_pct = senaryo etkisi
-                # Long (+) → pozitif (gain), Short (-) → negatif (loss)
-                impact += exp.net_position_try * pct
+            #
+            # G+3: Decimal multiplication + summation. 10M+ TRY pozisyonda
+            # %5/%10/%20 senaryolarında binary float artifact birikimini önler.
+            impact_components = [
+                multiply_money(exp.net_position_try, pct)
+                for exp in exposures
+                if exp.currency != "TRY"
+            ]
+            impact_d = sum_money(impact_components)
             scenarios.append(
                 FXSensitivityScenario(
                     scenario_name=name,
                     devaluation_pct=pct,
-                    total_impact_try=round(impact, 2),
+                    total_impact_try=to_float_for_storage(impact_d),
                 )
             )
         return scenarios

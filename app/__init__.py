@@ -31,6 +31,7 @@ from app.routers.staging_promotion import router as staging_promotion_router
 from app.routers.community import router as community_router
 from app.routers.sample_data import router as sample_data_router
 from app.routers.audit_admin import router as audit_admin_router
+from app.routers.ocr import router as ocr_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -329,6 +330,14 @@ def create_app() -> FastAPI:
     app.state.sample_data_engine = SampleDataEngine(
         database_path=settings.database_path,
     )
+    # A4: AI Invoice OCR (Claude Vision)
+    from app.engines.ocr_engine import OcrEngine
+    from app.ocr_service import create_ocr_service
+    app.state.ocr_service = create_ocr_service()
+    app.state.ocr_engine = OcrEngine(
+        database_path=settings.database_path,
+        ocr_service=app.state.ocr_service,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -440,6 +449,7 @@ def create_app() -> FastAPI:
     app.include_router(community_router)
     app.include_router(sample_data_router)
     app.include_router(audit_admin_router)
+    app.include_router(ocr_router)
     app.include_router(notifications_router)
     app.include_router(onboarding_router)
     app.include_router(procurement_router)

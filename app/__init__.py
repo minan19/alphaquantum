@@ -36,6 +36,7 @@ from app.routers.efatura import router as efatura_router
 from app.routers.treasury import router as treasury_router
 from app.routers.scenario import router as scenario_router
 from app.routers.vendor_risk import router as vendor_risk_router
+from app.routers.copilot import router as copilot_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -357,6 +358,11 @@ def create_app() -> FastAPI:
     app.state.vendor_risk_engine = VendorRiskEngine(
         database_path=settings.database_path,
     )
+    # AC1: AI Finance Copilot (NL → whitelist SQL)
+    from app.engines.copilot_engine import CopilotEngine
+    app.state.copilot_engine = CopilotEngine(
+        database_path=settings.database_path,
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -473,6 +479,7 @@ def create_app() -> FastAPI:
     app.include_router(treasury_router)
     app.include_router(scenario_router)
     app.include_router(vendor_risk_router)
+    app.include_router(copilot_router)
     app.include_router(notifications_router)
     app.include_router(onboarding_router)
     app.include_router(procurement_router)

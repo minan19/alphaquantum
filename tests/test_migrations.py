@@ -24,26 +24,25 @@ class MigrationManagerTests(unittest.TestCase):
 
     def test_apply_status_and_rollback(self) -> None:
         applied = self.manager.apply_all()
-        self.assertEqual(applied, list(range(1, 24)))
+        self.assertEqual(applied, list(range(1, 25)))
 
         status = self.manager.status()
-        self.assertEqual(len(status), 23)
-        for i in range(23):
+        self.assertEqual(len(status), 24)
+        for i in range(24):
             self.assertTrue(status[i]["applied"])
 
-        # Migration 23 (intercompany_ledger) is safe to roll back — no critical
-        # tables touched. The rollback drops intercompany_transfers + ledger
-        # columns and reapplies cleanly.
+        # Migration 24 (audit_hash_chain) is safe to roll back — only ALTER
+        # TABLE DROP COLUMN on audit_logs hash fields, no critical tables.
         rolled_back = self.manager.rollback(steps=1)
-        self.assertEqual(rolled_back, [23])
+        self.assertEqual(rolled_back, [24])
 
         status_after = self.manager.status()
-        for i in range(22):
+        for i in range(23):
             self.assertTrue(status_after[i]["applied"])
-        self.assertFalse(status_after[22]["applied"])
+        self.assertFalse(status_after[23]["applied"])
 
         reapplied = self.manager.apply_all()
-        self.assertEqual(reapplied, [23])
+        self.assertEqual(reapplied, [24])
 
     def test_023_intercompany_schema_shape(self) -> None:
         """G1.1: intercompany migration adds the right columns + tables.

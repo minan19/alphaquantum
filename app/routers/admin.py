@@ -14,6 +14,8 @@ Audit (1, view_audit_logs):
 """
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.models import (
@@ -148,4 +150,40 @@ def list_audit_logs(
 ) -> list[AuditLogRead]:
     del user
     rows = _audit_repo(request).list_logs(limit=limit)
-    return [AuditLogRead(**row) for row in rows]
+    # AuditLogRead'in tanımadığı hash kolonlarını çıkar
+    cleaned = [
+        {k: v for k, v in row.items() if k not in {"prev_hash", "entry_hash"}}
+        for row in rows
+    ]
+    return [AuditLogRead(**row) for row in cleaned]
+
+
+# ── G+4: Hash chain verify (audit integrity) ─────────────────────────────────
+
+
+@router.get(
+    "/api/v1/audit-logs/verify",
+    tags=["audit"],
+)
+def verify_audit_chain(
+    request: Request,
+    limit: int = Query(default=10_000, ge=1, le=100_000),
+    user: UserProfile = Depends(require_permissions("view_audit_logs")),
+) -> dict[str, Any]:
+    """G+4: Audit hash chain integrity verification.
+
+    Bağımsız denetçi-grade: O(N) tarama ile zincir bütünlüğünü doğrular.
+    Bir entry değiştirilirse first_break_id ile tespit edilir.
+
+    KVKK madde 12 + ISO 27001 A.12.4 + SOC 2 CC7.2 compliance.
+
+    Returns:
+      - verified: bool (zincir sağlam mı)
+      - checked_count: kontrol edilen entry sayısı
+      - first_break_id: ilk kırılma id'si (None = sağlam)
+      - first_break_reason: entry_hash_mismatch | prev_hash_mismatch | ""
+      - genesis_id: ilk hash-chain entry id'si
+      - legacy_count: pre-G+4 entries (entry_hash NULL)
+    """
+    del user
+    return _audit_repo(request).verify_chain(limit=limit)

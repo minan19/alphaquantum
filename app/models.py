@@ -2908,6 +2908,79 @@ class OcrJobListResponse(BaseModel):
     total: int = Field(ge=0)
 
 
+# ── T1: Multi-bank Treasury ────────────────────────────────────────────
+
+class TreasuryAccountResponse(BaseModel):
+    id: int
+    user_id: str
+    company_name: str
+    bank_name: str
+    branch: str | None = None
+    iban: str | None = None
+    account_no: str | None = None
+    account_type: str = Field(
+        pattern="^(vadesiz|vadeli|kredi|pos|doviz|diğer)$"
+    )
+    currency: str = Field(pattern="^[A-Z]{3}$")
+    current_balance: float
+    last_synced_at: int | None = None
+    is_active: bool
+    notes: str | None = None
+    created_at: int
+    updated_at: int
+
+
+class TreasuryAccountCreateRequest(BaseModel):
+    company_name: str = Field(min_length=1, max_length=120)
+    bank_name: str = Field(min_length=1, max_length=120)
+    iban: str | None = Field(default=None, min_length=12, max_length=40)
+    account_no: str | None = Field(default=None, max_length=50)
+    branch: str | None = Field(default=None, max_length=80)
+    account_type: str = Field(
+        default="vadesiz",
+        pattern="^(vadesiz|vadeli|kredi|pos|doviz|diğer)$",
+    )
+    currency: str = Field(default="TRY", pattern="^[A-Z]{3}$")
+    current_balance: float = Field(default=0)
+    notes: str | None = Field(default=None, max_length=500)
+
+
+class TreasuryBalanceUpdateRequest(BaseModel):
+    new_balance: float
+    source: str = Field(
+        default="manual",
+        pattern="^(manual|csv_import|mt940|camt053|open_banking)$",
+    )
+    snapshot_date: str | None = Field(
+        default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"
+    )
+
+
+class TreasurySummaryResponse(BaseModel):
+    total_in_try: float
+    by_currency: dict[str, float]
+    by_bank: list[dict[str, Any]]
+    by_company: list[dict[str, Any]]
+    account_count: int
+    last_synced_at: int | None = None
+
+
+class TreasuryHistoryEntry(BaseModel):
+    snapshot_date: str
+    balance: float
+    snapshot_source: str
+
+
+class TreasuryHistoryResponse(BaseModel):
+    entries: list[TreasuryHistoryEntry]
+
+
+class TreasuryCsvImportResponse(BaseModel):
+    inserted: int = Field(ge=0)
+    updated: int = Field(ge=0)
+    total_rows: int = Field(ge=0)
+
+
 class AnomalyCalibrationOverview(BaseModel):
     """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
 

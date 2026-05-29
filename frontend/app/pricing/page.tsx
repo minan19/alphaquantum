@@ -27,6 +27,7 @@ import { LogoMarquee } from "@/components/landing/logo-marquee";
 import { RoiCalculator } from "@/components/landing/roi-calculator";
 import { ComparisonTable } from "@/components/landing/comparison-table";
 import { StickyStorytelling } from "@/components/landing/sticky-storytelling";
+import { FinosStorytelling } from "@/components/landing/finos-storytelling";
 import { ProductCards } from "@/components/landing/product-cards";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/cn";
@@ -289,6 +290,9 @@ export default function PricingPage() {
 
       {/* B1: "Holding patronu bir günü" sticky storytelling — landing'in en güçlü dönüşüm motoru */}
       <StickyStorytelling />
+
+      {/* F3: FinOS karşılığı — KOBİ patronu bir sabahı (mint accent, telefon mockup) */}
+      <FinosStorytelling />
 
       {/* Pricing cards */}
       <section id="pricing" className="relative z-10 mx-auto max-w-7xl px-6 py-12">

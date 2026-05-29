@@ -27,6 +27,7 @@ import {
 import { ApiError, fetchLiveSignals, type DashboardLiveSignalsResponse, type DashboardSignal } from "@/lib/api";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { CustomizeDashboardTrigger } from "@/components/dashboard/customize-modal";
+import { AnomalySignalsWidget } from "@/components/dashboard/anomaly-signals-widget";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -168,6 +169,16 @@ export default function DashboardPage() {
           index={3}
         />
       </section>
+
+      {/* Anomaly Detection — CorpOS pillar widget */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, delay: 0.1, ease: [0.32, 0.72, 0, 1] }}
+        aria-label="Anomali sinyalleri"
+      >
+        <AnomalySignalsWidget />
+      </motion.section>
 
       {/* Cashflow Chart */}
       <motion.section

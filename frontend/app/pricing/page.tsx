@@ -28,6 +28,7 @@ import { RoiCalculator } from "@/components/landing/roi-calculator";
 import { ComparisonTable } from "@/components/landing/comparison-table";
 import { StickyStorytelling } from "@/components/landing/sticky-storytelling";
 import { ProductCards } from "@/components/landing/product-cards";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/cn";
 
 const PARTNER_LOGOS = [
@@ -233,6 +234,8 @@ export default function PricingPage() {
             <a href="#contact"  className="text-aq-dust hover:text-foreground transition-colors">İletişim</a>
           </nav>
           <div className="flex items-center gap-2">
+            {/* B5: Dark/Light mode toggle */}
+            <ThemeToggle />
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Giriş</Link>
             </Button>

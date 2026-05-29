@@ -88,6 +88,30 @@
     color-scheme: light;
   }
 
+  /* B5: Dark/Light mode smooth crossfade (tasarım doc K9.3).
+     CSS variable interpolation 300ms — göz yormaz, premium fintech hissi. */
+  html {
+    transition: color 300ms ease, background-color 300ms ease;
+  }
+  body {
+    transition: color 300ms ease, background-color 300ms ease, background-image 300ms ease;
+  }
+  /* Card/border yüzeyleri de smooth */
+  [class*="bg-aq-"],
+  [class*="bg-card"],
+  [class*="text-aq-"],
+  [class*="text-foreground"],
+  [class*="border-aq-"] {
+    transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease;
+  }
+  /* prefers-reduced-motion: instant geçiş */
+  @media (prefers-reduced-motion: reduce) {
+    html, body, [class*="bg-aq-"], [class*="bg-card"],
+    [class*="text-aq-"], [class*="text-foreground"], [class*="border-aq-"] {
+      transition: none !important;
+    }
+  }
+
   * {
     @apply border-border;
   }

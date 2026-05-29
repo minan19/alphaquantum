@@ -55,7 +55,8 @@ export default function RootLayout({
           </AuthProvider>
           <Toaster
             position="top-right"
-            theme="dark"
+            // B5: Tema sistem ile sync (light/dark/system tümü)
+            theme="system"
             className="font-display"
             toastOptions={{
               classNames: {

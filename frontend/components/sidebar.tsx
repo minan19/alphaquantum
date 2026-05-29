@@ -21,6 +21,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Logomark, Wordmark } from "@/components/brand/logomark";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/cn";
 
 type NavItem = {
@@ -159,6 +160,18 @@ export function Sidebar({
 
       {/* Footer */}
       <div className="border-t border-aq-mist/40 p-2 space-y-0.5">
+        {/* B5: Tema değiştirici (dashboard için) */}
+        <div
+          className={cn(
+            "flex items-center px-3 py-2",
+            collapsed ? "justify-center" : "justify-between",
+          )}
+        >
+          {!collapsed && (
+            <span className="text-xs text-aq-dust">Tema</span>
+          )}
+          <ThemeToggle />
+        </div>
         <FooterItem icon={HelpCircle} label="Yardım" collapsed={collapsed} />
         <button
           onClick={logout}

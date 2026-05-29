@@ -2571,3 +2571,41 @@ class AnomalyDetectionRunResponse(BaseModel):
     detectors_run: list[str]
     duration_ms: int = Field(ge=0)
     generated_at: int
+
+
+class AnomalyCalibrationDetectorMetric(BaseModel):
+    """Tek detector için öğrenme metric'i — kullanıcıya canlı raporlanır."""
+
+    confirmed: int = Field(ge=0)
+    dismissed: int = Field(ge=0)
+    total_reviews: int = Field(ge=0)
+    measured_precision: float | None = Field(
+        default=None, description="α/(α+β). None = yeterli veri yok."
+    )
+    threshold_offset: float
+    reliability: float = Field(
+        ge=0, description="0.5–1.5; severity multiplier"
+    )
+
+
+class AnomalyCalibrationOverview(BaseModel):
+    """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
+
+    Bu obje pazarlama yalanı değil — kullanıcının kendi onaylarından
+    hesaplanmış ölçülmüş hassasiyet.
+    """
+
+    measured_precision: float | None = Field(
+        default=None,
+        description="Tüm dedektör onayları toplamı / total. None = öğrenme yetersiz.",
+    )
+    total_reviews: int = Field(ge=0)
+    confirmed: int = Field(ge=0)
+    dismissed: int = Field(ge=0)
+    whitelisted_patterns: int = Field(ge=0)
+    is_learned: bool = Field(
+        description="True ise sistem yeterli feedback aldı, threshold tune'luyor."
+    )
+    per_detector: dict[str, AnomalyCalibrationDetectorMetric] = Field(
+        default_factory=dict
+    )

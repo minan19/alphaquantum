@@ -84,6 +84,31 @@ export async function reviewAnomaly(
   });
 }
 
+// ── A2.1: Adaptive calibration ────────────────────────────────────────
+
+export interface AnomalyDetectorMetric {
+  confirmed: number;
+  dismissed: number;
+  total_reviews: number;
+  measured_precision: number | null;
+  threshold_offset: number;
+  reliability: number;
+}
+
+export interface AnomalyCalibrationOverview {
+  measured_precision: number | null;
+  total_reviews: number;
+  confirmed: number;
+  dismissed: number;
+  whitelisted_patterns: number;
+  is_learned: boolean;
+  per_detector: Record<string, AnomalyDetectorMetric>;
+}
+
+export async function fetchAnomalyCalibration(): Promise<AnomalyCalibrationOverview> {
+  return apiRequest<AnomalyCalibrationOverview>("/api/v1/anomalies/calibration");
+}
+
 // ── Display helpers ────────────────────────────────────────────────────
 
 export const SIGNAL_TYPE_LABEL: Record<string, string> = {

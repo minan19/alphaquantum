@@ -27,6 +27,7 @@ import { LogoMarquee } from "@/components/landing/logo-marquee";
 import { RoiCalculator } from "@/components/landing/roi-calculator";
 import { ComparisonTable } from "@/components/landing/comparison-table";
 import { StickyStorytelling } from "@/components/landing/sticky-storytelling";
+import { ProductCards } from "@/components/landing/product-cards";
 import { cn } from "@/lib/cn";
 
 const PARTNER_LOGOS = [
@@ -276,6 +277,10 @@ export default function PricingPage() {
           <p className="mt-6 text-xs text-aq-trace font-mono">
             30 gün ücretsiz · kart bilgisi istemez · KVKK aydınlatma metni
           </p>
+
+          {/* F2: Sub-brand ürün kartları (CorpOS + FinOS).
+              Çatı marka altında iki modül — ziyaretçi buradan ürüne doğru ilerler. */}
+          <ProductCards />
         </motion.div>
       </section>
 

@@ -88,6 +88,12 @@ export function Wordmark({
   showModule = false,
 }: {
   className?: string;
+  /**
+   * F2: Sub-brand rozet.
+   * - "corpos" → bordo aksent (holding context)
+   * - "finos"  → mint aksent (KOBİ context)
+   * - false    → çatı marka (default)
+   */
   showModule?: "corpos" | "finos" | false;
 }) {
   return (
@@ -96,12 +102,12 @@ export function Wordmark({
         Alpha<span className="text-aq-quantum-2">Quantum</span>
       </span>
       {showModule === "corpos" && (
-        <span className="text-[10px] uppercase tracking-[0.18em] text-aq-plasma">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-aq-burgundy">
           · CorpOS
         </span>
       )}
       {showModule === "finos" && (
-        <span className="text-[10px] uppercase tracking-[0.18em] text-aq-solar">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-aq-mint">
           · FinOS
         </span>
       )}

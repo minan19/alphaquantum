@@ -34,6 +34,7 @@ from app.routers.sample_data import router as sample_data_router
 from app.routers.audit_admin import router as audit_admin_router
 from app.routers.ocr import router as ocr_router
 from app.routers.efatura import router as efatura_router
+from app.routers.scenario import router as scenario_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -343,6 +344,9 @@ def create_app() -> FastAPI:
         database_path=settings.database_path,
         ocr_service=app.state.ocr_service,
     )
+    # SP1: Scenario Planning (A3 forecast üzerinde what-if)
+    from app.engines.scenario_planning_engine import ScenarioPlanningEngine
+    app.state.scenario_planning_engine = ScenarioPlanningEngine()
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -456,6 +460,7 @@ def create_app() -> FastAPI:
     app.include_router(audit_admin_router)
     app.include_router(ocr_router)
     app.include_router(efatura_router)
+    app.include_router(scenario_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)
     app.include_router(onboarding_router)

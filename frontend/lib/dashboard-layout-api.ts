@@ -18,7 +18,8 @@ export type KnownWidgetId =
   | "exec_summary"
   | "aging_analysis"
   | "cashflow_projection"
-  | "recent_invoices";
+  | "recent_invoices"
+  | "anomaly_signals";
 
 export interface DashboardWidgetConfig {
   widget_id: KnownWidgetId | string;
@@ -109,5 +110,11 @@ export const WIDGET_CATALOG: WidgetMeta[] = [
     label: "Son Faturalar",
     description: "Son 7 günde oluşturulan faturalar",
     category: "finos",
+  },
+  {
+    id: "anomaly_signals",
+    label: "Anomali Dedektörü",
+    description: "%99 güvenli cross-company sızıntı sinyalleri",
+    category: "shared",
   },
 ];

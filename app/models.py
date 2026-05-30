@@ -2520,3 +2520,92 @@ class DashboardLayoutSaveRequest(BaseModel):
     """PUT /dashboard/layout — widgets array."""
 
     widgets: list[DashboardWidgetConfig] = Field(min_length=0, max_length=12)
+
+
+# ── A2: Cross-Company Anomaly Detection ────────────────────────────────────
+
+class AnomalySignalResponse(BaseModel):
+    """Tek bir tespit edilmiş anomali — frontend tüketim formatı."""
+
+    id: int
+    holding_id: int | None
+    signal_type: str = Field(
+        description="intercompany_leakage | volume_spike | duplicate_payment | velocity_anomaly"
+    )
+    severity: str = Field(pattern="^(critical|high|medium|low)$")
+    confidence_pct: float = Field(ge=0, le=100)
+    modified_z: float
+    title: str
+    description: str
+    baseline: dict[str, Any] = Field(default_factory=dict)
+    payload: dict[str, Any] = Field(default_factory=dict)
+    detected_at: int
+    status: str = Field(pattern="^(open|confirmed|dismissed)$")
+    reviewed_by: str | None = None
+    reviewed_at: int | None = None
+    review_note: str | None = None
+
+
+class AnomalySignalsListResponse(BaseModel):
+    """Liste + summary — dashboard widget bunu çağırır."""
+
+    signals: list[AnomalySignalResponse]
+    critical_count: int = Field(ge=0)
+    high_count: int = Field(ge=0)
+    medium_count: int = Field(ge=0)
+    total_open: int = Field(ge=0)
+    generated_at: int
+
+
+class AnomalyReviewRequest(BaseModel):
+    """Confirm/Dismiss feedback — human-in-loop tuning."""
+
+    action: str = Field(pattern="^(confirm|dismiss)$")
+    note: str | None = Field(default=None, max_length=500)
+
+
+class AnomalyDetectionRunResponse(BaseModel):
+    """Run sonucu — kaç sinyal tespit edildi."""
+
+    new_signals: int = Field(ge=0)
+    detectors_run: list[str]
+    duration_ms: int = Field(ge=0)
+    generated_at: int
+
+
+class AnomalyCalibrationDetectorMetric(BaseModel):
+    """Tek detector için öğrenme metric'i — kullanıcıya canlı raporlanır."""
+
+    confirmed: int = Field(ge=0)
+    dismissed: int = Field(ge=0)
+    total_reviews: int = Field(ge=0)
+    measured_precision: float | None = Field(
+        default=None, description="α/(α+β). None = yeterli veri yok."
+    )
+    threshold_offset: float
+    reliability: float = Field(
+        ge=0, description="0.5–1.5; severity multiplier"
+    )
+
+
+class AnomalyCalibrationOverview(BaseModel):
+    """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
+
+    Bu obje pazarlama yalanı değil — kullanıcının kendi onaylarından
+    hesaplanmış ölçülmüş hassasiyet.
+    """
+
+    measured_precision: float | None = Field(
+        default=None,
+        description="Tüm dedektör onayları toplamı / total. None = öğrenme yetersiz.",
+    )
+    total_reviews: int = Field(ge=0)
+    confirmed: int = Field(ge=0)
+    dismissed: int = Field(ge=0)
+    whitelisted_patterns: int = Field(ge=0)
+    is_learned: bool = Field(
+        description="True ise sistem yeterli feedback aldı, threshold tune'luyor."
+    )
+    per_detector: dict[str, AnomalyCalibrationDetectorMetric] = Field(
+        default_factory=dict
+    )

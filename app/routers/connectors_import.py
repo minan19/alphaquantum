@@ -34,6 +34,7 @@ router = APIRouter()
 _CONNECTOR_LABELS = {
     "logo_tiger": "Logo Tiger",
     "mikro": "Mikro ERP",
+    "netsis": "Netsis ERP",
 }
 
 

@@ -4,11 +4,13 @@ from __future__ import annotations
 from app.connectors.base import BaseConnector
 from app.connectors.logo_tiger import LogoTigerConnector
 from app.connectors.mikro import MikroConnector
+from app.connectors.netsis import NetsisConnector
 
 
 CONNECTOR_REGISTRY: dict[str, type[BaseConnector]] = {
     "logo_tiger": LogoTigerConnector,
     "mikro": MikroConnector,
+    "netsis": NetsisConnector,
 }
 
 

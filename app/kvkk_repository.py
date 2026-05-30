@@ -55,7 +55,9 @@ class KVKKRepository:
             )
             row_id = int(cur.lastrowid or 0)
             self._conn.commit()
-            return self._fetch_deletion(row_id)
+            row = self._fetch_deletion(row_id)
+            assert row is not None  # just inserted, must exist
+            return row
 
     def get_deletion_request(self, request_id: int) -> dict[str, Any] | None:
         with self._lock:
@@ -171,7 +173,9 @@ class KVKKRepository:
             )
             row_id = int(cur.lastrowid or 0)
             self._conn.commit()
-            return self._fetch_incident(row_id)
+            row = self._fetch_incident(row_id)
+            assert row is not None  # just inserted, must exist
+            return row
 
     def _fetch_incident(self, incident_id: int) -> dict[str, Any] | None:
         row = self._conn.execute(

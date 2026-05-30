@@ -2419,3 +2419,74 @@ class KVKKSecurityIncidentRead(BaseModel):
 class KVKKSecurityIncidentListResponse(BaseModel):
     total: int
     incidents: list[KVKKSecurityIncidentRead] = Field(default_factory=list)
+
+
+# ── BZ1: Onboarding Wizard ─────────────────────────────────────────────────
+#
+# 5 adımlı self-service onboarding (10 dakikada aktivasyon hedefi):
+#   1. Company info  (name, sector, employee_count)
+#   2. First user    (already created — current user → onboarding owner)
+#   3. Connector     (Logo/Mikro/Paraşüt/skip)
+#   4. First invoice (customer + amount + due_date)
+#   5. Complete      (status: onboarded)
+#
+# Backend tek endpoint: POST /api/v1/onboarding/complete
+# Frontend wizard adım adım toplar, son adımda tek POST.
+
+class OnboardingCompanyStep(BaseModel):
+    """Adım 1 — şirket bilgileri."""
+
+    name: str = Field(min_length=1, max_length=200)
+    sector: str = Field(min_length=1, max_length=100)
+    employee_count: int = Field(ge=1, le=10_000)
+    initial_balance: float = Field(default=0.0, ge=0)
+
+
+class OnboardingConnectorStep(BaseModel):
+    """Adım 3 — ERP/muhasebe sistemi seçimi (opsiyonel)."""
+
+    connector_type: str | None = Field(
+        default=None,
+        max_length=50,
+        description="logo_tiger | parasut | mikro | netsis | skip",
+    )
+
+
+class OnboardingFirstInvoiceStep(BaseModel):
+    """Adım 4 — ilk fatura demo (kullanıcı aktivasyonu için)."""
+
+    customer_name: str = Field(min_length=1, max_length=200)
+    amount: float = Field(gt=0)
+    currency: str = Field(default="TRY", min_length=3, max_length=3)
+    issue_date: str = Field(min_length=10, max_length=10, description="ISO YYYY-MM-DD")
+    due_date: str = Field(min_length=10, max_length=10)
+    description: str = Field(default="", max_length=500)
+
+
+class OnboardingCompleteRequest(BaseModel):
+    """Tek-shot onboarding submission (3 adım birlikte)."""
+
+    company: OnboardingCompanyStep
+    connector: OnboardingConnectorStep
+    first_invoice: OnboardingFirstInvoiceStep
+
+
+class OnboardingCompleteResponse(BaseModel):
+    """Onboarding tamamlama response."""
+
+    success: bool
+    company_name: str
+    invoice_id: int | None = None
+    connector_registered: bool
+    completed_at: int = Field(description="Unix timestamp")
+    welcome_message: str
+    next_steps: list[str] = Field(default_factory=list)
+
+
+class OnboardingStatusResponse(BaseModel):
+    """Mevcut user onboarding durumu — wizard'ın atlanabilirliğini belirler."""
+
+    is_onboarded: bool
+    user_id: str
+    company_count: int
+    invoice_count: int

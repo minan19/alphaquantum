@@ -79,7 +79,9 @@ class IntercompanyTransferRepository:
             )
             transfer_id = new_row_id(cursor)
             self._conn.commit()
-        return self.get_transfer(transfer_id)
+        row = self.get_transfer(transfer_id)
+        assert row is not None  # just inserted, must exist
+        return row
 
     # ── READ ───────────────────────────────────────────────────────────
 

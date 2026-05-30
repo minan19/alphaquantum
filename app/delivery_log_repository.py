@@ -57,7 +57,9 @@ class DeliveryLogRepository:
             )
             row_id = new_row_id(cur)
             self._conn.commit()
-            return self._fetch(row_id)
+            row = self._fetch(row_id)
+            assert row is not None  # just inserted, must exist
+            return row
 
     def _fetch(self, log_id: int) -> dict[str, Any] | None:
         row = self._conn.execute(

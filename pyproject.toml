@@ -49,7 +49,8 @@ ignore_missing_imports = true
 no_error_summary = true
 warn_unused_configs = true
 disable_error_code = [
-    "return-value",
+    # F2.2 tasfiye: "return-value" wave 2 sırasında temizlendi (A3 dict|None
+    # narrowing, I1 connector type[BaseConnector], I2 cast(Row,...))
     "assignment",
     "attr-defined",
     "misc",

@@ -2767,6 +2767,84 @@ class PromotionResultResponse(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+# ── BZ3: Public Changelog + Roadmap Voting ─────────────────────────────
+
+class ChangelogEntry(BaseModel):
+    id: int
+    version: str
+    title: str
+    description: str = ""
+    category: str = Field(pattern="^(feature|fix|improvement|security)$")
+    released_at: int
+    created_at: int
+    created_by: str | None = None
+
+
+class ChangelogListResponse(BaseModel):
+    entries: list[ChangelogEntry] = Field(default_factory=list)
+    total: int = Field(ge=0)
+
+
+class ChangelogPublishRequest(BaseModel):
+    version: str = Field(min_length=1, max_length=50)
+    title: str = Field(min_length=1, max_length=140)
+    description: str = Field(default="", max_length=2000)
+    category: str = Field(
+        default="feature", pattern="^(feature|fix|improvement|security)$"
+    )
+    released_at: int | None = Field(default=None, ge=0)
+
+
+class RoadmapItem(BaseModel):
+    id: int
+    title: str
+    description: str = ""
+    category: str = Field(
+        pattern="^(feature|integration|analytics|ux|security|mobile)$"
+    )
+    status: str = Field(pattern="^(idea|planned|in_progress|shipped|declined)$")
+    upvotes: int = Field(ge=0)
+    submitter: str | None = None
+    target_quarter: str | None = None
+    shipped_changelog_id: int | None = None
+    created_at: int
+    updated_at: int
+    has_voted: bool = False
+
+
+class RoadmapListResponse(BaseModel):
+    items: list[RoadmapItem] = Field(default_factory=list)
+    total: int = Field(ge=0)
+
+
+class RoadmapSubmitRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=140)
+    description: str = Field(default="", max_length=2000)
+    category: str = Field(
+        pattern="^(feature|integration|analytics|ux|security|mobile)$"
+    )
+
+
+class RoadmapStatusUpdateRequest(BaseModel):
+    status: str = Field(pattern="^(idea|planned|in_progress|shipped|declined)$")
+    target_quarter: str | None = Field(default=None, max_length=20)
+    shipped_changelog_id: int | None = Field(default=None, ge=1)
+
+
+class RoadmapVoteResponse(BaseModel):
+    item_id: int
+    voted: bool = Field(description="True ise ekledim, False ise geri çektim")
+    upvotes_after: int = Field(ge=0)
+
+
+class CommunityStatsResponse(BaseModel):
+    shipped_features: int = Field(ge=0)
+    in_progress: int = Field(ge=0)
+    planned: int = Field(ge=0)
+    open_ideas: int = Field(ge=0)
+    total_votes: int = Field(ge=0)
+
+
 class AnomalyCalibrationOverview(BaseModel):
     """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
 

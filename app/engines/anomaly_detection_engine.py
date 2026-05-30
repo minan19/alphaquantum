@@ -44,9 +44,6 @@ from typing import Any
 
 from app.anomaly_signals_repository import AnomalySignalsRepository
 from app.anomaly_stats import (
-    BaselineStats,
-    HIGH_Z_THRESHOLD,
-    MEDIUM_Z_THRESHOLD,
     compute_baseline,
     is_actionable,
     score_observation,

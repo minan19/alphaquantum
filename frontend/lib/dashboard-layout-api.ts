@@ -19,7 +19,8 @@ export type KnownWidgetId =
   | "aging_analysis"
   | "cashflow_projection"
   | "recent_invoices"
-  | "anomaly_signals";
+  | "anomaly_signals"
+  | "cashflow_forecast";
 
 export interface DashboardWidgetConfig {
   widget_id: KnownWidgetId | string;
@@ -116,5 +117,11 @@ export const WIDGET_CATALOG: WidgetMeta[] = [
     label: "Anomali Dedektörü",
     description: "%99 güvenli cross-company sızıntı sinyalleri",
     category: "shared",
+  },
+  {
+    id: "cashflow_forecast",
+    label: "Nakit Akışı Tahmini",
+    description: "Adaptive Holt-Winters · 30/60/90g öngörü",
+    category: "finos",
   },
 ];

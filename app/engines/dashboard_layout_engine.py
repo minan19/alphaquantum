@@ -55,6 +55,7 @@ KNOWN_WIDGETS = frozenset({
     "cashflow_projection",
     "recent_invoices",
     "anomaly_signals",
+    "cashflow_forecast",
 })
 
 VALID_SIZES = frozenset({"sm", "md", "lg"})
@@ -66,10 +67,11 @@ DEFAULT_LAYOUT: list[dict[str, Any]] = [
     {"widget_id": "balance",            "size": "md", "hidden": False, "order": 0},
     {"widget_id": "fx_position",        "size": "md", "hidden": False, "order": 1},
     {"widget_id": "anomaly_signals",    "size": "lg", "hidden": False, "order": 2},
-    {"widget_id": "consolidated_pl",    "size": "lg", "hidden": False, "order": 3},
-    {"widget_id": "pending_transfers",  "size": "md", "hidden": False, "order": 4},
-    {"widget_id": "aging_analysis",     "size": "md", "hidden": False, "order": 5},
-    {"widget_id": "exec_summary",       "size": "lg", "hidden": False, "order": 6},
+    {"widget_id": "cashflow_forecast",  "size": "lg", "hidden": False, "order": 3},
+    {"widget_id": "consolidated_pl",    "size": "lg", "hidden": False, "order": 4},
+    {"widget_id": "pending_transfers",  "size": "md", "hidden": False, "order": 5},
+    {"widget_id": "aging_analysis",     "size": "md", "hidden": False, "order": 6},
+    {"widget_id": "exec_summary",       "size": "lg", "hidden": False, "order": 7},
 ]
 
 

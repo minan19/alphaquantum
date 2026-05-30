@@ -2656,6 +2656,52 @@ class CashflowAccuracyHistoryResponse(BaseModel):
     )
 
 
+# ── I1: Logo Tiger Connector ───────────────────────────────────────────
+
+class ConnectorImportError(BaseModel):
+    """Tek satır parse hatası — kullanıcıya detaylı rapor."""
+
+    row_index: int
+    record_type: str
+    error_code: str
+    error_message: str
+    raw_payload: str | None = None
+
+
+class ConnectorImportJobResponse(BaseModel):
+    """Import job durumu — parse sonrası ve commit sonrası kullanılır."""
+
+    id: int
+    user_id: str
+    connector_type: str
+    mode: str
+    status: str = Field(
+        pattern="^(pending|parsing|preview|committing|completed|failed|cancelled)$"
+    )
+    source_filename: str | None
+    source_size_bytes: int = Field(ge=0)
+    summary: dict[str, Any] = Field(default_factory=dict)
+    preview: list[dict[str, Any]] = Field(default_factory=list)
+    error_message: str | None = None
+    started_at: int
+    finished_at: int | None = None
+    committed_at: int | None = None
+    errors: list[ConnectorImportError] = Field(default_factory=list)
+
+
+class ConnectorImportListResponse(BaseModel):
+    jobs: list[ConnectorImportJobResponse] = Field(default_factory=list)
+    total: int = Field(ge=0)
+
+
+class ConnectorTypeInfo(BaseModel):
+    """Frontend wizard için: hangi connector'lar mevcut + hangi modlar."""
+
+    connector_type: str
+    label: str
+    supported_modes: list[str]
+
+
 class AnomalyCalibrationOverview(BaseModel):
     """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
 

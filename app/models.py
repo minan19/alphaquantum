@@ -2908,6 +2908,39 @@ class OcrJobListResponse(BaseModel):
     total: int = Field(ge=0)
 
 
+# ── SP1: Scenario Planning ─────────────────────────────────────────────
+
+class ScenarioAdjustmentPayload(BaseModel):
+    type: str = Field(
+        pattern="^(revenue_shock|expense_shock|fx_shock|delayed_collection|lump_sum|combined)$"
+    )
+    pct_change: float = Field(default=0, ge=-100, le=200)
+    day_offset: int = Field(default=0, ge=0, le=365)
+    amount: float = Field(default=0)
+    category_filter: str | None = Field(default=None, max_length=50)
+
+
+class ScenarioRequest(BaseModel):
+    horizon_days: int = Field(default=30, ge=1, le=180)
+    scope: str = Field(default="*", max_length=100)
+    adjustments: list[ScenarioAdjustmentPayload] = Field(
+        min_length=1, max_length=10,
+    )
+
+
+class ScenarioResponse(BaseModel):
+    horizon_days: int
+    baseline_points: list[float]
+    adjusted_points: list[float]
+    p10_points: list[float]
+    p90_points: list[float]
+    cumulative_baseline: float
+    cumulative_adjusted: float
+    delta: float
+    delta_pct: float
+
+
+
 class AnomalyCalibrationOverview(BaseModel):
     """A2.1: Sistem doğruluk KPI'sı — dashboard'a yansır.
 

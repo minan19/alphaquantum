@@ -36,6 +36,7 @@ from app.routers.ocr import router as ocr_router
 from app.routers.efatura import router as efatura_router
 from app.routers.vendor_risk import router as vendor_risk_router
 from app.routers.scenario import router as scenario_router
+from app.routers.treasury import router as treasury_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
 from app.routers.procurement import router as procurement_router
@@ -353,6 +354,13 @@ def create_app() -> FastAPI:
     # SP1: Scenario Planning (A3 forecast üzerinde what-if)
     from app.engines.scenario_planning_engine import ScenarioPlanningEngine
     app.state.scenario_planning_engine = ScenarioPlanningEngine()
+    # T1: Multi-bank Treasury
+    from app.engines.treasury_engine import TreasuryEngine
+    app.state.treasury_engine = TreasuryEngine(
+        database_path=settings.database_path,
+        # Default FX (production'da group_fx_engine'den canlı çekilebilir)
+        fx_rates={"TRY": 1.0, "USD": 32.0, "EUR": 35.0, "GBP": 40.0},
+    )
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -468,6 +476,7 @@ def create_app() -> FastAPI:
     app.include_router(efatura_router)
     app.include_router(vendor_risk_router)
     app.include_router(scenario_router)
+    app.include_router(treasury_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)
     app.include_router(onboarding_router)

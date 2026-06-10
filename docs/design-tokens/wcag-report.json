@@ -1,0 +1,141 @@
+{
+  "generated_at": "2026-06-10",
+  "foundation_version": "1.0.0",
+  "theme": "dark",
+  "core": {
+    "theme": "dark",
+    "bg_primary": "#0C1015",
+    "bg_secondary": "#13161C",
+    "bg_tertiary": "#191D23",
+    "surface_01": "#20242A",
+    "surface_02": "#282C31",
+    "surface_03": "#2F3339",
+    "border": "#1F242D",
+    "text_primary": "#E2E4E8",
+    "text_secondary": "#A5A8AD",
+    "text_muted": "#777B82",
+    "text_inverse": "#0C1224",
+    "status_success": "#62BB78",
+    "status_success_surface": "#1E2A20",
+    "status_warning": "#ECAA0B",
+    "status_warning_surface": "#3D3424",
+    "status_error": "#DE4F46",
+    "status_error_surface": "#1D0C0A",
+    "status_info": "#4CABFD",
+    "status_info_surface": "#1C2833",
+    "focus_ring": "#0094F6"
+  },
+  "modules": {
+    "aq": {
+      "scope": "aq",
+      "brand": "#0C2D6B",
+      "brand_hover": "#000342",
+      "cta": "#2563EB",
+      "cta_hover": "#0033BA",
+      "cta_text": "#FFFFFF",
+      "on_brand": "#E8EFF9",
+      "accent": "#2563EB",
+      "link_back": null
+    },
+    "finos": {
+      "scope": "finos",
+      "brand": "#0EA5A4",
+      "brand_hover": "#007A7A",
+      "cta": "#CD4A00",
+      "cta_hover": "#922A00",
+      "cta_text": "#FFFFFF",
+      "accent": "#4CABFD",
+      "link_back": "#94A3B8"
+    },
+    "corpos": {
+      "scope": "corpos",
+      "brand": "#F4C542",
+      "brand_hover": "#D3A505",
+      "cta": "#F4C542",
+      "cta_hover": "#D3A505",
+      "cta_text": "#0C1224",
+      "cta_text_weight": 500,
+      "accent": "#475569",
+      "accent_light": "#94A3B8",
+      "link_back": "#94A3B8"
+    }
+  },
+  "gates": [
+    {
+      "id": 1,
+      "name": "FinOS CTA × white text ≥ 4.5:1",
+      "target": 4.5,
+      "measured": 4.5898239277645265,
+      "pass": true,
+      "detail": "cta=#CD4A00 text=#FFFFFF → 4.59:1"
+    },
+    {
+      "id": 2,
+      "name": "FinOS link-back × bg-primary(dark) ≥ 4.5:1",
+      "target": 4.5,
+      "measured": 7.4417250974083355,
+      "pass": true,
+      "detail": "link_back=#94A3B8 bg=#0C1015 → 7.44:1"
+    },
+    {
+      "id": 2,
+      "name": "CorpOS link-back × bg-primary(dark) ≥ 4.5:1",
+      "target": 4.5,
+      "measured": 7.4417250974083355,
+      "pass": true,
+      "detail": "link_back=#94A3B8 bg=#0C1015 → 7.44:1"
+    },
+    {
+      "id": 3,
+      "name": "Negatif renk (status-error) tanımlı + okunabilir",
+      "target": 3,
+      "measured": 4.827239448026998,
+      "pass": true,
+      "detail": "status_error=#DE4F46 bg=#0C1015 → 4.83:1"
+    },
+    {
+      "id": 4,
+      "name": "FinOS (teal) ≠ CorpOS accent (slate, teal değil)",
+      "target": "CorpOS accent hue ∉ [170, 210]",
+      "measured": "Δh = 63.3°, CorpOS hue = 257.3°",
+      "pass": true,
+      "detail": "finos.brand hue=194.0, corpos.accent hue=257.3"
+    },
+    {
+      "id": 5,
+      "name": "Ortak semantik katman (success/warning/error/info) çekirdekte",
+      "target": "4/4 status token core scope'unda",
+      "measured": "success=true warning=true error=true info=true",
+      "pass": true,
+      "detail": "Modüller status token'larını ezemez (governance)."
+    },
+    {
+      "id": 6,
+      "name": "focus-ring tanımlı + bg-primary üzerinde görünür ≥ 3:1",
+      "target": 3,
+      "measured": 5.966618315300093,
+      "pass": true,
+      "detail": "focus_ring=#0094F6 bg=#0C1015 → 5.97:1"
+    }
+  ],
+  "text_contrast": [
+    {
+      "pair": "text_primary × bg_primary",
+      "contrast": 14.988812573601496,
+      "rating": "AAA"
+    },
+    {
+      "pair": "text_secondary × bg_primary",
+      "contrast": 7.999750222424617,
+      "rating": "AAA"
+    },
+    {
+      "pair": "text_muted × bg_primary",
+      "contrast": 4.488472893384567,
+      "rating": "AA-Lg"
+    }
+  ],
+  "pass_count": 7,
+  "gate_count": 7,
+  "all_gates_pass": true
+}

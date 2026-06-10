@@ -313,3 +313,41 @@ export function tokensToCss(
 export function keyToCssVar(key: string): string {
   return key.replace(/_/g, "-");
 }
+
+// ============================================================================
+// 7. Pathname → Module detection (Faz 2 SSR cascade)
+// ============================================================================
+
+/**
+ * URL pathname'inden modül kimliğini tespit eder. Root layout `data-module`
+ * attribute'una bu değeri yazar; cascade `html[data-module='<scope>']`
+ * selectoru ile devreye girer.
+ *
+ * Kurallar (tutarlı + öngörülebilir):
+ *  - `/cashflow`, `/treasury`, `/invoices`, `/notifications` → FinOS
+ *  - `/customers`, `/companies` → CorpOS
+ *  - `/tokens-cascade-finos*`, `/tokens-cascade-corpos*` → demo override
+ *  - Diğer her şey (root, dashboard, settings, login, vs.) → AlphaQ çatı
+ *
+ * Core hiçbir zaman tek başına kimlik DEĞİL; her zaman bir modül seçilir.
+ */
+export function detectModuleFromPathname(pathname: string): ModuleScope {
+  // Demo route'lar — explicit override (test/proof için)
+  if (/^\/(tokens-cascade-finos)(\/|$)/.test(pathname)) return "finos";
+  if (/^\/(tokens-cascade-corpos)(\/|$)/.test(pathname)) return "corpos";
+  if (/^\/(tokens-cascade-aq)(\/|$)/.test(pathname)) return "aq";
+
+  // FinOS modülünün gerçek route'ları
+  if (/^\/(cashflow|treasury|invoices|notifications)(\/|$)/.test(pathname)) {
+    return "finos";
+  }
+
+  // CorpOS modülünün gerçek route'ları
+  if (/^\/(customers|companies)(\/|$)/.test(pathname)) {
+    return "corpos";
+  }
+
+  // Default: çatı (AlphaQ)
+  return "aq";
+}
+

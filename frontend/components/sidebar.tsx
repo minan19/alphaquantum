@@ -10,6 +10,7 @@ import {
   Bell,
   TrendingUp,
   Building2,
+  Landmark,
   Settings,
   LogOut,
   ChevronsLeft,
@@ -51,6 +52,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/invoices",     label: "Faturalar",     icon: Receipt, module: "finos" },
       { href: "/cashflow",     label: "Nakit Akışı",   icon: TrendingUp, module: "finos" },
+      { href: "/treasury",     label: "Treasury",      icon: Landmark, module: "finos" },
       { href: "/notifications",label: "Bildirimler",   icon: Bell, module: "finos", badge: "yeni" },
     ],
   },

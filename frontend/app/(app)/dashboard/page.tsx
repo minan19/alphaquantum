@@ -25,6 +25,10 @@ import {
   YAxis,
 } from "recharts";
 import { ApiError, fetchLiveSignals, type DashboardLiveSignalsResponse, type DashboardSignal } from "@/lib/api";
+import {
+  fetchCashflowForecast,
+  type CashflowForecastResponse,
+} from "@/lib/cashflow-forecast-api";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { CustomizeDashboardTrigger } from "@/components/dashboard/customize-modal";
 import { AnomalySignalsWidget } from "@/components/dashboard/anomaly-signals-widget";
@@ -35,22 +39,33 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSpotlight } from "@/lib/use-spotlight";
 
-// Mock 30-day cashflow data — replaced by real API later.
-// Deterministic pseudo-random (sin-based) to keep server + client renders
-// identical and avoid React hydration mismatches.
-const MOCK_CASHFLOW = Array.from({ length: 30 }).map((_, i) => {
+// B8: Cashflow chart now bound to real A3 forecast API.
+// Fallback (used while loading or on API failure) — deterministic sin-based,
+// keeps SSR + client renders identical so React doesn't hydrate mismatch.
+const FALLBACK_CASHFLOW = Array.from({ length: 30 }).map((_, i) => {
   const day = i + 1;
   const noise1 = (Math.sin(i * 12.9898) * 43758.5453) % 1;
-  const noise2 = (Math.sin(i * 78.233) * 43758.5453) % 1;
   const inflow = 12_000 + Math.sin(i / 3) * 4_000 + Math.abs(noise1) * 3_000;
-  const outflow = 9_000 + Math.cos(i / 4) * 2_500 + Math.abs(noise2) * 2_000;
   return {
-    day: `${day}.gün`,
-    gelir: Math.round(inflow),
-    gider: Math.round(outflow),
-    net:   Math.round(inflow - outflow),
+    day: `+${day}g`,
+    net: Math.round(inflow * 0.3),
+    ci80_low: Math.round(inflow * 0.2),
+    ci80_high: Math.round(inflow * 0.4),
   };
 });
+
+/** Forecast API → chart row. Maps day_offset → "+Ng" label + bands. */
+function forecastToChartData(
+  fc: CashflowForecastResponse | null,
+): Array<{ day: string; net: number; ci80_low: number; ci80_high: number }> {
+  if (!fc || fc.points.length === 0) return FALLBACK_CASHFLOW;
+  return fc.points.map((p) => ({
+    day: `+${p.day_offset}g`,
+    net: Math.round(p.point_estimate),
+    ci80_low: Math.round(p.ci80_low),
+    ci80_high: Math.round(p.ci80_high),
+  }));
+}
 
 // Map API signal source → icon + tone
 const SIGNAL_MAP: Record<string, { icon: typeof Activity; tone: "primary"|"ok"|"warn"|"alert"|"neutral"; label: string }> = {
@@ -65,6 +80,7 @@ const SIGNAL_MAP: Record<string, { icon: typeof Activity; tone: "primary"|"ok"|"
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardLiveSignalsResponse | null>(null);
+  const [forecast, setForecast] = useState<CashflowForecastResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,6 +97,23 @@ export default function DashboardPage() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // B8: Real cashflow forecast (A3 engine, scope=* = all companies, 30-day horizon).
+  // Fallback chart renders during load + on API failure.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const fc = await fetchCashflowForecast({ horizon: 30, scope: "*" });
+        if (!cancelled) setForecast(fc);
+      } catch {
+        // Silent: chart falls back to deterministic shape.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const cashflowChartData = forecastToChartData(forecast);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -204,19 +237,34 @@ export default function DashboardPage() {
         <Card className="p-6">
           <CardHeader className="p-0 pb-4 flex-row items-start justify-between">
             <div>
-              <CardTitle>Nakit Akışı</CardTitle>
-              <CardDescription>Son 30 gün · Gelir / Gider / Net</CardDescription>
+              <CardTitle>Nakit Akışı Tahmini</CardTitle>
+              <CardDescription>
+                {forecast
+                  ? `Önümüzdeki ${forecast.horizon_days} gün · A3 adaptif tahmin${forecast.cached ? " (cache)" : ""}`
+                  : "Önümüzdeki 30 gün · Yükleniyor…"}
+              </CardDescription>
             </div>
-            <div className="flex gap-1.5">
-              <Badge tone="success" withDot>Gelir</Badge>
-              <Badge tone="critical" withDot>Gider</Badge>
+            <div className="flex gap-1.5 items-center">
+              {forecast && (
+                <Badge
+                  tone={forecast.is_reliable ? "success" : "warn"}
+                  withDot
+                >
+                  {forecast.is_reliable
+                    ? forecast.mape != null
+                      ? `MAPE %${forecast.mape.toFixed(1)}`
+                      : "Güvenilir"
+                    : "Düşük güven"}
+                </Badge>
+              )}
               <Badge tone="primary" withDot>Net</Badge>
+              <Badge tone="neutral" withDot>%80 güven</Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={MOCK_CASHFLOW} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart data={cashflowChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="grad-gelir" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%"  stopColor="rgb(34 197 94)" stopOpacity={0.5} />
@@ -260,35 +308,48 @@ export default function DashboardPage() {
                       undefined,
                     ]}
                   />
+                  {/* Confidence band: ci80_high then ci80_low (high painted first, low painted second to "cut out") */}
                   <Area
                     type="monotone"
-                    dataKey="gelir"
+                    dataKey="ci80_high"
                     stroke="rgb(34 197 94)"
-                    strokeWidth={1.5}
+                    strokeWidth={0}
                     fill="url(#grad-gelir)"
+                    fillOpacity={0.35}
                     animationDuration={1200}
                     animationEasing="ease-out"
                   />
                   <Area
                     type="monotone"
-                    dataKey="gider"
+                    dataKey="ci80_low"
                     stroke="rgb(239 68 68)"
-                    strokeWidth={1.5}
+                    strokeWidth={0}
                     fill="url(#grad-gider)"
+                    fillOpacity={0.35}
                     animationDuration={1200}
                     animationBegin={150}
                     animationEasing="ease-out"
                   />
+                  {/* Point estimate (net) — on top */}
                   <Area
                     type="monotone"
                     dataKey="net"
                     stroke="rgb(91 71 251)"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     fill="url(#grad-net)"
+                    fillOpacity={0.5}
                     animationDuration={1400}
                     animationBegin={300}
                     animationEasing="ease-out"
                   />
+                  {forecast?.unreliable_reason && (
+                    <text
+                      x="50%" y="20" textAnchor="middle"
+                      fill="rgb(245 158 11)" fontSize={10}
+                    >
+                      {forecast.unreliable_reason}
+                    </text>
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>

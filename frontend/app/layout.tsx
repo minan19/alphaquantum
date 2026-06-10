@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeTokens } from "@/components/theme-tokens";
+import { detectModuleFromPathname } from "@/lib/tokens";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -40,14 +43,33 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Faz 2: SSR'da pathname'den modül kimliğini tespit et.
+  // `middleware.ts` x-pathname header'ını set ediyor; default 'aq' (çatı).
+  const h = await headers();
+  const pathname = h.get("x-pathname") ?? "/";
+  const dataModule = detectModuleFromPathname(pathname);
+
   return (
-    <html lang="tr" suppressHydrationWarning className={inter.variable}>
+    <html
+      lang="tr"
+      suppressHydrationWarning
+      className={inter.variable}
+      // FLASH YOK: data-module SSR'da set edilir, JS hidratasyonu gerekmez.
+      data-module={dataModule}
+    >
       <body className="min-h-screen relative font-display">
+        {/*
+          Faz 2: Design Token SSR enjeksiyonu.
+          <body> içinde, globals.css'in <head> link'inden SONRA render edilir
+          → kaynak sırası güvencesi. Asıl güvence specificity'dir:
+          html[data-module] (0,1,1) > :root (0,1,0).
+        */}
+        <ThemeTokens />
         <a href="#main" className="skip-link">İçeriğe geç</a>
         <ThemeProvider>
           <AuthProvider>

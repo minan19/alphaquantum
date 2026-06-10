@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -3034,4 +3034,45 @@ class AnomalyCalibrationOverview(BaseModel):
     )
     per_detector: dict[str, AnomalyCalibrationDetectorMetric] = Field(
         default_factory=dict
+    )
+
+
+# ============================================================================
+# Design Token Programı — Faz 1 (data layer)
+# ============================================================================
+
+ColorTokenScope = Literal["core", "aq", "finos", "corpos"]
+
+
+class ColorTokenResponse(BaseModel):
+    """Tek bir tasarım token kaydı.
+
+    Scope governance:
+      - core      → ortak: bg/surface/border, text, status, focus-ring
+      - aq/finos/corpos → yalnız kimlik: brand, brand-hover, cta, cta-hover,
+        cta-text, on-brand, accent, accent-light, link-back, cta-text-weight
+
+    Modüller core-sahipli anahtarları EZEMEZ. Guard hem app/color_token_repository.py
+    içinde hem frontend `lib/tokens.ts` içinde uygulanır.
+    """
+
+    scope: ColorTokenScope
+    key: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    order: int = Field(ge=0, alias="display_order")
+    updated_at: int = Field(ge=0)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ColorTokenListResponse(BaseModel):
+    """GET /api/v1/design-tokens çıktısı."""
+
+    tokens: list[ColorTokenResponse] = Field(default_factory=list)
+    scope_filter: ColorTokenScope | None = None
+    seeded_at: int | None = Field(
+        default=None,
+        description="DB seed olmuş mu — son seed unix timestamp veya None.",
     )

@@ -9,6 +9,7 @@ from app.connectors.base import (
 )
 from app.connectors.logo_tiger import LogoTigerConnector
 from app.connectors.mikro import MikroConnector
+from app.connectors.netsis import NetsisConnector
 from app.connectors.registry import CONNECTOR_REGISTRY, get_connector
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "BaseConnector",
     "LogoTigerConnector",
     "MikroConnector",
+    "NetsisConnector",
     "CONNECTOR_REGISTRY",
     "get_connector",
 ]

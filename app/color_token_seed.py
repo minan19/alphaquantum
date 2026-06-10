@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from app.color_token_repository import ColorTokenRepository
 
@@ -68,7 +69,7 @@ def _default_foundation_path() -> Path:
 
 def build_seed_items(
     foundation_path: Path | None = None,
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Faz 0 JSON dosyasından upsert payload'ı üret.
 
     Çıktı: ColorTokenRepository.upsert_many için hazır liste.
@@ -82,7 +83,7 @@ def build_seed_items(
         )
     payload = json.loads(path.read_text(encoding="utf-8"))
 
-    items: list[dict[str, object]] = []
+    items: list[dict[str, Any]] = []
 
     # core
     core = payload.get("core", {})

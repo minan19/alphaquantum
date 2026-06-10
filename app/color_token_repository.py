@@ -17,7 +17,7 @@ import sqlite3
 import time
 from pathlib import Path
 from threading import Lock
-from typing import Literal
+from typing import Any, Literal
 
 # ----------------------------------------------------------------------------
 # Governance: scope × izinli anahtar matrisi
@@ -140,7 +140,7 @@ class ColorTokenRepository:
 
     # ---- read ---------------------------------------------------------------
 
-    def list_tokens(self, scope: Scope | None = None) -> list[dict[str, object]]:
+    def list_tokens(self, scope: Scope | None = None) -> list[dict[str, Any]]:
         """Tüm token'ları (veya scope filtreli) döndür.
 
         Sıralama: scope, sonra display_order, sonra key (deterministic).
@@ -207,7 +207,7 @@ class ColorTokenRepository:
             )
             self._conn.commit()
 
-    def upsert_many(self, items: list[dict[str, object]]) -> int:
+    def upsert_many(self, items: list[dict[str, Any]]) -> int:
         """Toplu idempotent upsert. Her item: {scope, key, value, label, category, display_order?}.
 
         Hepsi bir transaction'da. Bir item governance'ı ihlal ederse hepsi geri sarar.

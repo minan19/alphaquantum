@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="tr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Alpha Quantum — Design Token Önizleme (Faz 0)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg-page: #0C1015;
+    --bg-card: #13161C;
+    --border: #1F242D;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg-page);
+    color: #E2E4E8;
+    font-family: -apple-system, "SF Pro Text", "Inter", Segoe UI, Roboto, sans-serif;
+    line-height: 1.5;
+    padding: 32px 24px 80px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+  .top {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 28px; border-bottom: 1px solid var(--border); padding-bottom: 16px;
+  }
+  .top h1 { margin: 0; font-size: 22px; }
+  .top .meta { color: #777B82; font-size: 13px; }
+  .grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+
+  .palette-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    color: var(--text-primary);
+  }
+  .ph {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ph-brand { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .logo-dot { width: 16px; height: 16px; border-radius: 50%; }
+  .back { font-size: 12px; text-decoration: none; }
+
+  .hero h2 { margin: 0 0 4px; font-size: 18px; }
+  .hero p { margin: 0 0 12px; color: var(--text-secondary); font-size: 13px; }
+  .hero-actions { display: flex; gap: 8px; }
+  button.cta, button.ghost {
+    font: inherit; padding: 8px 14px; border-radius: 6px; border: none;
+    cursor: pointer; font-weight: 500; font-size: 13px;
+  }
+  button.ghost {
+    background: transparent; color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  button.cta { box-shadow: 0 1px 0 rgba(255,255,255,.08) inset; }
+  button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+  .card {
+    margin-top: 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .card-h { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; }
+  .muted { color: var(--text-muted); font-size: 12px; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .kpi { display: flex; flex-direction: column; gap: 4px; }
+  .kpi strong { font-variant-numeric: tabular-nums; font-size: 16px; }
+  .up { color: var(--status-success); }
+  .down { color: var(--status-error); }
+
+  .badges { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .b {
+    padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .b-success { color: var(--status-success); background: #1E2A20; border-color: var(--status-success); }
+  .b-warning { color: var(--status-warning); background: #3D3424; border-color: var(--status-warning); }
+  .b-error   { color: var(--status-error);   background: #1D0C0A;   border-color: var(--status-error);   }
+  .b-info    { color: var(--status-info);    background: #1C2833;    border-color: var(--status-info);    }
+
+  .swatches {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px; margin-top: 16px;
+  }
+  .sw {
+    display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+    font-size: 10px;
+  }
+  .sw-c { width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border); }
+  .sw code { font-size: 10px; }
+  .legend {
+    margin-top: 28px; padding: 14px;
+    background: #13161C; border: 1px solid #1F242D;
+    border-radius: 10px; font-size: 12px; color: #A5A8AD;
+  }
+  .legend strong { color: #E2E4E8; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top">
+    <h1>Alpha Quantum — Design Token Önizleme</h1>
+    <div class="meta">Faz 0 · Foundation kilidi · 10 Haziran 2026</div>
+  </div>
+  <div class="grid">
+    
+    <section class="palette-card" style="
+      --bg-primary: #0C1015;
+      --bg-secondary: #13161C;
+      --bg-tertiary: #191D23;
+      --surface-01: #20242A;
+      --border: #1F242D;
+      --text-primary: #E2E4E8;
+      --text-secondary: #A5A8AD;
+      --text-muted: #777B82;
+      --text-inverse: #0C1224;
+      --status-success: #62BB78;
+      --status-warning: #ECAA0B;
+      --status-error: #DE4F46;
+      --status-info: #4CABFD;
+      --focus-ring: #0094F6;
+      --brand: #13161C;
+      --cta: #4CABFD;
+      --cta-text: #E2E4E8;
+      --accent: #4CABFD;
+      --link-back: transparent;
+    ">
+      <header class="ph">
+        <div class="ph-brand">
+          <div class="logo-dot" style="background:#13161C"></div>
+          <strong>Core</strong>
+        </div>
+        <span class="back" style="opacity:.4">root</span>
+      </header>
+      <div class="hero">
+        <h2>Core ana ekranı</h2>
+        <p>Tek paragraflık tanıtım metni — secondary text tonunda.</p>
+        <div class="hero-actions">
+          <button class="cta" style="background:#4CABFD; color:#E2E4E8;">Hemen başla</button>
+          <button class="ghost">İncele</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">
+          <strong>Aylık özet</strong>
+          <span class="muted">Haziran 2026</span>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi">
+            <span class="muted">Net akış</span>
+            <strong class="up">+₺128.450</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Risk müşterisi</span>
+            <strong class="down">−₺47.200</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Aktif hesap</span>
+            <strong>14</strong>
+          </div>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="b b-success">başarı</span>
+        <span class="b b-warning">uyarı</span>
+        <span class="b b-error">hata</span>
+        <span class="b b-info">bilgi</span>
+      </div>
+      <div class="swatches">
+        <div class="sw"><div class="sw-c" style="background:#13161C"></div><code>brand</code><code class="muted">#13161C</code></div><div class="sw"><div class="sw-c" style="background:#4CABFD"></div><code>cta</code><code class="muted">#4CABFD</code></div><div class="sw"><div class="sw-c" style="background:#4CABFD"></div><code>accent</code><code class="muted">#4CABFD</code></div><div class="sw"><div class="sw-c" style="background:#0C1015"></div><code>bg-primary</code><code class="muted">#0C1015</code></div><div class="sw"><div class="sw-c" style="background:#20242A"></div><code>surface-01</code><code class="muted">#20242A</code></div><div class="sw"><div class="sw-c" style="background:#1F242D"></div><code>border</code><code class="muted">#1F242D</code></div>
+      </div>
+    </section>
+    
+    <section class="palette-card" style="
+      --bg-primary: #0C1015;
+      --bg-secondary: #13161C;
+      --bg-tertiary: #191D23;
+      --surface-01: #20242A;
+      --border: #1F242D;
+      --text-primary: #E2E4E8;
+      --text-secondary: #A5A8AD;
+      --text-muted: #777B82;
+      --text-inverse: #0C1224;
+      --status-success: #62BB78;
+      --status-warning: #ECAA0B;
+      --status-error: #DE4F46;
+      --status-info: #4CABFD;
+      --focus-ring: #0094F6;
+      --brand: #0C2D6B;
+      --cta: #2563EB;
+      --cta-text: #FFFFFF;
+      --accent: #2563EB;
+      --link-back: transparent;
+    ">
+      <header class="ph">
+        <div class="ph-brand">
+          <div class="logo-dot" style="background:#0C2D6B"></div>
+          <strong>AlphaQ (çatı)</strong>
+        </div>
+        <span class="back" style="opacity:.4">root</span>
+      </header>
+      <div class="hero">
+        <h2>AlphaQ (çatı) ana ekranı</h2>
+        <p>Tek paragraflık tanıtım metni — secondary text tonunda.</p>
+        <div class="hero-actions">
+          <button class="cta" style="background:#2563EB; color:#FFFFFF;">Hemen başla</button>
+          <button class="ghost">İncele</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">
+          <strong>Aylık özet</strong>
+          <span class="muted">Haziran 2026</span>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi">
+            <span class="muted">Net akış</span>
+            <strong class="up">+₺128.450</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Risk müşterisi</span>
+            <strong class="down">−₺47.200</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Aktif hesap</span>
+            <strong>25</strong>
+          </div>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="b b-success">başarı</span>
+        <span class="b b-warning">uyarı</span>
+        <span class="b b-error">hata</span>
+        <span class="b b-info">bilgi</span>
+      </div>
+      <div class="swatches">
+        <div class="sw"><div class="sw-c" style="background:#0C2D6B"></div><code>brand</code><code class="muted">#0C2D6B</code></div><div class="sw"><div class="sw-c" style="background:#2563EB"></div><code>cta</code><code class="muted">#2563EB</code></div><div class="sw"><div class="sw-c" style="background:#2563EB"></div><code>accent</code><code class="muted">#2563EB</code></div><div class="sw"><div class="sw-c" style="background:#0C1015"></div><code>bg-primary</code><code class="muted">#0C1015</code></div><div class="sw"><div class="sw-c" style="background:#20242A"></div><code>surface-01</code><code class="muted">#20242A</code></div><div class="sw"><div class="sw-c" style="background:#1F242D"></div><code>border</code><code class="muted">#1F242D</code></div>
+      </div>
+    </section>
+    
+    <section class="palette-card" style="
+      --bg-primary: #0C1015;
+      --bg-secondary: #13161C;
+      --bg-tertiary: #191D23;
+      --surface-01: #20242A;
+      --border: #1F242D;
+      --text-primary: #E2E4E8;
+      --text-secondary: #A5A8AD;
+      --text-muted: #777B82;
+      --text-inverse: #0C1224;
+      --status-success: #62BB78;
+      --status-warning: #ECAA0B;
+      --status-error: #DE4F46;
+      --status-info: #4CABFD;
+      --focus-ring: #0094F6;
+      --brand: #0EA5A4;
+      --cta: #CD4A00;
+      --cta-text: #FFFFFF;
+      --accent: #4CABFD;
+      --link-back: #94A3B8;
+    ">
+      <header class="ph">
+        <div class="ph-brand">
+          <div class="logo-dot" style="background:#0EA5A4"></div>
+          <strong>FinOS</strong>
+        </div>
+        <a class="back" href="#" style="color:#94A3B8">← Çatı'ya dön</a>
+      </header>
+      <div class="hero">
+        <h2>FinOS ana ekranı</h2>
+        <p>Tek paragraflık tanıtım metni — secondary text tonunda.</p>
+        <div class="hero-actions">
+          <button class="cta" style="background:#CD4A00; color:#FFFFFF;">Hemen başla</button>
+          <button class="ghost">İncele</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">
+          <strong>Aylık özet</strong>
+          <span class="muted">Haziran 2026</span>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi">
+            <span class="muted">Net akış</span>
+            <strong class="up">+₺128.450</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Risk müşterisi</span>
+            <strong class="down">−₺47.200</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Aktif hesap</span>
+            <strong>28</strong>
+          </div>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="b b-success">başarı</span>
+        <span class="b b-warning">uyarı</span>
+        <span class="b b-error">hata</span>
+        <span class="b b-info">bilgi</span>
+      </div>
+      <div class="swatches">
+        <div class="sw"><div class="sw-c" style="background:#0EA5A4"></div><code>brand</code><code class="muted">#0EA5A4</code></div><div class="sw"><div class="sw-c" style="background:#CD4A00"></div><code>cta</code><code class="muted">#CD4A00</code></div><div class="sw"><div class="sw-c" style="background:#4CABFD"></div><code>accent</code><code class="muted">#4CABFD</code></div><div class="sw"><div class="sw-c" style="background:#0C1015"></div><code>bg-primary</code><code class="muted">#0C1015</code></div><div class="sw"><div class="sw-c" style="background:#20242A"></div><code>surface-01</code><code class="muted">#20242A</code></div><div class="sw"><div class="sw-c" style="background:#1F242D"></div><code>border</code><code class="muted">#1F242D</code></div>
+      </div>
+    </section>
+    
+    <section class="palette-card" style="
+      --bg-primary: #0C1015;
+      --bg-secondary: #13161C;
+      --bg-tertiary: #191D23;
+      --surface-01: #20242A;
+      --border: #1F242D;
+      --text-primary: #E2E4E8;
+      --text-secondary: #A5A8AD;
+      --text-muted: #777B82;
+      --text-inverse: #0C1224;
+      --status-success: #62BB78;
+      --status-warning: #ECAA0B;
+      --status-error: #DE4F46;
+      --status-info: #4CABFD;
+      --focus-ring: #0094F6;
+      --brand: #F4C542;
+      --cta: #F4C542;
+      --cta-text: #0C1224;
+      --accent: #475569;
+      --link-back: #94A3B8;
+    ">
+      <header class="ph">
+        <div class="ph-brand">
+          <div class="logo-dot" style="background:#F4C542"></div>
+          <strong>CorpOS</strong>
+        </div>
+        <a class="back" href="#" style="color:#94A3B8">← Çatı'ya dön</a>
+      </header>
+      <div class="hero">
+        <h2>CorpOS ana ekranı</h2>
+        <p>Tek paragraflık tanıtım metni — secondary text tonunda.</p>
+        <div class="hero-actions">
+          <button class="cta" style="background:#F4C542; color:#0C1224;">Hemen başla</button>
+          <button class="ghost">İncele</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">
+          <strong>Aylık özet</strong>
+          <span class="muted">Haziran 2026</span>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi">
+            <span class="muted">Net akış</span>
+            <strong class="up">+₺128.450</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Risk müşterisi</span>
+            <strong class="down">−₺47.200</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Aktif hesap</span>
+            <strong>29</strong>
+          </div>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="b b-success">başarı</span>
+        <span class="b b-warning">uyarı</span>
+        <span class="b b-error">hata</span>
+        <span class="b b-info">bilgi</span>
+      </div>
+      <div class="swatches">
+        <div class="sw"><div class="sw-c" style="background:#F4C542"></div><code>brand</code><code class="muted">#F4C542</code></div><div class="sw"><div class="sw-c" style="background:#F4C542"></div><code>cta</code><code class="muted">#F4C542</code></div><div class="sw"><div class="sw-c" style="background:#475569"></div><code>accent</code><code class="muted">#475569</code></div><div class="sw"><div class="sw-c" style="background:#0C1015"></div><code>bg-primary</code><code class="muted">#0C1015</code></div><div class="sw"><div class="sw-c" style="background:#20242A"></div><code>surface-01</code><code class="muted">#20242A</code></div><div class="sw"><div class="sw-c" style="background:#1F242D"></div><code>border</code><code class="muted">#1F242D</code></div>
+      </div>
+    </section>
+  </div>
+  <div class="legend">
+    <strong>Kapı doğrulamaları:</strong> Bu sayfa <code>system.mjs</code> tarafından
+    üretilmiştir. WCAG kontrast oranları, hue dissimilarity, status renk varlığı —
+    hepsi raporda mekanik olarak doğrulanmıştır. Detay için
+    <code>docs/design-tokens/wcag-report.md</code>.
+  </div>
+</div>
+</body>
+</html>

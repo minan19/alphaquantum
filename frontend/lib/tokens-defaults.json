@@ -1,0 +1,351 @@
+{
+  "generated_from": "docs/design-tokens/wcag-report.json",
+  "foundation_version": "1.0.0",
+  "theme": "dark",
+  "tokens": [
+    {
+      "scope": "aq",
+      "key": "brand",
+      "value": "#0C2D6B",
+      "label": "Marka",
+      "category": "brand",
+      "order": 10
+    },
+    {
+      "scope": "aq",
+      "key": "brand_hover",
+      "value": "#000342",
+      "label": "Marka — hover",
+      "category": "brand",
+      "order": 11
+    },
+    {
+      "scope": "aq",
+      "key": "cta",
+      "value": "#2563EB",
+      "label": "CTA dolgu",
+      "category": "cta",
+      "order": 20
+    },
+    {
+      "scope": "aq",
+      "key": "cta_hover",
+      "value": "#0033BA",
+      "label": "CTA — hover",
+      "category": "cta",
+      "order": 21
+    },
+    {
+      "scope": "aq",
+      "key": "cta_text",
+      "value": "#FFFFFF",
+      "label": "CTA — metin rengi",
+      "category": "cta",
+      "order": 22
+    },
+    {
+      "scope": "aq",
+      "key": "on_brand",
+      "value": "#E8EFF9",
+      "label": "Marka yüzeyi",
+      "category": "brand",
+      "order": 30
+    },
+    {
+      "scope": "aq",
+      "key": "accent",
+      "value": "#2563EB",
+      "label": "Aksan (veri)",
+      "category": "accent",
+      "order": 40
+    },
+    {
+      "scope": "core",
+      "key": "bg_primary",
+      "value": "#0C1015",
+      "label": "Arkaplan — birincil",
+      "category": "background",
+      "order": 10
+    },
+    {
+      "scope": "core",
+      "key": "bg_secondary",
+      "value": "#13161C",
+      "label": "Arkaplan — ikincil",
+      "category": "background",
+      "order": 11
+    },
+    {
+      "scope": "core",
+      "key": "bg_tertiary",
+      "value": "#191D23",
+      "label": "Arkaplan — üçüncül",
+      "category": "background",
+      "order": 12
+    },
+    {
+      "scope": "core",
+      "key": "surface_01",
+      "value": "#20242A",
+      "label": "Yüzey 01",
+      "category": "surface",
+      "order": 20
+    },
+    {
+      "scope": "core",
+      "key": "surface_02",
+      "value": "#282C31",
+      "label": "Yüzey 02",
+      "category": "surface",
+      "order": 21
+    },
+    {
+      "scope": "core",
+      "key": "surface_03",
+      "value": "#2F3339",
+      "label": "Yüzey 03",
+      "category": "surface",
+      "order": 22
+    },
+    {
+      "scope": "core",
+      "key": "border",
+      "value": "#1F242D",
+      "label": "Kenarlık",
+      "category": "border",
+      "order": 30
+    },
+    {
+      "scope": "core",
+      "key": "text_primary",
+      "value": "#E2E4E8",
+      "label": "Metin — birincil (~15:1)",
+      "category": "text",
+      "order": 40
+    },
+    {
+      "scope": "core",
+      "key": "text_secondary",
+      "value": "#A5A8AD",
+      "label": "Metin — ikincil (~8:1)",
+      "category": "text",
+      "order": 41
+    },
+    {
+      "scope": "core",
+      "key": "text_muted",
+      "value": "#777B82",
+      "label": "Metin — soluk (~4.5:1)",
+      "category": "text",
+      "order": 42
+    },
+    {
+      "scope": "core",
+      "key": "text_inverse",
+      "value": "#0C1224",
+      "label": "Metin — ters",
+      "category": "text",
+      "order": 43
+    },
+    {
+      "scope": "core",
+      "key": "status_success",
+      "value": "#62BB78",
+      "label": "Durum — başarı",
+      "category": "status",
+      "order": 50
+    },
+    {
+      "scope": "core",
+      "key": "status_success_surface",
+      "value": "#1E2A20",
+      "label": "Durum — başarı yüzeyi",
+      "category": "status",
+      "order": 51
+    },
+    {
+      "scope": "core",
+      "key": "status_warning",
+      "value": "#ECAA0B",
+      "label": "Durum — uyarı",
+      "category": "status",
+      "order": 52
+    },
+    {
+      "scope": "core",
+      "key": "status_warning_surface",
+      "value": "#3D3424",
+      "label": "Durum — uyarı yüzeyi",
+      "category": "status",
+      "order": 53
+    },
+    {
+      "scope": "core",
+      "key": "status_error",
+      "value": "#DE4F46",
+      "label": "Durum — hata (= negatif)",
+      "category": "status",
+      "order": 54
+    },
+    {
+      "scope": "core",
+      "key": "status_error_surface",
+      "value": "#1D0C0A",
+      "label": "Durum — hata yüzeyi",
+      "category": "status",
+      "order": 55
+    },
+    {
+      "scope": "core",
+      "key": "status_info",
+      "value": "#4CABFD",
+      "label": "Durum — bilgi",
+      "category": "status",
+      "order": 56
+    },
+    {
+      "scope": "core",
+      "key": "status_info_surface",
+      "value": "#1C2833",
+      "label": "Durum — bilgi yüzeyi",
+      "category": "status",
+      "order": 57
+    },
+    {
+      "scope": "core",
+      "key": "focus_ring",
+      "value": "#0094F6",
+      "label": "Focus halkası",
+      "category": "focus",
+      "order": 60
+    },
+    {
+      "scope": "corpos",
+      "key": "brand",
+      "value": "#F4C542",
+      "label": "Marka",
+      "category": "brand",
+      "order": 10
+    },
+    {
+      "scope": "corpos",
+      "key": "brand_hover",
+      "value": "#D3A505",
+      "label": "Marka — hover",
+      "category": "brand",
+      "order": 11
+    },
+    {
+      "scope": "corpos",
+      "key": "cta",
+      "value": "#F4C542",
+      "label": "CTA dolgu",
+      "category": "cta",
+      "order": 20
+    },
+    {
+      "scope": "corpos",
+      "key": "cta_hover",
+      "value": "#D3A505",
+      "label": "CTA — hover",
+      "category": "cta",
+      "order": 21
+    },
+    {
+      "scope": "corpos",
+      "key": "cta_text",
+      "value": "#0C1224",
+      "label": "CTA — metin rengi",
+      "category": "cta",
+      "order": 22
+    },
+    {
+      "scope": "corpos",
+      "key": "cta_text_weight",
+      "value": "500",
+      "label": "CTA — metin ağırlığı",
+      "category": "cta",
+      "order": 23
+    },
+    {
+      "scope": "corpos",
+      "key": "accent",
+      "value": "#475569",
+      "label": "Aksan (veri)",
+      "category": "accent",
+      "order": 40
+    },
+    {
+      "scope": "corpos",
+      "key": "accent_light",
+      "value": "#94A3B8",
+      "label": "Aksan — açık",
+      "category": "accent",
+      "order": 41
+    },
+    {
+      "scope": "corpos",
+      "key": "link_back",
+      "value": "#94A3B8",
+      "label": "Çatıya geri-dönüş",
+      "category": "accent",
+      "order": 50
+    },
+    {
+      "scope": "finos",
+      "key": "brand",
+      "value": "#0EA5A4",
+      "label": "Marka",
+      "category": "brand",
+      "order": 10
+    },
+    {
+      "scope": "finos",
+      "key": "brand_hover",
+      "value": "#007A7A",
+      "label": "Marka — hover",
+      "category": "brand",
+      "order": 11
+    },
+    {
+      "scope": "finos",
+      "key": "cta",
+      "value": "#CD4A00",
+      "label": "CTA dolgu",
+      "category": "cta",
+      "order": 20
+    },
+    {
+      "scope": "finos",
+      "key": "cta_hover",
+      "value": "#922A00",
+      "label": "CTA — hover",
+      "category": "cta",
+      "order": 21
+    },
+    {
+      "scope": "finos",
+      "key": "cta_text",
+      "value": "#FFFFFF",
+      "label": "CTA — metin rengi",
+      "category": "cta",
+      "order": 22
+    },
+    {
+      "scope": "finos",
+      "key": "accent",
+      "value": "#4CABFD",
+      "label": "Aksan (veri)",
+      "category": "accent",
+      "order": 40
+    },
+    {
+      "scope": "finos",
+      "key": "link_back",
+      "value": "#94A3B8",
+      "label": "Çatıya geri-dönüş",
+      "category": "accent",
+      "order": 50
+    }
+  ]
+}

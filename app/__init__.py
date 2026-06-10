@@ -37,6 +37,7 @@ from app.routers.efatura import router as efatura_router
 from app.routers.vendor_risk import router as vendor_risk_router
 from app.routers.scenario import router as scenario_router
 from app.routers.treasury import router as treasury_router
+from app.routers.design_tokens import router as design_tokens_router
 from app.routers.copilot import router as copilot_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
@@ -367,6 +368,19 @@ def create_app() -> FastAPI:
     app.state.copilot_engine = CopilotEngine(
         database_path=settings.database_path,
     )
+    # Design Token Programı — Faz 1 (data layer)
+    from app.color_token_repository import ColorTokenRepository
+    from app.color_token_seed import seed_color_tokens
+    app.state.color_token_repo = ColorTokenRepository(settings.database_path)
+    # Idempotent seed — boş tabloyu Faz 0 wcag-report.json'dan doldur.
+    # Tablo doluysa upsert no-op değerleri yeniler (foundation kilidi her zaman geçerli).
+    try:
+        seeded = seed_color_tokens(app.state.color_token_repo)
+        logger.info("color_tokens_seeded", extra={"count": seeded})
+    except FileNotFoundError as err:
+        # wcag-report.json yoksa (test env'lerde olabilir) — DEFAULT_TOKENS fallback'i
+        # frontend tarafında devreye girer. Sessizce devam.
+        logger.warning("color_tokens_seed_skipped", extra={"reason": str(err)})
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -483,6 +497,7 @@ def create_app() -> FastAPI:
     app.include_router(vendor_risk_router)
     app.include_router(scenario_router)
     app.include_router(treasury_router)
+    app.include_router(design_tokens_router)
     app.include_router(copilot_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)

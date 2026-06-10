@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "tokens:generate": "node scripts/generate-token-defaults.mjs",
+    "tokens:test": "node scripts/test-tokens.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

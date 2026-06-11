@@ -3076,3 +3076,42 @@ class ColorTokenListResponse(BaseModel):
         default=None,
         description="DB seed olmuş mu — son seed unix timestamp veya None.",
     )
+
+
+class ColorTokenPatchRequest(BaseModel):
+    """PATCH /api/v1/design-tokens — tek scope'ta delta update.
+
+    Faz 4 panel çekirdeği. Governance API'de zorlanır:
+      - Modül scope'unda core-sahipli key reddedilir (422).
+      - Bilinmeyen key reddedilir (422).
+      - Geçersiz hex/değer reddedilir (422).
+    """
+
+    scope: ColorTokenScope
+    changes: dict[str, str | int] = Field(
+        ...,
+        description="Anahtar→değer haritası. Renk değeri '#RRGGBB' formatında.",
+        min_length=1,
+    )
+
+
+class ColorTokenPatchResponse(BaseModel):
+    """PATCH sonucu — kaç token güncellendiğinin özeti."""
+
+    scope: ColorTokenScope
+    updated: list[str] = Field(default_factory=list, description="Güncellenen anahtarlar.")
+    updated_count: int = Field(ge=0)
+
+
+class ColorTokenResetRequest(BaseModel):
+    """POST /api/v1/design-tokens/reset — bir scope'u Faz 0 seed'ine döndür."""
+
+    scope: ColorTokenScope
+
+
+class ColorTokenResetResponse(BaseModel):
+    """Reset sonucu."""
+
+    scope: ColorTokenScope
+    deleted: int = Field(ge=0)
+    inserted: int = Field(ge=0)

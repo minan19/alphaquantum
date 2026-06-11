@@ -247,3 +247,37 @@ class ColorTokenRepository:
             )
             self._conn.commit()
         return len(rows)
+
+    def update_value(self, scope: str, key: str, value: str) -> bool:
+        """Tek token'ın value'sunu güncelle. Governance checked.
+
+        Dönüş: True if updated, False if not found.
+        """
+        assert_governance(scope, key)
+        now = int(time.time())
+        with self._lock:
+            cur = self._conn.execute(
+                """
+                UPDATE color_tokens
+                SET value = ?, updated_at = ?
+                WHERE scope = ? AND key = ?
+                """,
+                (value, now, scope, key),
+            )
+            self._conn.commit()
+            return cur.rowcount > 0
+
+    def delete_scope(self, scope: str) -> int:
+        """Bir scope'taki tüm token'ları sil (reset için pre-step).
+
+        Dönüş: silinen satır sayısı.
+        """
+        if scope not in VALID_SCOPES:
+            raise ValueError(f"Geçersiz scope: {scope!r}")
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM color_tokens WHERE scope = ?",
+                (scope,),
+            )
+            self._conn.commit()
+            return cur.rowcount

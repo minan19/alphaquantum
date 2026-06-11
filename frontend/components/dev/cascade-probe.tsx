@@ -28,6 +28,7 @@ const PROBES: Probe[] = [
   { cssVar: "--focus-ring",   label: "focus-ring (core)",                         expectedAq: "#0094F6", expectedFinos: "#0094F6", expectedCorpos: "#0094F6" },
   { cssVar: "--brand",        label: "brand (modül kimliği)",                     expectedAq: "#0C2D6B", expectedFinos: "#0EA5A4", expectedCorpos: "#F4C542" },
   { cssVar: "--cta",          label: "cta (modül kimliği — Kapı 1 FinOS=#CD4A00)", expectedAq: "#2563EB", expectedFinos: "#CD4A00", expectedCorpos: "#F4C542" },
+  { cssVar: "--cta-text",     label: "cta-text (Q6 çift — CorpOS=#0C1224 koyu)",   expectedAq: "#FFFFFF", expectedFinos: "#FFFFFF", expectedCorpos: "#0C1224" },
   { cssVar: "--accent",       label: "accent (Kapı 4 CorpOS=slate #475569)",      expectedAq: "#2563EB", expectedFinos: "#4CABFD", expectedCorpos: "#475569" },
   { cssVar: "--link-back",    label: "link-back (Kapı 2 — silver #94A3B8)",       expectedAq: undefined, expectedFinos: "#94A3B8", expectedCorpos: "#94A3B8" },
 ];
@@ -129,6 +130,47 @@ export function CascadeProbe({ expectedModule }: { expectedModule: Module }) {
         <div style={{ padding: 20, borderRadius: 10, background: c.bg, border: `1px solid ${c.border}` }}>
           <div style={{ height: 64, borderRadius: 6, background: "var(--bg-secondary)", border: "1px solid var(--border)", marginBottom: 12 }} />
           <div style={{ fontSize: 12, color: "var(--text-muted)" }}>background: var(--bg-secondary) (core)</div>
+        </div>
+      </section>
+
+      {/* Faz 3.5: Alias Bridge — Tailwind shadcn class'larıyla aynı kimliği iddia.
+          bg-primary text-primary-foreground → alias bridge → var(--cta-rgb) + var(--cta-text-rgb)
+          → cascade modül scope'undan çözer. Üç route'ta üç farklı renge dönüşür. */}
+      <section style={{ marginTop: 24, padding: 16, background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 10 }}>
+        <h2 style={{ fontSize: 14, margin: 0, marginBottom: 4 }}>Alias Bridge Kanıtı — Tailwind shadcn class&apos;ları</h2>
+        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0, marginBottom: 14 }}>
+          Bu öğeler CSS değişkenlerini DOĞRUDAN kullanmıyor; Tailwind shadcn utility class&apos;ları
+          (bg-primary, text-primary-foreground, bg-card, vb.) kullanıyor. Alias bridge devredeyken
+          modül cascade&apos;inden geçerek modüle özel renkler alır.
+        </p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium"
+          >
+            Hemen başla
+          </button>
+          <button
+            className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md"
+          >
+            İkincil
+          </button>
+          <button
+            className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md"
+          >
+            Sil
+          </button>
+          <div className="bg-accent text-accent-foreground px-4 py-2 rounded-md">
+            Aksan
+          </div>
+          <div className="bg-card border-border border px-4 py-2 rounded-md text-foreground">
+            Kart yüzeyi
+          </div>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 10, color: "var(--text-muted)" }}>
+          <code>className=&quot;bg-primary text-primary-foreground&quot;</code> →
+          alias: <code>--primary: var(--cta-rgb)</code>,
+          <code> --primary-foreground: var(--cta-text-rgb)</code> →
+          cascade: <code>html[data-module=&apos;{expectedModule}&apos;]</code>
         </div>
       </section>
 

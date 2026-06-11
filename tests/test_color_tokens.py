@@ -245,5 +245,228 @@ class DesignTokensApiTests(unittest.TestCase):
         self.assertIn(resp.status_code, (400, 422))
 
 
+class DesignTokensPatchTests(unittest.TestCase):
+    """Faz 4: PATCH/reset uçları — governance + auth + write-cycle."""
+
+    def setUp(self) -> None:
+        import os
+        from app import create_app
+
+        self._temp_dir = tempfile.TemporaryDirectory()
+        self._db_path = Path(self._temp_dir.name) / "patch_test.db"
+        self._original_env = {
+            "AQ_DATABASE_PATH": os.getenv("AQ_DATABASE_PATH"),
+            "AQ_AUTH_USERS": os.getenv("AQ_AUTH_USERS"),
+            "AQ_ENABLE_DEMO_USERS": os.getenv("AQ_ENABLE_DEMO_USERS"),
+            "AQ_JWT_SECRET": os.getenv("AQ_JWT_SECRET"),
+            "AQ_ENV": os.getenv("AQ_ENV"),
+        }
+        os.environ["AQ_DATABASE_PATH"] = str(self._db_path)
+        os.environ["AQ_AUTH_USERS"] = (
+            "admin:admin12345:admin,manager:manager12345:manager"
+        )
+        os.environ["AQ_ENABLE_DEMO_USERS"] = "false"
+        os.environ["AQ_JWT_SECRET"] = "faz4-test-secret"
+        os.environ["AQ_ENV"] = "development"
+
+        self.client = TestClient(create_app())
+
+    def tearDown(self) -> None:
+        import os
+        self.client.close()
+        for k, v in self._original_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        self._temp_dir.cleanup()
+
+    def _admin_token(self) -> str:
+        resp = self.client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin12345"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        return str(resp.json()["access_token"])
+
+    def _manager_token(self) -> str:
+        resp = self.client.post(
+            "/api/v1/auth/login",
+            json={"username": "manager", "password": "manager12345"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        return str(resp.json()["access_token"])
+
+    # ---- AUTH ----
+
+    def test_patch_requires_auth(self) -> None:
+        resp = self.client.patch(
+            "/api/v1/design-tokens",
+            json={"scope": "finos", "changes": {"cta": "#AABBCC"}},
+        )
+        self.assertEqual(resp.status_code, 401)
+
+    def test_patch_requires_manage_permission(self) -> None:
+        """Manager rolünde manage_design_tokens YOK — 403 dönmeli."""
+        token = self._manager_token()
+        resp = self.client.patch(
+            "/api/v1/design-tokens",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "finos", "changes": {"cta": "#AABBCC"}},
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_reset_requires_auth(self) -> None:
+        resp = self.client.post(
+            "/api/v1/design-tokens/reset",
+            json={"scope": "finos"},
+        )
+        self.assertEqual(resp.status_code, 401)
+
+    # ---- GOVERNANCE (API'de zorlanır) ----
+
+    def test_patch_module_cannot_override_core_key(self) -> None:
+        """Modül scope'unda core-sahipli key → 422 (governance)."""
+        token = self._admin_token()
+        for scope in ("aq", "finos", "corpos"):
+            for core_key in ("bg_primary", "status_error", "focus_ring"):
+                resp = self.client.patch(
+                    "/api/v1/design-tokens",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"scope": scope, "changes": {core_key: "#AABBCC"}},
+                )
+                self.assertEqual(
+                    resp.status_code, 422,
+                    f"{scope}.{core_key} reddedilmeliydi",
+                )
+                self.assertIn("core-sahipli", resp.json()["detail"])
+
+    def test_patch_unknown_key_rejected(self) -> None:
+        """Bilinmeyen key → 422."""
+        token = self._admin_token()
+        resp = self.client.patch(
+            "/api/v1/design-tokens",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "finos", "changes": {"made_up_key": "#FFFFFF"}},
+        )
+        self.assertEqual(resp.status_code, 422)
+
+    def test_patch_invalid_hex_rejected(self) -> None:
+        """Geçersiz renk değeri → 422."""
+        token = self._admin_token()
+        for bad in ("not-a-hex", "#XYZ123", "rgb(1,2,3)", "#FFF"):
+            resp = self.client.patch(
+                "/api/v1/design-tokens",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"scope": "finos", "changes": {"cta": bad}},
+            )
+            self.assertEqual(resp.status_code, 422, f"'{bad}' reddedilmeliydi")
+
+    # ---- HAPPY PATH ----
+
+    def test_patch_finos_cta_then_read_back(self) -> None:
+        """Yazma → okuma zinciri çalışıyor."""
+        token = self._admin_token()
+        resp = self.client.patch(
+            "/api/v1/design-tokens",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "finos", "changes": {"cta": "#FF8800"}},
+        )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["updated_count"], 1)
+        self.assertIn("cta", body["updated"])
+
+        # Okumayla doğrula
+        read = self.client.get("/api/v1/design-tokens?scope=finos")
+        self.assertEqual(read.status_code, 200)
+        tokens = {t["key"]: t["value"] for t in read.json()["tokens"]}
+        self.assertEqual(tokens["cta"], "#FF8800")
+
+    def test_patch_multiple_keys(self) -> None:
+        """Birden fazla key tek atomik update."""
+        token = self._admin_token()
+        resp = self.client.patch(
+            "/api/v1/design-tokens",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "finos", "changes": {"cta": "#112233", "brand": "#445566"}},
+        )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["updated_count"], 2)
+        self.assertEqual(set(body["updated"]), {"cta", "brand"})
+
+    def test_patch_partial_governance_violation_atomic_reject(self) -> None:
+        """Bir değişiklikte governance ihlali varsa hiçbiri yazılmamalı."""
+        token = self._admin_token()
+        # Önce mevcut değeri sakla
+        before = self.client.get("/api/v1/design-tokens?scope=finos").json()
+        before_cta = {t["key"]: t["value"] for t in before["tokens"]}["cta"]
+
+        # cta (legal) + bg_primary (governance violation) birlikte gönder
+        resp = self.client.patch(
+            "/api/v1/design-tokens",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "finos", "changes": {
+                "cta": "#DEADBE",
+                "bg_primary": "#000000",
+            }},
+        )
+        self.assertEqual(resp.status_code, 422)
+
+        # cta DEĞİŞMEDİĞİNİ doğrula (atomic)
+        after = self.client.get("/api/v1/design-tokens?scope=finos").json()
+        after_cta = {t["key"]: t["value"] for t in after["tokens"]}["cta"]
+        self.assertEqual(before_cta, after_cta, "Atomic update bozuldu")
+
+    # ---- RESET ----
+
+    def test_reset_restores_finos_cta_to_kapi_1_value(self) -> None:
+        """Reset finos scope → cta tekrar #CD4A00 (Kapı 1 değeri)."""
+        token = self._admin_token()
+        # Önce değiştir
+        self.client.patch(
+            "/api/v1/design-tokens",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "finos", "changes": {"cta": "#000000"}},
+        )
+
+        # Reset
+        resp = self.client.post(
+            "/api/v1/design-tokens/reset",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "finos"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertGreater(body["inserted"], 0)
+
+        # Doğrula
+        read = self.client.get("/api/v1/design-tokens?scope=finos").json()
+        tokens = {t["key"]: t["value"] for t in read["tokens"]}
+        self.assertEqual(tokens["cta"], "#CD4A00", "Kapı 1 değeri restore edilmedi")
+        self.assertEqual(tokens["link_back"], "#94A3B8", "Kapı 2 değeri restore edilmedi")
+
+    def test_reset_other_scope_isolated(self) -> None:
+        """finos reset edilince corpos değişmemeli (scope izolasyonu)."""
+        token = self._admin_token()
+        # corpos.cta değiştir
+        self.client.patch(
+            "/api/v1/design-tokens",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "corpos", "changes": {"cta": "#ABCDEF"}},
+        )
+        # finos reset
+        self.client.post(
+            "/api/v1/design-tokens/reset",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"scope": "finos"},
+        )
+        # corpos.cta hâlâ #ABCDEF olmalı
+        corpos = self.client.get("/api/v1/design-tokens?scope=corpos").json()
+        ctas = {t["key"]: t["value"] for t in corpos["tokens"]}
+        self.assertEqual(ctas["cta"], "#ABCDEF")
+
+
 if __name__ == "__main__":
     unittest.main()

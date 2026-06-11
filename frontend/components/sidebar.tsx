@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Building2,
   Landmark,
+  Palette,
   Settings,
   LogOut,
   ChevronsLeft,
@@ -59,6 +60,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Hesap",
     items: [
+      { href: "/admin/colors", label: "Tasarım Tokenları", icon: Palette },
       { href: "/settings",     label: "Ayarlar",       icon: Settings },
     ],
   },

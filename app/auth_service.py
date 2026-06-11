@@ -293,6 +293,7 @@ class AuthService:
             "manage_holdings": "Create holdings and onboard subsidiaries in bulk",
             "read_connectors": "Read integration connectors, mapping previews, and sync jobs",
             "manage_connectors": "Create integration connectors and dispatch sync jobs",
+            "manage_design_tokens": "Edit design tokens — admin panel write access (Faz 4)",
         }
         for name, description in catalog.items():
             self._repo.ensure_permission(name, description)

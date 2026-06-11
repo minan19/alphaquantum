@@ -81,10 +81,11 @@ export async function resetScope(scope: Scope): Promise<ResetResponse> {
   return (await res.json()) as ResetResponse;
 }
 
-/** Browser localStorage'tan token oku. */
+/** Browser localStorage'tan token oku. Auth-context'in yazdığı key ile EŞLEŞMELİ. */
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("aq_access_token");
+  // lib/api.ts'teki TOKEN_KEY ile birebir aynı olmalı (auth-context login bunu yazıyor).
+  return window.localStorage.getItem("aq.access_token");
 }
 
 export type { Token };

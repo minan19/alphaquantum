@@ -39,14 +39,42 @@ import {
   VALID_SCOPES,
 } from "@/lib/tokens";
 
-/** Bir token listesini "var: value;" deklarasyon bloğuna çevirir (deterministic sıra). */
+/**
+ * Hex `#RRGGBB` → `"R G B"` (Tailwind alpha-pattern formatı).
+ * Faz 3.5: alias köprüsü için her renk token'ın yanına `-rgb` varyantı türetiriz.
+ * Hex DEĞİLSE boş döner — caller skip eder (örn. `cta_text_weight: 500`).
+ */
+function hexToRgbTriple(value: string): string {
+  const m = value.match(/^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/);
+  if (!m) return "";
+  return `${parseInt(m[1], 16)} ${parseInt(m[2], 16)} ${parseInt(m[3], 16)}`;
+}
+
+/**
+ * Bir token listesini "var: value;" deklarasyon bloğuna çevirir (deterministic sıra).
+ *
+ * Faz 3.5: Her renk token için iki satır basılır:
+ *   --bg-primary:     #0C1015;
+ *   --bg-primary-rgb: 12 16 21;
+ *
+ * `-rgb` varyantı yalnız hex değerlerden TÜRETİLİR (elle ikinci liste yok → drift yok).
+ * Non-color değerler (örn. `cta_text_weight: 500`, font-family) sadece tek satır.
+ */
 function tokensToDeclarations(tokens: readonly Token[]): string {
   return tokens
     .slice()
     .sort((a, b) =>
       a.order !== b.order ? a.order - b.order : a.key.localeCompare(b.key),
     )
-    .map((t) => `  --${keyToCssVar(t.key)}: ${t.value};`)
+    .flatMap((t) => {
+      const cssVar = keyToCssVar(t.key);
+      const lines = [`  --${cssVar}: ${t.value};`];
+      const rgb = hexToRgbTriple(String(t.value));
+      if (rgb) {
+        lines.push(`  --${cssVar}-rgb: ${rgb};`);
+      }
+      return lines;
+    })
     .join("\n");
 }
 
@@ -55,6 +83,47 @@ function buildStyleBlock(selector: string, tokens: readonly Token[]): string {
   if (tokens.length === 0) return "";
   return `${selector} {\n${tokensToDeclarations(tokens)}\n}`;
 }
+
+/**
+ * Faz 3.5 — Alias köprüsü.
+ *
+ * Mevcut shadcn semantic değişkenlerini Faz 1 token sözlüğüne bağlar. Eski isimler
+ * KORUNUR (Tailwind utility'leri ve bileşenler etkilenmez); yalnız tanımları yeni
+ * token'lardan beslenir. Tailwind `rgb(var(--token) / <alpha-value>)` pattern'i
+ * için `-rgb` varyantları kullanılır.
+ *
+ * Cascade: alias `:root`'ta tanımlı ama `var(--cta-rgb)` USE-time'da çözülür →
+ * modül scope'undaki `--cta-rgb` cascade otomatik devreye girer (FinOS'ta turuncu,
+ * CorpOS'ta altın, AlphaQ'da azure).
+ *
+ * **Kapı 1 garanti çifti:**
+ *   --primary           → --cta-rgb         (modül kimliği)
+ *   --primary-foreground → --cta-text-rgb   (modül kimliğine uygun metin rengi)
+ *   CorpOS altın CTA'sında metin OTOMATIK koyu (#0C1224 RGB) olur — beyaz kalmaz.
+ */
+const ALIAS_BRIDGE_CSS = `:root {
+  /* Faz 3.5 alias köprüsü — shadcn semantic → Faz 1 token sözlüğü */
+  --background:              var(--bg-primary-rgb);
+  --foreground:              var(--text-primary-rgb);
+  --card:                    var(--surface-01-rgb);
+  --card-foreground:         var(--text-primary-rgb);
+  --popover:                 var(--surface-02-rgb);
+  --popover-foreground:      var(--text-primary-rgb);
+  /* Q6 — Primary CTA çifti: dolgu + metin BİRLİKTE bağlanır (Kapı 1 garantisi) */
+  --primary:                 var(--cta-rgb);
+  --primary-foreground:      var(--cta-text-rgb);
+  --secondary:               var(--surface-01-rgb);
+  --secondary-foreground:    var(--text-primary-rgb);
+  --muted:                   var(--bg-tertiary-rgb);
+  --muted-foreground:        var(--text-muted-rgb);
+  --accent:                  var(--accent-rgb);
+  --accent-foreground:       var(--text-primary-rgb);
+  --destructive:             var(--status-error-rgb);
+  --destructive-foreground:  255 255 255;
+  --border:                  var(--border-rgb);
+  --input:                   var(--border-rgb);
+  --ring:                    var(--focus-ring-rgb);
+}`;
 
 export async function ThemeTokens() {
   // Tüm 4 scope'u paralel çek — `unstable_cache(tags:['design-tokens'])` ile sarılı.
@@ -116,6 +185,16 @@ export async function ThemeTokens() {
         id="aq-tokens-theme-scaffold"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: themeScaffold }}
+      />
+      {/*
+        Faz 3.5 — Alias köprüsü. EN SON basılır → eski shadcn semantic değişkenleri
+        yeni token'lardan beslenir. var() çözümlemesi USE-time olduğu için modül
+        cascade'i otomatik devreye girer (data-module'a göre --cta-rgb değişir).
+      */}
+      <style
+        id="aq-tokens-alias-bridge"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: ALIAS_BRIDGE_CSS }}
       />
     </>
   );

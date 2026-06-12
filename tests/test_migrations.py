@@ -24,24 +24,24 @@ class MigrationManagerTests(unittest.TestCase):
 
     def test_apply_status_and_rollback(self) -> None:
         applied = self.manager.apply_all()
-        self.assertEqual(applied, list(range(1, 35)))
+        self.assertEqual(applied, list(range(1, 36)))
 
         status = self.manager.status()
-        self.assertEqual(len(status), 34)
-        for i in range(34):
+        self.assertEqual(len(status), 35)
+        for i in range(35):
             self.assertTrue(status[i]["applied"])
 
-        # Migration 34 (color_tokens) safe to roll back — yeni tablo, additif.
+        # Migration 35 (color_token_snapshots) safe to roll back — yeni tablo, additif.
         rolled_back = self.manager.rollback(steps=1)
-        self.assertEqual(rolled_back, [34])
+        self.assertEqual(rolled_back, [35])
 
         status_after = self.manager.status()
-        for i in range(33):
+        for i in range(34):
             self.assertTrue(status_after[i]["applied"])
-        self.assertFalse(status_after[33]["applied"])
+        self.assertFalse(status_after[34]["applied"])
 
         reapplied = self.manager.apply_all()
-        self.assertEqual(reapplied, [34])
+        self.assertEqual(reapplied, [35])
 
     def test_023_intercompany_schema_shape(self) -> None:
         """G1.1: intercompany migration adds the right columns + tables.

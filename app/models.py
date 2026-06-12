@@ -3115,3 +3115,66 @@ class ColorTokenResetResponse(BaseModel):
     scope: ColorTokenScope
     deleted: int = Field(ge=0)
     inserted: int = Field(ge=0)
+
+
+# ---------------------------------------------------------------------------
+# Faz 5 — Snapshot/Restore (geri sarma zinciri)
+# ---------------------------------------------------------------------------
+
+ColorTokenSnapshotSource = Literal["pre_save", "pre_restore", "pre_reset", "manual"]
+
+
+class ColorTokenSnapshotSummary(BaseModel):
+    """Snapshot listesinde tek satır — payload taşımaz (UI'da hafif kalsın)."""
+
+    id: int = Field(ge=1)
+    scope: ColorTokenScope
+    source: ColorTokenSnapshotSource
+    label: str = Field(min_length=1)
+    created_by: str | None = None
+    taken_at: int = Field(ge=0)
+
+
+class ColorTokenSnapshotListResponse(BaseModel):
+    """GET /api/v1/design-tokens/snapshots çıktısı."""
+
+    scope: ColorTokenScope
+    snapshots: list[ColorTokenSnapshotSummary] = Field(default_factory=list)
+
+
+class ColorTokenSnapshotCreateRequest(BaseModel):
+    """POST /api/v1/design-tokens/snapshot — manuel etiketli kayıt."""
+
+    scope: ColorTokenScope
+    label: str = Field(min_length=1, max_length=80, description="UI'da gösterilecek kısa etiket.")
+
+
+class ColorTokenSnapshotCreateResponse(BaseModel):
+    """Manuel snapshot sonucu."""
+
+    snapshot_id: int = Field(ge=1)
+    scope: ColorTokenScope
+    label: str
+    taken_at: int = Field(ge=0)
+
+
+class ColorTokenRestoreRequest(BaseModel):
+    """POST /api/v1/design-tokens/restore — bir snapshot'a geri dön.
+
+    Restore atomik: önce mevcut scope durumu 'pre_restore' kaydı olarak
+    snapshot'lanır, sonra hedef payload upsert edilir. Kayıpsız undo.
+    """
+
+    snapshot_id: int = Field(ge=1)
+
+
+class ColorTokenRestoreResponse(BaseModel):
+    """Restore sonucu."""
+
+    scope: ColorTokenScope
+    snapshot_id: int = Field(ge=1)
+    pre_restore_snapshot_id: int = Field(
+        ge=1,
+        description="Restore öncesi durumun yazıldığı 'pre_restore' snapshot id'si (undo için).",
+    )
+    restored_count: int = Field(ge=0, description="Upsert edilen token sayısı.")

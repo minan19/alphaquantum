@@ -26,7 +26,14 @@ from app.models import (
     ColorTokenResetRequest,
     ColorTokenResetResponse,
     ColorTokenResponse,
+    ColorTokenRestoreRequest,
+    ColorTokenRestoreResponse,
     ColorTokenScope,
+    ColorTokenSnapshotCreateRequest,
+    ColorTokenSnapshotCreateResponse,
+    ColorTokenSnapshotListResponse,
+    ColorTokenSnapshotSource,
+    ColorTokenSnapshotSummary,
     UserProfile,
 )
 from app.security import require_permissions
@@ -123,14 +130,17 @@ def list_tokens(
 def patch_tokens(
     payload: ColorTokenPatchRequest,
     request: Request,
-    _user: UserProfile = Depends(require_permissions("manage_design_tokens")),
+    user: UserProfile = Depends(require_permissions("manage_design_tokens")),
 ) -> ColorTokenPatchResponse:
-    """Faz 4: panel yazma ucu.
+    """Faz 4+5: panel yazma ucu — pre-save snapshot ile.
 
     Tek scope'ta delta update. Governance API'de zorlanır:
       - Modül scope'unda core-sahipli key → 422 (assertGovernance fırlar)
       - Bilinmeyen key → 422 (ne core ne module whitelist'inde)
       - Geçersiz hex değer → 422 (_validate_value)
+
+    Faz 5: yazımdan ÖNCE mevcut scope durumu 'pre_save' snapshot'u olarak
+    yazılır → "⤺ Bir Önceki" tek tıkla bu noktaya döner.
     """
     if payload.scope not in VALID_SCOPES:
         raise HTTPException(status_code=422, detail=f"invalid scope: {payload.scope}")
@@ -146,6 +156,17 @@ def patch_tokens(
         _validate_value(key, value)
 
     repo = _repo(request)
+
+    # Faz 5: pre-save snapshot. Boş scope'ta da yazılır (geri dönüş hâlâ mümkün).
+    pre_payload = repo.snapshot_payload(payload.scope)
+    repo.create_snapshot(
+        scope=payload.scope,
+        source="pre_save",
+        label=f"Kaydetme öncesi ({len(payload.changes)} alan)",
+        payload=pre_payload,
+        created_by=getattr(user, "email", None) or getattr(user, "id", None),
+    )
+
     updated: list[str] = []
     for key, raw_value in payload.changes.items():
         normalized = _validate_value(key, raw_value)
@@ -172,11 +193,12 @@ def patch_tokens(
 def reset_scope(
     payload: ColorTokenResetRequest,
     request: Request,
-    _user: UserProfile = Depends(require_permissions("manage_design_tokens")),
+    user: UserProfile = Depends(require_permissions("manage_design_tokens")),
 ) -> ColorTokenResetResponse:
-    """Faz 4: bir scope'u Faz 0 seed'ine döndür (fabrika = foundation kilidi).
+    """Faz 4+5: bir scope'u Faz 0 seed'ine döndür — pre-reset snapshot ile.
 
     İki adımlı onay UI'da; backend tek atomik op:
+      0. Mevcut scope durumu 'pre_reset' snapshot'u olarak yazılır (Faz 5)
       1. Belirtilen scope'taki tüm token'ları sil
       2. wcag-report.json'dan o scope için seed'i upsert et
     """
@@ -191,6 +213,18 @@ def reset_scope(
     seed_items = [it for it in build_seed_items(foundation_path) if it["scope"] == payload.scope]
 
     repo = _repo(request)
+
+    # Faz 5: fabrika reset öncesi de snapshot al ki kullanıcı geri dönebilsin.
+    pre_payload = repo.snapshot_payload(payload.scope)
+    if pre_payload:  # boş scope'ta snapshot anlamsız
+        repo.create_snapshot(
+            scope=payload.scope,
+            source="pre_reset",
+            label="Fabrika ayarlarına dönüş öncesi",
+            payload=pre_payload,
+            created_by=getattr(user, "email", None) or getattr(user, "id", None),
+        )
+
     deleted = repo.delete_scope(payload.scope)
     inserted = repo.upsert_many(seed_items)
 
@@ -198,4 +232,169 @@ def reset_scope(
         scope=payload.scope,
         deleted=deleted,
         inserted=inserted,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Faz 5 — Snapshot endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/api/v1/design-tokens/snapshots",
+    response_model=ColorTokenSnapshotListResponse,
+    tags=["design-tokens"],
+    responses={
+        401: {"description": "Auth gerekli"},
+        403: {"description": "Insufficient permissions (manage_design_tokens)"},
+    },
+)
+def list_snapshots(
+    request: Request,
+    scope: ColorTokenScope = Query(..., description="Snapshot listelenecek scope."),
+    limit: int = Query(default=20, ge=1, le=100),
+    _user: UserProfile = Depends(require_permissions("manage_design_tokens")),
+) -> ColorTokenSnapshotListResponse:
+    """Faz 5: bir scope için snapshot listesi (yeni→eski).
+
+    Payload taşımaz; UI'da liste hafif kalsın. Tek snapshot'a `restore` ile gidilir.
+    """
+    if scope not in VALID_SCOPES:
+        raise HTTPException(status_code=422, detail=f"invalid scope: {scope}")
+
+    repo = _repo(request)
+    rows = repo.list_snapshots(scope=scope, limit=limit)
+    return ColorTokenSnapshotListResponse(
+        scope=scope,
+        snapshots=[
+            ColorTokenSnapshotSummary(
+                id=int(r["id"]),
+                scope=cast(ColorTokenScope, r["scope"]),
+                source=cast(ColorTokenSnapshotSource, r["source"]),
+                label=str(r["label"]),
+                created_by=(str(r["created_by"]) if r.get("created_by") is not None else None),
+                taken_at=int(r["taken_at"]),
+            )
+            for r in rows
+        ],
+    )
+
+
+@router.post(
+    "/api/v1/design-tokens/snapshot",
+    response_model=ColorTokenSnapshotCreateResponse,
+    tags=["design-tokens"],
+    responses={
+        401: {"description": "Auth gerekli"},
+        403: {"description": "Insufficient permissions (manage_design_tokens)"},
+    },
+)
+def create_manual_snapshot(
+    payload: ColorTokenSnapshotCreateRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_design_tokens")),
+) -> ColorTokenSnapshotCreateResponse:
+    """Faz 5: manuel etiketli snapshot ("Versiyonum 1.0" gibi).
+
+    PATCH/reset zaten otomatik snapshot alır; bu uç kullanıcının kendi tanımlı
+    referans noktasını oluşturmasını sağlar.
+    """
+    if payload.scope not in VALID_SCOPES:
+        raise HTTPException(status_code=422, detail=f"invalid scope: {payload.scope}")
+
+    repo = _repo(request)
+    snap_payload = repo.snapshot_payload(payload.scope)
+    if not snap_payload:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Scope '{payload.scope}' boş; snapshot alınacak veri yok.",
+        )
+
+    snapshot_id = repo.create_snapshot(
+        scope=payload.scope,
+        source="manual",
+        label=payload.label.strip()[:80],
+        payload=snap_payload,
+        created_by=getattr(user, "email", None) or getattr(user, "id", None),
+    )
+
+    # taken_at'i tekrar okumak yerine tekil get ile dön (consistency).
+    row = repo.get_snapshot(snapshot_id)
+    return ColorTokenSnapshotCreateResponse(
+        snapshot_id=snapshot_id,
+        scope=payload.scope,
+        label=payload.label.strip()[:80],
+        taken_at=int(row["taken_at"]) if row else 0,
+    )
+
+
+@router.post(
+    "/api/v1/design-tokens/restore",
+    response_model=ColorTokenRestoreResponse,
+    tags=["design-tokens"],
+    responses={
+        401: {"description": "Auth gerekli"},
+        403: {"description": "Insufficient permissions (manage_design_tokens)"},
+        404: {"description": "Snapshot bulunamadı"},
+    },
+)
+def restore_snapshot(
+    payload: ColorTokenRestoreRequest,
+    request: Request,
+    user: UserProfile = Depends(require_permissions("manage_design_tokens")),
+) -> ColorTokenRestoreResponse:
+    """Faz 5: bir snapshot'a geri dön (kayıpsız undo).
+
+    Algoritma:
+      1. Hedef snapshot oku — yoksa 404.
+      2. Mevcut scope durumunu 'pre_restore' snapshot'u olarak kaydet.
+      3. Hedef payload'ı governance ile doğrula (whitelist defansı).
+      4. Scope'u sil + payload'ı upsert et.
+
+    Restore'un kendisi de yeni bir snapshot bıraktığı için tekrar geri sarılabilir.
+    """
+    repo = _repo(request)
+    target = repo.get_snapshot(payload.snapshot_id)
+    if target is None:
+        raise HTTPException(
+            status_code=404, detail=f"Snapshot bulunamadı: {payload.snapshot_id}"
+        )
+
+    target_scope = str(target["scope"])
+    if target_scope not in VALID_SCOPES:
+        raise HTTPException(
+            status_code=500, detail=f"Snapshot bozuk scope: {target_scope!r}"
+        )
+
+    target_payload = target.get("payload") or []
+    if not isinstance(target_payload, list):
+        raise HTTPException(status_code=500, detail="Snapshot payload bozuk.")
+
+    # Defansif governance — depo bozulsa bile yazıma izinli olmayan key girmesin.
+    for item in target_payload:
+        try:
+            assert_governance(str(item.get("scope")), str(item.get("key")))
+        except GovernanceViolation as err:
+            raise HTTPException(
+                status_code=422, detail=f"Snapshot governance ihlal ediyor: {err}"
+            ) from err
+
+    # Pre-restore snapshot — undo zinciri.
+    pre_payload = repo.snapshot_payload(target_scope)
+    pre_id = repo.create_snapshot(
+        scope=target_scope,
+        source="pre_restore",
+        label=f"Snapshot #{payload.snapshot_id} restore öncesi",
+        payload=pre_payload,
+        created_by=getattr(user, "email", None) or getattr(user, "id", None),
+    )
+
+    repo.delete_scope(target_scope)
+    restored = repo.upsert_many(target_payload)
+
+    return ColorTokenRestoreResponse(
+        scope=target_scope,
+        snapshot_id=payload.snapshot_id,
+        pre_restore_snapshot_id=pre_id,
+        restored_count=restored,
     )

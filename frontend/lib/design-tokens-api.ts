@@ -88,4 +88,77 @@ function getStoredToken(): string | null {
   return window.localStorage.getItem("aq.access_token");
 }
 
+// ---------------------------------------------------------------------------
+// Faz 5 — Snapshot/Restore client API
+// ---------------------------------------------------------------------------
+
+export type SnapshotSource = "pre_save" | "pre_restore" | "pre_reset" | "manual";
+
+export interface SnapshotSummary {
+  id: number;
+  scope: Scope;
+  source: SnapshotSource;
+  label: string;
+  created_by: string | null;
+  taken_at: number;
+}
+
+export interface SnapshotListResponse {
+  scope: Scope;
+  snapshots: SnapshotSummary[];
+}
+
+export interface SnapshotCreateResponse {
+  snapshot_id: number;
+  scope: Scope;
+  label: string;
+  taken_at: number;
+}
+
+export interface RestoreResponse {
+  scope: Scope;
+  snapshot_id: number;
+  pre_restore_snapshot_id: number;
+  restored_count: number;
+}
+
+async function authedFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${getStoredToken() ?? ""}`);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  const res = await fetch(url, { ...init, headers });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({ detail: res.statusText }))) as {
+      detail?: string;
+    };
+    throw new Error(body.detail ?? `${init.method ?? "GET"} ${url} failed (${res.status})`);
+  }
+  return (await res.json()) as T;
+}
+
+export function listSnapshots(scope: Scope, limit = 20): Promise<SnapshotListResponse> {
+  return authedFetch(
+    `/api/admin/design-tokens/snapshots?scope=${encodeURIComponent(scope)}&limit=${limit}`,
+  );
+}
+
+export function createManualSnapshot(
+  scope: Scope,
+  label: string,
+): Promise<SnapshotCreateResponse> {
+  return authedFetch("/api/admin/design-tokens/snapshot", {
+    method: "POST",
+    body: JSON.stringify({ scope, label }),
+  });
+}
+
+export function restoreSnapshot(snapshotId: number): Promise<RestoreResponse> {
+  return authedFetch("/api/admin/design-tokens/restore", {
+    method: "POST",
+    body: JSON.stringify({ snapshot_id: snapshotId }),
+  });
+}
+
 export type { Token };

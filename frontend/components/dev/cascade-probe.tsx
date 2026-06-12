@@ -57,10 +57,9 @@ export function CascadeProbe({ expectedModule }: { expectedModule: Module }) {
   const [computed, setComputed] = useState<Record<string, string>>({});
   const [docModule, setDocModule] = useState<string>("");
 
-  useEffect(() => {
+  function refreshComputed() {
     const html = document.documentElement;
     setDocModule(html.getAttribute("data-module") ?? "");
-
     const cs = window.getComputedStyle(html);
     const out: Record<string, string> = {};
     for (const probe of PROBES) {
@@ -68,6 +67,56 @@ export function CascadeProbe({ expectedModule }: { expectedModule: Module }) {
       out[probe.cssVar] = raw ? normalizeColor(raw) : "(unset)";
     }
     setComputed(out);
+  }
+
+  useEffect(() => {
+    refreshComputed();
+  }, []);
+
+  // Faz 5 — Live preview: parent panel postMessage ile draft token gönderir.
+  // Inline <style id="aq-draft-overlay"> bloğu ile en yüksek specificity'de
+  // override edilir (SSR base + module cascade + draft overlay).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.parent || window.parent === window) return;
+    function applyDraft(tokens: Array<{ scope: string; key: string; value: string }>) {
+      const byScope: Record<string, string[]> = {};
+      for (const t of tokens) {
+        if (typeof t.value !== "string") continue;
+        const cssKey = `--${t.key.replace(/_/g, "-")}: ${t.value};`;
+        let cssKeyRgb = "";
+        const hex = t.value.match(/^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/);
+        if (hex) {
+          cssKeyRgb = `--${t.key.replace(/_/g, "-")}-rgb: ${parseInt(hex[1], 16)} ${parseInt(hex[2], 16)} ${parseInt(hex[3], 16)};`;
+        }
+        (byScope[t.scope] ??= []).push(cssKey + cssKeyRgb);
+      }
+      const segments: string[] = [];
+      if (byScope.core) segments.push(`:root{${byScope.core.join("")}}`);
+      for (const mod of ["aq", "finos", "corpos"] as const) {
+        if (byScope[mod]) {
+          segments.push(`html[data-module='${mod}']{${byScope[mod].join("")}}`);
+        }
+      }
+      const css = segments.join("");
+      let el = document.getElementById("aq-draft-overlay") as HTMLStyleElement | null;
+      if (!el) {
+        el = document.createElement("style");
+        el.id = "aq-draft-overlay";
+        document.head.appendChild(el);
+      }
+      el.textContent = css;
+      requestAnimationFrame(refreshComputed);
+    }
+    function onMessage(ev: MessageEvent) {
+      if (ev.origin !== window.location.origin) return;
+      const data = ev.data as { type?: string; tokens?: unknown };
+      if (data?.type !== "aq:draft-tokens" || !Array.isArray(data.tokens)) return;
+      applyDraft(data.tokens as Array<{ scope: string; key: string; value: string }>);
+    }
+    window.addEventListener("message", onMessage);
+    window.parent.postMessage({ type: "aq:preview-ready" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
   }, []);
 
   const moduleColors: Record<Module, { bg: string; border: string; label: string }> = {

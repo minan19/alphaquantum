@@ -13,11 +13,23 @@
  *  - ✦ Tümünü Otomatik: kategori başına
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, RotateCcw, Save, Sparkles, ShieldAlert, Wand2 } from "lucide-react";
+import {
+  Eye,
+  History,
+  Loader2,
+  RotateCcw,
+  Save,
+  ShieldAlert,
+  Sparkles,
+  Undo2,
+  Wand2,
+} from "lucide-react";
 import {
   fetchAllTokensClient,
+  listSnapshots,
   patchTokens,
   resetScope,
+  restoreSnapshot,
 } from "@/lib/design-tokens-api";
 import {
   VALID_SCOPES,
@@ -32,6 +44,8 @@ import {
   type ComputeAutoCategory,
   type DraftValues,
 } from "@/lib/token-auto";
+import { SnapshotHistoryDrawer } from "@/components/admin/snapshot-history-drawer";
+import { LivePreviewFrame } from "@/components/admin/live-preview-frame";
 
 interface PanelToken extends Token {
   /** Kaydedilmiş (DB'deki) değer — ↩ Geri Al için referans. */
@@ -61,6 +75,10 @@ export function AdminColorsPanel() {
   const [saving, setSaving] = useState(false);
   const [factoryConfirmStep, setFactoryConfirmStep] = useState<0 | 1 | 2>(0);
   const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  // Faz 5
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [revertingPrev, setRevertingPrev] = useState(false);
 
   // ---- load ---------------------------------------------------------------
 
@@ -238,6 +256,39 @@ export function AdminColorsPanel() {
     }
   };
 
+  // ---- Faz 5: tek tık "Bir Önceki" --------------------------------------
+  // En yakın pre_save/manual snapshot'a döner. UI'da kaybolan değişiklik yok
+  // (her kayıt öncesi backend zaten snapshot bırakıyor).
+  const handleRevertToPrevious = async () => {
+    setRevertingPrev(true);
+    try {
+      const list = await listSnapshots(activeScope, 5);
+      const previous = list.snapshots.find(
+        (s) => s.source === "pre_save" || s.source === "manual",
+      );
+      if (!previous) {
+        setToast({
+          kind: "error",
+          text: "Geri dönülecek önceki kayıt bulunamadı.",
+        });
+        return;
+      }
+      await restoreSnapshot(previous.id);
+      setToast({
+        kind: "success",
+        text: `Önceki kayda dönüldü (#${previous.id} · ${previous.label})`,
+      });
+      await loadAll();
+    } catch (e) {
+      setToast({
+        kind: "error",
+        text: e instanceof Error ? e.message : "Geri sarma başarısız",
+      });
+    } finally {
+      setRevertingPrev(false);
+    }
+  };
+
   // ---- tab change (draft uyarısı) ----------------------------------------
 
   const handleScopeChange = (next: Scope) => {
@@ -300,7 +351,7 @@ export function AdminColorsPanel() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-aq-dust">
             {dirtyKeys.length > 0
               ? `${dirtyKeys.length} değişiklik var`
@@ -313,6 +364,41 @@ export function AdminColorsPanel() {
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Kaydet
+          </button>
+
+          {/* Faz 5: Bir Önceki */}
+          <button
+            onClick={handleRevertToPrevious}
+            disabled={saving || revertingPrev}
+            className="inline-flex items-center gap-2 rounded-md border border-aq-mist/40 px-3 py-2 text-xs text-aq-dust transition hover:border-aq-quantum/40 hover:text-aq-neutron disabled:opacity-40"
+            title="En yakın önceki kayda dön"
+          >
+            {revertingPrev ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+            Bir Önceki
+          </button>
+
+          {/* Faz 5: Geçmiş */}
+          <button
+            onClick={() => setHistoryOpen(true)}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-md border border-aq-mist/40 px-3 py-2 text-xs text-aq-dust transition hover:border-aq-quantum/40 hover:text-aq-neutron"
+            title="Snapshot zinciri"
+          >
+            <History className="h-3.5 w-3.5" /> Geçmiş
+          </button>
+
+          {/* Faz 5: Canlı Önizleme */}
+          <button
+            onClick={() => setPreviewOpen((v) => !v)}
+            className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition ${
+              previewOpen
+                ? "border-aq-quantum bg-aq-quantum/15 text-aq-neutron"
+                : "border-aq-mist/40 text-aq-dust hover:border-aq-quantum/40 hover:text-aq-neutron"
+            }`}
+            title="Canlı önizleme penceresi"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            {previewOpen ? "Önizlemeyi Kapat" : "Canlı Önizleme"}
           </button>
 
           {/* Fabrika (2-step confirm) */}
@@ -426,6 +512,25 @@ export function AdminColorsPanel() {
           {toast.text}
         </div>
       )}
+
+      {/* Faz 5: Snapshot Geçmişi */}
+      <SnapshotHistoryDrawer
+        scope={activeScope}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onRestored={async () => {
+          setToast({ kind: "success", text: "Snapshot restore edildi" });
+          await loadAll();
+        }}
+      />
+
+      {/* Faz 5: Canlı Önizleme (kaydetmeden uygulanır) */}
+      <LivePreviewFrame
+        activeScope={activeScope}
+        draftTokens={tokens.map((t) => ({ scope: t.scope, key: t.key, value: t.value }))}
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }

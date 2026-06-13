@@ -15,8 +15,9 @@ const CSP_DIRECTIVES = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   // Image: self + data: (icon) + blob: (önizleme).
   "img-src 'self' data: blob:",
-  // Backend API çağrıları (lokal dev için 127.0.0.1).
-  "connect-src 'self' http://127.0.0.1:8000 ws: wss:",
+  // Backend API çağrıları (lokal dev için 127.0.0.1 + localhost — lib/api.ts
+  // default'u 'http://localhost:8000', tarayıcı 'localhost' ile resolve eder).
+  "connect-src 'self' http://127.0.0.1:8000 http://localhost:8000 ws: wss:",
   // Iframe yalnız self (Faz 5 önizleme).
   "frame-src 'self'",
   "object-src 'none'",

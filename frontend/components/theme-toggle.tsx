@@ -1,37 +1,20 @@
 "use client";
 
 /**
- * B5: Dark/Light mode toggle.
+ * Dark/Light mode toggle.
  *
- * next-themes wrapper. UX kararları:
+ * Cookie tek-kaynak (Faz 7). UX kararları:
  *  - Smooth sun ↔ moon ikon morph (Framer Motion)
  *  - System preference takip seçeneği (3-state: light/dark/system)
  *  - Premium hover state (border accent + subtle glow)
  *  - a11y: aria-label, focus-visible ring
  *  - SSR-safe: mounted guard ile hydration mismatch önleme
- *
- * Tasarım doc'undaki "Dark/Light Mode Geçiş Animasyonu" (K9.3) hayata geçer:
- *   - Toggle'a tıkla → tema yumuşak geçer (CSS variables transition)
- *   - İkon morph (güneş ↔ ay) Framer Motion ile
- *   - prefers-reduced-motion: instant geçiş (animation kapalı)
  */
-import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { readThemeCookieClient, setThemeCookie, type Theme as AqTheme } from "@/lib/theme";
-
-type ThemeChoice = "light" | "dark" | "system";
-
-/** Sistem teması (prefers-color-scheme). SSR'da yok → "dark" varsayılan. */
-function systemTheme(): AqTheme {
-  if (typeof window === "undefined") return "dark";
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
-function resolveChoice(choice: ThemeChoice): AqTheme {
-  return choice === "system" ? systemTheme() : choice;
-}
+import { useTheme } from "@/lib/use-theme";
+import { resolveChoice } from "@/lib/theme";
 
 interface ThemeToggleProps {
   className?: string;
@@ -40,21 +23,8 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className, compact = true }: ThemeToggleProps) {
-  // Faz 7: cookie tek-kaynak. SSR'da hangi tema set'lendi → o.
-  const [mounted, setMounted] = useState(false);
-  const [choice, setChoice] = useState<ThemeChoice>("dark");
-
-  useEffect(() => {
-    setMounted(true);
-    // Çerez varsa onu kullan; yoksa dark default.
-    const fromCookie = readThemeCookieClient();
-    setChoice(fromCookie ?? "dark");
-  }, []);
-
-  const apply = (next: ThemeChoice) => {
-    setChoice(next);
-    setThemeCookie(resolveChoice(next));
-  };
+  // Faz 7: cookie tek-kaynak useTheme hook'u (lib/use-theme.ts).
+  const { theme: choice, mounted, setTheme: apply } = useTheme();
 
   // SSR placeholder: hydration mismatch önle
   if (!mounted) {

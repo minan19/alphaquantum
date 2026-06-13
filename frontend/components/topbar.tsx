@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell, Command, Moon, Sun, Monitor } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/use-theme";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

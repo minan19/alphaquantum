@@ -41,3 +41,19 @@ export function readThemeCookieClient(): Theme | null {
   if (!match) return null;
   return isValidTheme(match[1]) ? match[1] : null;
 }
+
+/**
+ * Faz 7 — 3-state (light/dark/system) tema seçim tipi.
+ * Cookie tek-kaynak; UI'lar için ortak yer.
+ */
+export type ThemeChoice = "light" | "dark" | "system";
+
+/** Sistem teması (prefers-color-scheme). SSR/no-window → "dark" varsayılan. */
+export function systemTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+export function resolveChoice(choice: ThemeChoice): Theme {
+  return choice === "system" ? systemTheme() : choice;
+}

@@ -40,7 +40,17 @@ Modül ayrımı **yalnız renge yaslanmıyor**. Sidebar (`components/sidebar.tsx
 
 - **Birinci cue:** grup başlığı uppercase metin ("CORPOS" / "FINOS")
 - **İkinci cue:** her satırda işlevsel ikon (Users / Building2 / Receipt / TrendingUp / …)
-- Modül renkleri (teal / altın / azure) **3. cue** — yardımcı, asıl tanımlayıcı değil.
+- **3. cue (yardımcı):** Modül kimlik renkleri:
+  - AlphaQ (çatı) → **azure signature** `#2563EB` — çatının `--cta` rengi, panel header'larda ve global etkileşim noktalarında
+  - FinOS → **teal brand** `#0EA5A4` + **Kapı 1 turuncu CTA** `#CD4A00`
+  - CorpOS → **altın brand/CTA** `#F4C542` + **Kapı 4 slate accent** `#475569`
+
+> **Önemli kavramsal ayrım:** **azure** = AlphaQ çatı kimliğinin **signature CTA**'sıdır (`FAZ0_ANCHORS.aq.cta` = `#2563EB`); **accent** ise modülün **data accent** rolüdür (görselleştirmelerde, vurgu çubuklarında). İkisi aynı değil:
+> - AlphaQ'da `cta` ve `accent` aynı (azure her ikisini de doldurur — çatının signature'ı budur, [`token-auto.ts:372`](frontend/lib/token-auto.ts:372))
+> - FinOS'ta `cta` = turuncu, `accent` = `core.status_info` (azure'a yakın bilgi rengi) — **ayrı kavramlar**
+> - CorpOS'ta `cta` = altın, `accent` = slate (Kapı 4 garantisi)
+>
+> Yani azure tek başına "AlphaQ çatı" anlamı taşır; modül `accent`'i azure'a benzese de farklı kavramdır ve foundation kilidi tarafından scope başına ayrı tanımlanır.
 
 Deuteranopi/protanopi simülasyonunda metin+ikon değişmediği için ayrım korunur.
 

@@ -78,8 +78,8 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "relative flex h-screen shrink-0 flex-col border-r border-aq-mist/60",
-        "bg-aq-cosmos/40 backdrop-blur-2xl transition-[width] duration-300 ease-quantum",
+        "relative flex h-screen shrink-0 flex-col border-r border-border",
+        "bg-card/40 backdrop-blur-2xl transition-[width] duration-300 ease-quantum",
         collapsed ? "w-[68px]" : "w-[248px]",
       )}
     >
@@ -94,14 +94,14 @@ export function Sidebar({
         <button
           onClick={onOpenCommand}
           className={cn(
-            "mx-3 mb-3 flex items-center gap-2 rounded-md border border-aq-mist/40",
-            "px-3 py-1.5 text-xs text-aq-dust hover:text-foreground",
-            "hover:border-aq-quantum/40 hover:bg-aq-quantum/5 transition-all ease-quantum",
+            "mx-3 mb-3 flex items-center gap-2 rounded-md border border-border",
+            "px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground",
+            "hover:border-ring hover:bg-accent transition-all ease-quantum",
           )}
         >
           <Command className="h-3.5 w-3.5" />
           <span>Hızlı arama</span>
-          <kbd className="ml-auto rounded bg-aq-mist/60 px-1.5 py-0.5 font-mono text-[10px]">
+          <kbd className="ml-auto rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
             ⌘K
           </kbd>
         </button>
@@ -112,7 +112,7 @@ export function Sidebar({
         {NAV.map((group) => (
           <div key={group.group} className="mb-4">
             {!collapsed && (
-              <p className="px-3 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-aq-trace">
+              <p className="px-3 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 {group.group}
               </p>
             )}
@@ -127,8 +127,8 @@ export function Sidebar({
                         "group relative flex items-center gap-3 rounded-md px-3 py-2",
                         "text-sm transition-all duration-200 ease-quantum",
                         active
-                          ? "bg-aq-quantum/15 text-aq-neutron"
-                          : "text-aq-dust hover:bg-aq-mist/40 hover:text-foreground",
+                          ? "bg-primary/15 text-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
                         collapsed && "justify-center",
                       )}
                       title={collapsed ? item.label : undefined}
@@ -136,12 +136,12 @@ export function Sidebar({
                       {active && (
                         <motion.span
                           layoutId="sidebar-active"
-                          className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-aq-quantum"
+                          className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-primary"
                           transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
                         />
                       )}
                       <item.icon
-                        className={cn("h-4 w-4 shrink-0", active && "text-aq-quantum-2")}
+                        className={cn("h-4 w-4 shrink-0", active && "text-primary")}
                       />
                       {!collapsed && (
                         <>
@@ -163,7 +163,7 @@ export function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-aq-mist/40 p-2 space-y-0.5">
+      <div className="border-t border-border p-2 space-y-0.5">
         {/* B5: Tema değiştirici (dashboard için) */}
         <div
           className={cn(
@@ -172,7 +172,7 @@ export function Sidebar({
           )}
         >
           {!collapsed && (
-            <span className="text-xs text-aq-dust">Tema</span>
+            <span className="text-xs text-muted-foreground">Tema</span>
           )}
           <ThemeToggle />
         </div>
@@ -181,7 +181,7 @@ export function Sidebar({
           onClick={logout}
           className={cn(
             "w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm",
-            "text-aq-dust hover:bg-aq-fission/10 hover:text-aq-fission transition-all",
+            "text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
             collapsed && "justify-center",
           )}
           title={collapsed ? "Çıkış" : undefined}
@@ -196,8 +196,8 @@ export function Sidebar({
         onClick={() => setCollapsed((c) => !c)}
         className={cn(
           "absolute -right-3 top-20 grid h-6 w-6 place-items-center",
-          "rounded-full border border-aq-mist/60 bg-aq-cosmos text-aq-dust",
-          "hover:text-foreground hover:border-aq-quantum/60 transition-all",
+          "rounded-full border border-border bg-card text-muted-foreground",
+          "hover:text-foreground hover:border-ring transition-all",
         )}
         aria-label={collapsed ? "Genişlet" : "Daralt"}
       >
@@ -220,7 +220,7 @@ function FooterItem({
     <button
       className={cn(
         "w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm",
-        "text-aq-dust hover:bg-aq-mist/40 hover:text-foreground transition-all",
+        "text-muted-foreground hover:bg-accent hover:text-foreground transition-all",
         collapsed && "justify-center",
       )}
       title={collapsed ? label : undefined}

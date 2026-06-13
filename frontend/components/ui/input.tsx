@@ -13,7 +13,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="relative">
         {leadingIcon && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-aq-dust">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
             {leadingIcon}
           </div>
         )}
@@ -21,11 +21,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           type={type}
           className={cn(
-            "h-10 w-full rounded-md bg-aq-orbital/60 text-sm text-foreground",
-            "border border-aq-mist/60 placeholder:text-aq-trace",
+            "h-10 w-full rounded-md bg-background/60 text-sm text-foreground",
+            "border border-input placeholder:text-muted-foreground",
             "transition-all duration-200 ease-quantum",
-            "focus:bg-aq-orbital/80 focus:border-aq-quantum/60 focus:outline-none",
-            "focus:ring-2 focus:ring-aq-quantum/20",
+            "focus:bg-background/80 focus:border-ring focus:outline-none",
+            "focus:ring-2 focus:ring-ring/30",
             "disabled:cursor-not-allowed disabled:opacity-50",
             padLeft, padRight,
             className,
@@ -33,7 +33,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {trailingIcon && (
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 text-aq-dust">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground">
             {trailingIcon}
           </div>
         )}

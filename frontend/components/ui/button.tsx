@@ -20,36 +20,36 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary — flagship CTA, gradient + glow
+        // Primary — flagship CTA, modül cascade
         primary: [
-          "bg-gradient-to-br from-aq-quantum to-aq-quantum-2 text-white",
-          "shadow-quantum hover:shadow-quantum-lg",
-          "hover:from-aq-quantum-2 hover:to-aq-quantum",
-          // Inner highlight
+          "bg-primary text-primary-foreground shadow-elevation-2",
+          "hover:bg-primary/90",
+          // Inner highlight (gradient ışıltı için)
           "before:absolute before:inset-0 before:bg-gradient-to-b",
-          "before:from-white/15 before:to-transparent before:pointer-events-none",
+          "before:from-white/10 before:to-transparent before:pointer-events-none",
         ],
-        // Secondary — subtle, glass
+        // Secondary — subtle, glass yüzeyi (token-bağlı)
         secondary: [
-          "glass glass-hover text-foreground",
+          "bg-secondary text-secondary-foreground border border-border/40",
+          "hover:bg-secondary/80",
         ],
-        // Outline — minimal
+        // Outline — minimal, hover'da modül ringi
         outline: [
-          "border border-aq-mist/60 bg-transparent text-foreground",
-          "hover:border-aq-quantum/60 hover:bg-aq-quantum/5",
+          "border border-input bg-transparent text-foreground",
+          "hover:border-ring hover:bg-accent hover:text-accent-foreground",
         ],
         // Ghost — no surface until hover
         ghost: [
-          "text-aq-dust hover:text-foreground hover:bg-aq-mist/40",
+          "text-muted-foreground hover:text-accent-foreground hover:bg-accent",
         ],
         // Destructive — danger zone
         destructive: [
-          "bg-aq-fission text-white shadow-elevation-2",
-          "hover:bg-aq-fission/90",
+          "bg-destructive text-destructive-foreground shadow-elevation-2",
+          "hover:bg-destructive/90",
         ],
-        // Link — text-only
+        // Link — text-only, modül-bağlı primary
         link: [
-          "text-aq-quantum hover:text-aq-quantum-2 underline-offset-4 hover:underline",
+          "text-primary hover:text-primary/80 underline-offset-4 hover:underline",
           "p-0 h-auto",
         ],
       },

@@ -156,11 +156,11 @@ export default function ChangelogPage() {
         {/* Footer CTA */}
         <div className="mt-12 text-center">
           <p className="text-sm text-aq-dust">
-            Bir özellik mi eksik? Roadmap'te oy ver veya öner.
+            Bir özellik mi eksik? Roadmap&apos;te oy ver veya öner.
           </p>
           <Link href="/roadmap">
             <Button className="mt-3" size="sm">
-              Roadmap'i gör →
+              Roadmap&apos;i gör →
             </Button>
           </Link>
         </div>

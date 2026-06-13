@@ -61,8 +61,8 @@ export default function ConnectorsPage() {
           Veri kaynaklarını <span className="bg-gradient-to-r from-aq-quantum-2 to-aq-plasma bg-clip-text text-transparent">bağla</span>
         </h1>
         <p className="text-sm text-aq-dust mt-1">
-          Logo Tiger ve diğer ERP'lerden veri import et — XML veya Excel.
-          Onay öncesi her şeyi preview'de görürsün.
+          Logo Tiger ve diğer ERP&apos;lerden veri import et — XML veya Excel.
+          Onay öncesi her şeyi preview&apos;de görürsün.
         </p>
       </motion.header>
 
@@ -78,7 +78,7 @@ export default function ConnectorsPage() {
               Son İmportlar
             </CardTitle>
             <CardDescription className="mt-1">
-              Önceki import job'larını gör.
+              Önceki import job&apos;larını gör.
             </CardDescription>
           </div>
           <Button

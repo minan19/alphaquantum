@@ -166,7 +166,7 @@ export default function OcrPage() {
                 OCR Sonucu
               </CardTitle>
               <CardDescription>
-                Çıkarılan field'ları kontrol et, gerekirse düzelt, onayla.
+                Çıkarılan field&apos;ları kontrol et, gerekirse düzelt, onayla.
                 Onaylandığında ledger entry oluşur.
               </CardDescription>
             </div>
@@ -215,7 +215,7 @@ export default function OcrPage() {
                 ) : (
                   <>
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                    Onayla ve Ledger'a Ekle
+                    Onayla ve Ledger&apos;a Ekle
                   </>
                 )}
               </Button>

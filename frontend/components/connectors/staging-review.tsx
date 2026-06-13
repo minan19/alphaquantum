@@ -141,7 +141,7 @@ export function StagingReview({
             Staging → CRM & Fatura Aktarımı
           </CardTitle>
           <CardDescription className="mt-1">
-            Logo'dan import edilen kayıtları gerçek CRM, fatura ve nakit
+            Logo&apos;dan import edilen kayıtları gerçek CRM, fatura ve nakit
             akışı tablolarına aktar. Idempotent — tekrar tetiklemek
             güvenli.
           </CardDescription>
@@ -173,7 +173,7 @@ export function StagingReview({
             </Badge>
             {!hasStaged && (
               <span className="text-aq-trace">
-                Logo'dan import yaparak staging'i doldurun
+                Logo&apos;dan import yaparak staging&apos;i doldurun
               </span>
             )}
           </div>
@@ -323,7 +323,7 @@ export function StagingReview({
         {!hasStaged && !loading && (
           <div className="rounded-md border border-aq-mist/30 bg-aq-cosmos/40 p-4 text-center text-xs">
             <AlertTriangle className="h-4 w-4 mx-auto mb-2 text-aq-dust" />
-            Staging boş. Önce Logo'dan import yaparak veri ekleyin.
+            Staging boş. Önce Logo&apos;dan import yaparak veri ekleyin.
           </div>
         )}
       </CardContent>

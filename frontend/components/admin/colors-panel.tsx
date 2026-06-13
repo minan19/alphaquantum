@@ -40,11 +40,14 @@ import {
 } from "@/lib/tokens";
 import {
   computeAuto,
-  contrastRating,
-  wcagContrast,
   type ComputeAutoCategory,
   type DraftValues,
 } from "@/lib/token-auto";
+import {
+  resolveWcagTarget,
+  type WcagBadge,
+  type WcagInputToken,
+} from "@/lib/wcag-target";
 import { SnapshotHistoryDrawer } from "@/components/admin/snapshot-history-drawer";
 import { LivePreviewFrame } from "@/components/admin/live-preview-frame";
 import { ImportExportDialog } from "@/components/admin/import-export-dialog";
@@ -142,11 +145,17 @@ export function AdminColorsPanel() {
     [tokens],
   );
 
-  /** Çözümlenmiş bg-primary (scope-aware — WCAG rozet zemini için). */
-  const resolvedBgPrimary = useMemo(() => {
-    const bg = tokens.find((t) => t.scope === "core" && t.key === "bg_primary");
-    return bg?.value ?? "#0C1015";
-  }, [tokens]);
+  /** WCAG rozeti için sadeleştirilmiş token kümesi — resolveWcagTarget girdisi. */
+  const wcagInputs = useMemo<WcagInputToken[]>(
+    () =>
+      tokens.map((t) => ({
+        scope: t.scope,
+        key: t.key,
+        value: t.value,
+        category: t.category,
+      })),
+    [tokens],
+  );
 
   /** Draft (kaydedilmemiş) sayısı — yalnız aktif scope için. */
   const dirtyKeys = useMemo(() => {
@@ -502,7 +511,11 @@ export function AdminColorsPanel() {
                   row={row}
                   readOnly={isReadOnly(row)}
                   isDirty={row.value !== row.savedValue}
-                  bgForContrast={resolvedBgPrimary}
+                  badge={resolveWcagTarget(
+                    { scope: row.scope, key: row.key, value: row.value, category: row.category },
+                    wcagInputs,
+                    activeScope,
+                  )}
                   onChange={(v) => updateValue(row.scope, row.key, v)}
                   onRevert={() => revertRow(row.scope, row.key)}
                   onAuto={() => autoRow(row)}
@@ -574,7 +587,7 @@ function TokenRow({
   row,
   readOnly,
   isDirty,
-  bgForContrast,
+  badge,
   onChange,
   onRevert,
   onAuto,
@@ -582,20 +595,14 @@ function TokenRow({
   row: PanelToken;
   readOnly: boolean;
   isDirty: boolean;
-  bgForContrast: string;
+  badge: WcagBadge;
   onChange: (v: string) => void;
   onRevert: () => void;
   onAuto: () => void;
 }) {
   const isNumeric = row.key === "cta_text_weight";
   const isValidHex = HEX_RE.test(row.value);
-
-  // WCAG rozeti: token rengini bg-primary'ye karşı (renk değilse skip)
-  let contrastInfo: { ratio: number; rating: string } | null = null;
-  if (!isNumeric && isValidHex) {
-    const ratio = wcagContrast(row.value, bgForContrast);
-    contrastInfo = { ratio, rating: contrastRating(ratio) };
-  }
+  const passing = badge?.mode === "ratio" && badge.ratio >= badge.threshold;
 
   return (
     <div
@@ -651,20 +658,30 @@ function TokenRow({
 
       {/* WCAG badge */}
       <div className="col-span-3">
-        {contrastInfo && (
+        {badge?.mode === "ratio" && (
           <span
             className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-mono ${
-              contrastInfo.rating === "AAA"
+              badge.rating === "AAA"
                 ? "bg-aq-fusion/20 text-aq-fusion"
-                : contrastInfo.rating === "AA"
+                : badge.rating === "AA"
                   ? "bg-aq-fusion/15 text-aq-fusion"
-                  : contrastInfo.rating === "AA-Lg"
-                    ? "bg-aq-solar/15 text-aq-solar"
+                  : badge.rating === "AA-Lg"
+                    ? passing
+                      ? "bg-aq-fusion/15 text-aq-fusion"
+                      : "bg-aq-solar/15 text-aq-solar"
                     : "bg-aq-fission/15 text-aq-fission"
             }`}
-            title={`vs bg-primary ${bgForContrast}`}
+            title={`${badge.tooltip} · hedef ${badge.threshold}:1`}
           >
-            {contrastInfo.ratio.toFixed(2)}:1 · {contrastInfo.rating}
+            {badge.ratio.toFixed(2)}:1 · {badge.rating}
+          </span>
+        )}
+        {badge?.mode === "neutral" && (
+          <span
+            className="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-mono bg-aq-mist/20 text-aq-dust"
+            title={badge.tooltip}
+          >
+            — {badge.label}
           </span>
         )}
       </div>

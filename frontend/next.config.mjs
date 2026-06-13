@@ -1,10 +1,26 @@
 /** @type {import('next').NextConfig} */
 
-// Faz 6 — Content-Security-Policy.
-// Daha önce CSP yoktu; minimal-açma yaklaşımı. Yalnız bu fazın gerektirdiği
-// kadar genişletildi (font kaynakları). Diğer kategoriler 'self' + Next.js'in
-// HMR/inline gerektirdiği yerlerde 'unsafe-inline' (dev/prod aynı; sıkılaştırma
-// ileri fazda).
+// Faz 6 + fix/wcag-badge-reference — Content-Security-Policy.
+// Env-koşullu connect-src: dev'de localhost+127.0.0.1+ws/wss; prod'da yalnız
+// 'self' + NEXT_PUBLIC_API_BASE_URL origin'i. Lokal dev konfigürasyonu prod'a
+// SIZMAZ. PROD_API_ORIGIN env yoksa boş — segments dahil edilmez, 'self' kalır.
+const IS_DEV = process.env.NODE_ENV !== "production";
+const PROD_API_ORIGIN = (() => {
+  const raw = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!raw) return "";
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return "";
+  }
+})();
+
+const CONNECT_SRC = [
+  "'self'",
+  ...(IS_DEV ? ["http://127.0.0.1:8000", "http://localhost:8000", "ws:", "wss:"] : []),
+  ...(!IS_DEV && PROD_API_ORIGIN ? [PROD_API_ORIGIN] : []),
+];
+
 const CSP_DIRECTIVES = [
   "default-src 'self'",
   // Font dosyaları: kendi origin (upload bayts /api/fonts/<id>) + Google Static.
@@ -15,8 +31,8 @@ const CSP_DIRECTIVES = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   // Image: self + data: (icon) + blob: (önizleme).
   "img-src 'self' data: blob:",
-  // Backend API çağrıları (lokal dev için 127.0.0.1).
-  "connect-src 'self' http://127.0.0.1:8000 ws: wss:",
+  // Backend API çağrıları — env-koşullu (yukarıda inşa edildi).
+  `connect-src ${CONNECT_SRC.join(" ")}`,
   // Iframe yalnız self (Faz 5 önizleme).
   "frame-src 'self'",
   "object-src 'none'",

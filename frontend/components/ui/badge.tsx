@@ -7,12 +7,12 @@ const badgeVariants = cva(
   {
     variants: {
       tone: {
-        neutral: "bg-aq-mist/60 text-aq-neutron",
-        info:    "bg-aq-plasma/15 text-aq-plasma ring-1 ring-aq-plasma/30",
-        success: "bg-aq-fusion/15 text-aq-fusion ring-1 ring-aq-fusion/30",
-        warn:    "bg-aq-solar/15 text-aq-solar ring-1 ring-aq-solar/30",
-        critical:"bg-aq-fission/15 text-aq-fission ring-1 ring-aq-fission/30",
-        primary: "bg-aq-quantum/15 text-aq-quantum-2 ring-1 ring-aq-quantum/30",
+        neutral: "bg-muted text-foreground",
+        info:    "bg-info/15 text-info ring-1 ring-info/30",
+        success: "bg-success/15 text-success ring-1 ring-success/30",
+        warn:    "bg-warning/15 text-warning ring-1 ring-warning/30",
+        critical:"bg-destructive/15 text-destructive ring-1 ring-destructive/30",
+        primary: "bg-primary/15 text-primary ring-1 ring-primary/30",
       },
       withDot: {
         true: "before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current before:shadow-[0_0_8px_currentColor]",

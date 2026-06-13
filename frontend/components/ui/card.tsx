@@ -16,7 +16,7 @@ const Card = React.forwardRef<
     className={cn(
       "rounded-lg text-card-foreground transition-all duration-300 ease-quantum",
       variant === "default" && [
-        "border border-aq-mist/60 bg-card/80",
+        "border border-border bg-card/80",
         "shadow-elevation-1 hover:shadow-elevation-2",
       ],
       variant === "glass" && "glass glass-hover",

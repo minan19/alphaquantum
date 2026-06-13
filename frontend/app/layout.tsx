@@ -96,7 +96,7 @@ export default async function RootLayout({
             className="font-display"
             toastOptions={{
               classNames: {
-                toast: "!bg-aq-orbital !border-aq-mist !text-aq-neutron",
+                toast: "!bg-popover !border-border !text-popover-foreground",
               },
             }}
           />

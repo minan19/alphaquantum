@@ -31,6 +31,12 @@ export default {
         border:      c("border"),
         input:       c("input"),
         ring:        c("ring"),
+        // M1.1 (fix/button-variants-cascade) — intent renkleri (status_*).
+        // Modül-bağımsız (her modülde aynı), token'a bağlı; chrome/primitive
+        // bunları aq-fusion/aq-solar/aq-plasma yerine kullanır.
+        success:     c("status-success-rgb"),
+        warning:     c("status-warning-rgb"),
+        info:        c("status-info-rgb"),
 
         // Brand palette (Alpha Quantum signature)
         aq: {

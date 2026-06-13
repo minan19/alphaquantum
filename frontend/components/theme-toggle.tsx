@@ -1,25 +1,20 @@
 "use client";
 
 /**
- * B5: Dark/Light mode toggle.
+ * Dark/Light mode toggle.
  *
- * next-themes wrapper. UX kararları:
+ * Cookie tek-kaynak (Faz 7). UX kararları:
  *  - Smooth sun ↔ moon ikon morph (Framer Motion)
  *  - System preference takip seçeneği (3-state: light/dark/system)
  *  - Premium hover state (border accent + subtle glow)
  *  - a11y: aria-label, focus-visible ring
  *  - SSR-safe: mounted guard ile hydration mismatch önleme
- *
- * Tasarım doc'undaki "Dark/Light Mode Geçiş Animasyonu" (K9.3) hayata geçer:
- *   - Toggle'a tıkla → tema yumuşak geçer (CSS variables transition)
- *   - İkon morph (güneş ↔ ay) Framer Motion ile
- *   - prefers-reduced-motion: instant geçiş (animation kapalı)
  */
-import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useTheme } from "@/lib/use-theme";
+import { resolveChoice } from "@/lib/theme";
 
 interface ThemeToggleProps {
   className?: string;
@@ -28,11 +23,8 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className, compact = true }: ThemeToggleProps) {
-  // next-themes SSR sırasında resolved değil → mounted guard
-  const [mounted, setMounted] = useState(false);
-  const { theme, resolvedTheme, setTheme } = useTheme();
-
-  useEffect(() => setMounted(true), []);
+  // Faz 7: cookie tek-kaynak useTheme hook'u (lib/use-theme.ts).
+  const { theme: choice, mounted, setTheme: apply } = useTheme();
 
   // SSR placeholder: hydration mismatch önle
   if (!mounted) {
@@ -49,13 +41,13 @@ export function ThemeToggle({ className, compact = true }: ThemeToggleProps) {
 
   if (compact) {
     // Compact: single toggle between light ↔ dark, ignoring system
-    const isDark = (resolvedTheme ?? theme) === "dark";
+    const isDark = resolveChoice(choice) === "dark";
     const nextLabel = isDark ? "Açık temaya geç" : "Koyu temaya geç";
 
     return (
       <button
         type="button"
-        onClick={() => setTheme(isDark ? "light" : "dark")}
+        onClick={() => apply(isDark ? "light" : "dark")}
         aria-label={nextLabel}
         title={nextLabel}
         className={cn(
@@ -115,14 +107,14 @@ export function ThemeToggle({ className, compact = true }: ThemeToggleProps) {
     >
       {options.map((opt) => {
         const Icon = opt.icon;
-        const active = theme === opt.value;
+        const active = choice === opt.value;
         return (
           <button
             key={opt.value}
             type="button"
             role="radio"
             aria-checked={active}
-            onClick={() => setTheme(opt.value)}
+            onClick={() => apply(opt.value)}
             className={cn(
               "relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5",
               "text-xs font-medium transition-colors duration-200",

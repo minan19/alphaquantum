@@ -354,40 +354,83 @@ export function buildCorePalette(theme: "dark" | "light" = "dark"): CorePalette 
   };
 }
 
-/** Modül kimliği paleti üret (core'u baz alarak). */
+/** Modül kimliği paleti üret (core'u baz alarak, theme-aware).
+ *
+ * Faz 7: light modda modül CTA/brand L'i KOYULAŞTIRILIR (açık zeminde okunabilir
+ * kontrast için). Hue+chroma anchor'lardan değişmez (marka kimliği korunur);
+ * yalnız L delta uygulanır. cta_text light'ta her zaman beyaz (koyulaşmış CTA
+ * üzerine) — CorpOS'un Q6 koyu metin kuralı yalnız DARK altın CTA için geçerli.
+ */
 export function buildModulePalette(
   name: ModuleScope,
   core: CorePalette,
+  theme: "dark" | "light" = "dark",
 ): ModulePalette {
+  // Light'ta modül CTA/brand renklerinin L'i ne kadar düşürülsün?
+  // 0.30 hue+chroma'yı koruyarak açık zemine karşı ≥4.5:1 kontrast verir.
+  const lightDarken = 0.30;
+  const L = (anchorL: number) =>
+    theme === "light"
+      ? Math.max(0.10, anchorL - lightDarken)
+      : anchorL;
+
+  /** Faz 7: Kapı 2 link_back = #94A3B8 (silver) DARK foundation anchor.
+   *  Light için aynı hue+chroma korunup L düşürülür (≥4.5:1 sağlamak için).
+   *  '#94A3B8' ≈ OKLCH(L=0.66, C=0.027, h=255). Light L=0.40 → ~6.8:1. */
+  const linkBackForTheme = (darkHex: string): string =>
+    theme === "light" ? oklchToHex(0.40, 0.027, 255) : darkHex;
+
   if (name === "aq") {
     const a = FAZ0_ANCHORS.aq;
+    const brandL = L(a.brand.L);
+    const ctaL = L(a.cta.L);
     return {
       scope: "aq",
-      brand:        a.brand.hex,
-      brand_hover:  oklchToHex(Math.max(0, a.brand.L - 0.14), a.brand.C, a.brand.h),
-      cta:          a.cta.hex,
-      cta_hover:    oklchToHex(Math.max(0, a.cta.L - 0.14), a.cta.C, a.cta.h),
-      cta_text:     a.cta_text,
-      on_brand:     a.on_brand.hex,
-      accent:       a.cta.hex, // çatı: signature azure data accent
+      brand:        oklchToHex(brandL, a.brand.C, a.brand.h),
+      brand_hover:  oklchToHex(Math.max(0, brandL - 0.14), a.brand.C, a.brand.h),
+      cta:          oklchToHex(ctaL, a.cta.C, a.cta.h),
+      cta_hover:    oklchToHex(Math.max(0, ctaL - 0.14), a.cta.C, a.cta.h),
+      cta_text:     "#FFFFFF", // hem dark hem light: koyu CTA üstüne beyaz
+      on_brand:     theme === "light" ? "#FFFFFF" : a.on_brand.hex,
+      accent:       oklchToHex(ctaL, a.cta.C, a.cta.h),
       link_back:    null,
     };
   }
   if (name === "finos") {
     const a = FAZ0_ANCHORS.finos;
+    const brandL = L(a.brand.L);
+    const ctaL = L(a.cta.L);
     return {
       scope: "finos",
-      brand:        a.brand.hex,
-      brand_hover:  oklchToHex(Math.max(0, a.brand.L - 0.14), a.brand.C, a.brand.h),
-      cta:          a.cta.hex,
-      cta_hover:    oklchToHex(Math.max(0, a.cta.L - 0.14), a.cta.C, a.cta.h),
-      cta_text:     a.cta_text,
+      brand:        oklchToHex(brandL, a.brand.C, a.brand.h),
+      brand_hover:  oklchToHex(Math.max(0, brandL - 0.14), a.brand.C, a.brand.h),
+      cta:          oklchToHex(ctaL, a.cta.C, a.cta.h),
+      cta_hover:    oklchToHex(Math.max(0, ctaL - 0.14), a.cta.C, a.cta.h),
+      cta_text:     "#FFFFFF",
       accent:       core.status_info,
-      link_back:    a.link_back,
+      link_back:    linkBackForTheme(a.link_back),
     };
   }
   // corpos
   const a = FAZ0_ANCHORS.corpos;
+  if (theme === "light") {
+    // Light'ta altın CTA çok parlak kalır → koyu accent slate'i CTA olarak kullan
+    // (Kapı 4: CorpOS accent = slate, light modda CTA olarak kabul edilebilir).
+    const ctaHex = oklchToHex(L(a.brand.L), a.brand.C, a.brand.h);
+    return {
+      scope: "corpos",
+      brand:        oklchToHex(L(a.brand.L), a.brand.C, a.brand.h),
+      brand_hover:  oklchToHex(Math.max(0, L(a.brand.L) - 0.10), a.brand.C, a.brand.h),
+      cta:          ctaHex,
+      cta_hover:    oklchToHex(Math.max(0, L(a.brand.L) - 0.10), a.brand.C, a.brand.h),
+      cta_text:     "#FFFFFF",
+      cta_text_weight: 400, // koyulaşmış CTA → normal ağırlık yeter
+      accent:       a.accent.hex,
+      accent_light: a.accent_light.hex,
+      link_back:    linkBackForTheme(a.link_back),
+    };
+  }
+  // dark — foundation kilidi (Kapı 4 + Q6 altın CTA + koyu metin)
   return {
     scope: "corpos",
     brand:        a.brand.hex,

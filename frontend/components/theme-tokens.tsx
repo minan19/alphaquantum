@@ -38,6 +38,7 @@ import {
   type Token,
   VALID_SCOPES,
 } from "@/lib/tokens";
+import { lightCoreTokens, lightModuleTokens, type LightTokenMap } from "@/lib/light-tokens";
 
 /**
  * Hex `#RRGGBB` → `"R G B"` (Tailwind alpha-pattern formatı).
@@ -82,6 +83,31 @@ function tokensToDeclarations(tokens: readonly Token[]): string {
 function buildStyleBlock(selector: string, tokens: readonly Token[]): string {
   if (tokens.length === 0) return "";
   return `${selector} {\n${tokensToDeclarations(tokens)}\n}`;
+}
+
+/**
+ * Faz 7 — light token map'inden CSS bloğu üretir.
+ *
+ * Şema dark blokları ile birebir aynı: her renk token için iki satır
+ * (`--key:` ve `--key-rgb:`); non-color (cta_text_weight) tek satır.
+ * Sıralama deterministik (key alfabetik).
+ */
+function lightTokensMapToCssBlock(selector: string, map: LightTokenMap): string {
+  const keys = Object.keys(map).sort();
+  if (keys.length === 0) return "";
+  const lines: string[] = [];
+  for (const key of keys) {
+    const cssVar = keyToCssVar(key);
+    const value = map[key];
+    if (typeof value === "string") {
+      lines.push(`  --${cssVar}: ${value};`);
+      const rgb = hexToRgbTriple(value);
+      if (rgb) lines.push(`  --${cssVar}-rgb: ${rgb};`);
+    } else if (typeof value === "number") {
+      lines.push(`  --${cssVar}: ${value};`);
+    }
+  }
+  return `${selector} {\n${lines.join("\n")}\n}`;
 }
 
 /**
@@ -141,18 +167,30 @@ export async function ThemeTokens() {
   const finosCss = buildStyleBlock("html[data-module='finos']", finosTokens);
   const corposCss = buildStyleBlock("html[data-module='corpos']", corposTokens);
 
-  // Faz 7 iskelesi — light değerler bu fazda DOLDURULMAZ, yalnız sıralama+seçici belgelenir.
-  const themeScaffold = [
-    "/* Theme axis scaffold — Faz 7'de light değerlerle doldurulacak */",
-    "/* Cascade önceliği:",
-    " *   html[data-theme='light']                          (0,1,1)",
-    " *   html[data-module='finos'][data-theme='light']     (0,2,1) <- modül+tema kazanır",
-    " */",
-    "/* html[data-theme='light'] { ... } */",
-    "/* html[data-module='aq'][data-theme='light']     { ... } */",
-    "/* html[data-module='finos'][data-theme='light']  { ... } */",
-    "/* html[data-module='corpos'][data-theme='light'] { ... } */",
-  ].join("\n");
+  // Faz 7 — LIGHT değerler. Faz 3 motorundan hesaplanır (foundation kilidi).
+  //
+  // KRİTİK cascade kuralı (specificity tablosu):
+  //   :root                                              (0,1,0) core dark
+  //   html[data-module='X']                              (0,1,1) modül dark
+  //   html[data-theme='light']                           (0,1,1) core light
+  //   html[data-module='X'][data-theme='light']          (0,2,1) modül light ← KAZANIR
+  //
+  // (0,1,1) iki blok arasında çakışma var: aynı özgüllükte modül-dark ile
+  // core-light. Modüldeyken core-light'a düşmemek için core-light bloğu
+  // modül-dark'tan SONRA basılır (kaynak sırası). Asıl güvence (0,2,1) modül-
+  // light birleşik seçici — her çakışan token modül-light bloğunda explicit.
+
+  const coreLightCss = lightTokensMapToCssBlock(
+    "html[data-theme='light']",
+    lightCoreTokens(),
+  );
+  const moduleLightCss: Record<string, string> = {};
+  for (const mod of ["aq", "finos", "corpos"] as const) {
+    moduleLightCss[mod] = lightTokensMapToCssBlock(
+      `html[data-module='${mod}'][data-theme='light']`,
+      lightModuleTokens(mod),
+    );
+  }
 
   return (
     <>
@@ -181,10 +219,32 @@ export async function ThemeTokens() {
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: corposCss }}
       />
+      {/*
+        Faz 7 — Light blokları. Sıra KRİTİK:
+        Modül-dark blokları yukarıda basıldı. Core-light burada gelir ki
+        modüldeyken light'a geçince modül-dark'ı (aynı özgüllük) kaynak
+        sırasıyla yenebilsin. Sonra modül-light blokları (0,2,1) gelir,
+        bunlar her şeyi kazanır.
+      */}
       <style
-        id="aq-tokens-theme-scaffold"
+        id="aq-tokens-core-light"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: themeScaffold }}
+        dangerouslySetInnerHTML={{ __html: coreLightCss }}
+      />
+      <style
+        id="aq-tokens-aq-light"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: moduleLightCss.aq }}
+      />
+      <style
+        id="aq-tokens-finos-light"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: moduleLightCss.finos }}
+      />
+      <style
+        id="aq-tokens-corpos-light"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: moduleLightCss.corpos }}
       />
       {/*
         Faz 3.5 — Alias köprüsü. EN SON basılır → eski shadcn semantic değişkenleri

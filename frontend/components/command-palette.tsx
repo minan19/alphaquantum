@@ -18,7 +18,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/use-theme";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/cn";
 

@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeTokens } from "@/components/theme-tokens";
 import { FontLoader } from "@/components/font-loader";
 import { detectModuleFromPathname } from "@/lib/tokens";
+import { isValidTheme, THEME_COOKIE, type Theme } from "@/lib/theme";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -55,13 +56,20 @@ export default async function RootLayout({
   const pathname = h.get("x-pathname") ?? "/";
   const dataModule = detectModuleFromPathname(pathname);
 
+  // Faz 7: SSR'da çerezden temayı oku → NO-FLASH (ilk boyamada doğru tema).
+  // Çerez yoksa varsayılan dark.
+  const cookieStore = await cookies();
+  const rawTheme = cookieStore.get(THEME_COOKIE)?.value;
+  const theme: Theme = isValidTheme(rawTheme) ? rawTheme : "dark";
+
   return (
     <html
       lang="tr"
       suppressHydrationWarning
-      className={inter.variable}
-      // FLASH YOK: data-module SSR'da set edilir, JS hidratasyonu gerekmez.
+      className={`${inter.variable}${theme === "light" ? " light" : ""}`}
+      // FLASH YOK: data-module + data-theme SSR'da set edilir; JS hidratasyonu beklenmez.
       data-module={dataModule}
+      data-theme={theme}
     >
       <body className="min-h-screen relative font-display">
         {/*

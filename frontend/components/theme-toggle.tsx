@@ -16,10 +16,22 @@
  *   - prefers-reduced-motion: instant geçiş (animation kapalı)
  */
 import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { readThemeCookieClient, setThemeCookie, type Theme as AqTheme } from "@/lib/theme";
+
+type ThemeChoice = "light" | "dark" | "system";
+
+/** Sistem teması (prefers-color-scheme). SSR'da yok → "dark" varsayılan. */
+function systemTheme(): AqTheme {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function resolveChoice(choice: ThemeChoice): AqTheme {
+  return choice === "system" ? systemTheme() : choice;
+}
 
 interface ThemeToggleProps {
   className?: string;
@@ -28,11 +40,21 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className, compact = true }: ThemeToggleProps) {
-  // next-themes SSR sırasında resolved değil → mounted guard
+  // Faz 7: cookie tek-kaynak. SSR'da hangi tema set'lendi → o.
   const [mounted, setMounted] = useState(false);
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const [choice, setChoice] = useState<ThemeChoice>("dark");
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    // Çerez varsa onu kullan; yoksa dark default.
+    const fromCookie = readThemeCookieClient();
+    setChoice(fromCookie ?? "dark");
+  }, []);
+
+  const apply = (next: ThemeChoice) => {
+    setChoice(next);
+    setThemeCookie(resolveChoice(next));
+  };
 
   // SSR placeholder: hydration mismatch önle
   if (!mounted) {
@@ -49,13 +71,13 @@ export function ThemeToggle({ className, compact = true }: ThemeToggleProps) {
 
   if (compact) {
     // Compact: single toggle between light ↔ dark, ignoring system
-    const isDark = (resolvedTheme ?? theme) === "dark";
+    const isDark = resolveChoice(choice) === "dark";
     const nextLabel = isDark ? "Açık temaya geç" : "Koyu temaya geç";
 
     return (
       <button
         type="button"
-        onClick={() => setTheme(isDark ? "light" : "dark")}
+        onClick={() => apply(isDark ? "light" : "dark")}
         aria-label={nextLabel}
         title={nextLabel}
         className={cn(
@@ -115,14 +137,14 @@ export function ThemeToggle({ className, compact = true }: ThemeToggleProps) {
     >
       {options.map((opt) => {
         const Icon = opt.icon;
-        const active = theme === opt.value;
+        const active = choice === opt.value;
         return (
           <button
             key={opt.value}
             type="button"
             role="radio"
             aria-checked={active}
-            onClick={() => setTheme(opt.value)}
+            onClick={() => apply(opt.value)}
             className={cn(
               "relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5",
               "text-xs font-medium transition-colors duration-200",

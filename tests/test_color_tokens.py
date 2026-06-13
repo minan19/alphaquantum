@@ -789,5 +789,285 @@ class DesignTokensSnapshotTests(unittest.TestCase):
         self.assertEqual(len(corpos_list["snapshots"]), 0)
 
 
+# ---------------------------------------------------------------------------
+# Faz 5 — Export / Import (round-trip JSON)
+# ---------------------------------------------------------------------------
+
+
+class DesignTokensImportExportTests(unittest.TestCase):
+    """Faz 5: export → import round-trip + governance defansı."""
+
+    def setUp(self) -> None:
+        import os
+        from app import create_app
+
+        self._temp_dir = tempfile.TemporaryDirectory()
+        self._db_path = Path(self._temp_dir.name) / "ie_test.db"
+        self._original_env = {
+            "AQ_DATABASE_PATH": os.getenv("AQ_DATABASE_PATH"),
+            "AQ_AUTH_USERS": os.getenv("AQ_AUTH_USERS"),
+            "AQ_ENABLE_DEMO_USERS": os.getenv("AQ_ENABLE_DEMO_USERS"),
+            "AQ_JWT_SECRET": os.getenv("AQ_JWT_SECRET"),
+            "AQ_ENV": os.getenv("AQ_ENV"),
+        }
+        os.environ["AQ_DATABASE_PATH"] = str(self._db_path)
+        os.environ["AQ_AUTH_USERS"] = (
+            "admin:admin12345:admin,manager:manager12345:manager"
+        )
+        os.environ["AQ_ENABLE_DEMO_USERS"] = "false"
+        os.environ["AQ_JWT_SECRET"] = "faz5-ie-secret"
+        os.environ["AQ_ENV"] = "development"
+
+        self.client = TestClient(create_app())
+
+    def tearDown(self) -> None:
+        import os
+        self.client.close()
+        for k, v in self._original_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        self._temp_dir.cleanup()
+
+    def _admin_token(self) -> str:
+        resp = self.client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin12345"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        return str(resp.json()["access_token"])
+
+    def _manager_token(self) -> str:
+        resp = self.client.post(
+            "/api/v1/auth/login",
+            json={"username": "manager", "password": "manager12345"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        return str(resp.json()["access_token"])
+
+    def _h(self, token: str) -> dict[str, str]:
+        return {"Authorization": f"Bearer {token}"}
+
+    # ---- auth / permissions ----
+
+    def test_export_requires_auth(self) -> None:
+        resp = self.client.get("/api/v1/design-tokens/export?scope=finos")
+        self.assertEqual(resp.status_code, 401)
+
+    def test_export_requires_manage_permission(self) -> None:
+        token = self._manager_token()
+        resp = self.client.get(
+            "/api/v1/design-tokens/export?scope=finos",
+            headers=self._h(token),
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_import_requires_auth(self) -> None:
+        resp = self.client.post(
+            "/api/v1/design-tokens/import",
+            json={"scope": "finos", "payload": []},
+        )
+        self.assertEqual(resp.status_code, 401)
+
+    # ---- export ----
+
+    def test_export_returns_full_scope(self) -> None:
+        token = self._admin_token()
+        resp = self.client.get(
+            "/api/v1/design-tokens/export?scope=finos",
+            headers=self._h(token),
+        )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body["version"], 1)
+        self.assertEqual(body["scope"], "finos")
+        self.assertGreater(len(body["tokens"]), 0)
+        # Tüm item'lar scope=finos olmalı
+        self.assertTrue(all(t["scope"] == "finos" for t in body["tokens"]))
+        # Kapı 1: cta = #CD4A00 export'ta görünür
+        ctas = [t for t in body["tokens"] if t["key"] == "cta"]
+        self.assertEqual(len(ctas), 1)
+        self.assertEqual(ctas[0]["value"], "#CD4A00")
+
+    # ---- round-trip ----
+
+    def test_round_trip_export_then_import(self) -> None:
+        """Export → cta'yı değiştir → import → cta export anındaki değere döner."""
+        token = self._admin_token()
+        exported = self.client.get(
+            "/api/v1/design-tokens/export?scope=finos",
+            headers=self._h(token),
+        ).json()
+        initial_cta = next(t["value"] for t in exported["tokens"] if t["key"] == "cta")
+
+        # cta'yı bambaşka değere değiştir
+        self.client.patch(
+            "/api/v1/design-tokens",
+            headers=self._h(token),
+            json={"scope": "finos", "changes": {"cta": "#AABBCC"}},
+        )
+        # Import — export çıktısının tokens alanını payload olarak ver
+        resp = self.client.post(
+            "/api/v1/design-tokens/import",
+            headers=self._h(token),
+            json={"scope": "finos", "payload": exported["tokens"]},
+        )
+        self.assertEqual(resp.status_code, 200, resp.text)
+        body = resp.json()
+        self.assertEqual(body["scope"], "finos")
+        self.assertEqual(body["imported_count"], len(exported["tokens"]))
+        self.assertGreaterEqual(body["pre_import_snapshot_id"], 1)
+
+        # cta export anındaki değere geri döndü mü?
+        after = self.client.get("/api/v1/design-tokens?scope=finos").json()
+        ctas = {t["key"]: t["value"] for t in after["tokens"]}
+        self.assertEqual(ctas["cta"], initial_cta, "Round-trip bozuldu")
+
+    # ---- governance / sanitize ----
+
+    def test_import_rejects_unknown_key(self) -> None:
+        token = self._admin_token()
+        bad_payload = [
+            {
+                "scope": "finos",
+                "key": "made_up_key",
+                "value": "#FFFFFF",
+                "label": "x",
+                "category": "x",
+                "display_order": 0,
+            }
+        ]
+        resp = self.client.post(
+            "/api/v1/design-tokens/import",
+            headers=self._h(token),
+            json={"scope": "finos", "payload": bad_payload},
+        )
+        self.assertEqual(resp.status_code, 422)
+
+    def test_import_rejects_core_key_in_module_scope(self) -> None:
+        token = self._admin_token()
+        bad_payload = [
+            {
+                "scope": "finos",
+                "key": "bg_primary",
+                "value": "#000000",
+                "label": "x",
+                "category": "x",
+                "display_order": 0,
+            }
+        ]
+        resp = self.client.post(
+            "/api/v1/design-tokens/import",
+            headers=self._h(token),
+            json={"scope": "finos", "payload": bad_payload},
+        )
+        self.assertEqual(resp.status_code, 422)
+        detail = resp.json()["detail"]
+        # Detail dict olabilir (errors list) ya da str — fail-safe kontrol
+        self.assertTrue(
+            "core-sahipli" in str(detail) or "bg_primary" in str(detail),
+            f"governance hatası mesajda görünmeli: {detail}",
+        )
+
+    def test_import_rejects_bad_hex(self) -> None:
+        token = self._admin_token()
+        bad_payload = [
+            {
+                "scope": "finos",
+                "key": "cta",
+                "value": "not-a-hex",
+                "label": "x",
+                "category": "x",
+                "display_order": 0,
+            }
+        ]
+        resp = self.client.post(
+            "/api/v1/design-tokens/import",
+            headers=self._h(token),
+            json={"scope": "finos", "payload": bad_payload},
+        )
+        self.assertEqual(resp.status_code, 422)
+
+    def test_import_rejects_scope_mismatch(self) -> None:
+        """payload.scope=finos, item.scope=corpos → reddedilmeli."""
+        token = self._admin_token()
+        bad_payload = [
+            {
+                "scope": "corpos",
+                "key": "cta",
+                "value": "#FFFFFF",
+                "label": "x",
+                "category": "x",
+                "display_order": 0,
+            }
+        ]
+        resp = self.client.post(
+            "/api/v1/design-tokens/import",
+            headers=self._h(token),
+            json={"scope": "finos", "payload": bad_payload},
+        )
+        self.assertEqual(resp.status_code, 422)
+
+    def test_import_failure_is_atomic(self) -> None:
+        """Bir item bozuksa hiçbir item yazılmasın (mevcut cta değişmesin)."""
+        token = self._admin_token()
+        before = self.client.get("/api/v1/design-tokens?scope=finos").json()
+        before_cta = {t["key"]: t["value"] for t in before["tokens"]}["cta"]
+
+        mixed_payload = [
+            {
+                "scope": "finos",
+                "key": "cta",
+                "value": "#112233",
+                "label": "x",
+                "category": "x",
+                "display_order": 0,
+            },
+            {
+                "scope": "finos",
+                "key": "made_up",
+                "value": "#FFFFFF",
+                "label": "x",
+                "category": "x",
+                "display_order": 0,
+            },
+        ]
+        resp = self.client.post(
+            "/api/v1/design-tokens/import",
+            headers=self._h(token),
+            json={"scope": "finos", "payload": mixed_payload},
+        )
+        self.assertEqual(resp.status_code, 422)
+
+        after = self.client.get("/api/v1/design-tokens?scope=finos").json()
+        after_cta = {t["key"]: t["value"] for t in after["tokens"]}["cta"]
+        self.assertEqual(before_cta, after_cta, "Atomic import bozuldu")
+
+    def test_import_creates_pre_import_snapshot(self) -> None:
+        """Başarılı import → snapshot listesine 'manual' kayıt eklenir."""
+        token = self._admin_token()
+        exported = self.client.get(
+            "/api/v1/design-tokens/export?scope=finos",
+            headers=self._h(token),
+        ).json()
+        self.client.post(
+            "/api/v1/design-tokens/import",
+            headers=self._h(token),
+            json={"scope": "finos", "payload": exported["tokens"]},
+        )
+        snaps = self.client.get(
+            "/api/v1/design-tokens/snapshots?scope=finos",
+            headers=self._h(token),
+        ).json()
+        sources = [s["source"] for s in snaps["snapshots"]]
+        labels = [s["label"] for s in snaps["snapshots"]]
+        self.assertIn("manual", sources)
+        self.assertTrue(
+            any("İçe aktarma" in lbl for lbl in labels),
+            f"pre-import snapshot etiketi beklenir: {labels}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

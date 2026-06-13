@@ -14,6 +14,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowDownToLine,
   Eye,
   History,
   Loader2,
@@ -46,6 +47,7 @@ import {
 } from "@/lib/token-auto";
 import { SnapshotHistoryDrawer } from "@/components/admin/snapshot-history-drawer";
 import { LivePreviewFrame } from "@/components/admin/live-preview-frame";
+import { ImportExportDialog } from "@/components/admin/import-export-dialog";
 
 interface PanelToken extends Token {
   /** Kaydedilmiş (DB'deki) değer — ↩ Geri Al için referans. */
@@ -79,6 +81,7 @@ export function AdminColorsPanel() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [revertingPrev, setRevertingPrev] = useState(false);
+  const [importExportOpen, setImportExportOpen] = useState(false);
 
   // ---- load ---------------------------------------------------------------
 
@@ -387,6 +390,16 @@ export function AdminColorsPanel() {
             <History className="h-3.5 w-3.5" /> Geçmiş
           </button>
 
+          {/* Faz 5: İçe / Dışa Aktar */}
+          <button
+            onClick={() => setImportExportOpen(true)}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-md border border-aq-mist/40 px-3 py-2 text-xs text-aq-dust transition hover:border-aq-quantum/40 hover:text-aq-neutron"
+            title="JSON dışa / içe aktar"
+          >
+            <ArrowDownToLine className="h-3.5 w-3.5" /> İçe / Dışa Aktar
+          </button>
+
           {/* Faz 5: Canlı Önizleme */}
           <button
             onClick={() => setPreviewOpen((v) => !v)}
@@ -530,6 +543,17 @@ export function AdminColorsPanel() {
         draftTokens={tokens.map((t) => ({ scope: t.scope, key: t.key, value: t.value }))}
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
+      />
+
+      {/* Faz 5: İçe / Dışa Aktar */}
+      <ImportExportDialog
+        scope={activeScope}
+        open={importExportOpen}
+        onClose={() => setImportExportOpen(false)}
+        onImported={async () => {
+          setToast({ kind: "success", text: "İçe aktarma başarılı" });
+          await loadAll();
+        }}
       />
     </div>
   );

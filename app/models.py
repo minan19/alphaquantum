@@ -3178,3 +3178,59 @@ class ColorTokenRestoreResponse(BaseModel):
         description="Restore öncesi durumun yazıldığı 'pre_restore' snapshot id'si (undo için).",
     )
     restored_count: int = Field(ge=0, description="Upsert edilen token sayısı.")
+
+
+# ---------------------------------------------------------------------------
+# Faz 5 — Import / Export (round-trip JSON)
+# ---------------------------------------------------------------------------
+
+# Export payload şeması versiyonu. Geriye dönük uyumluluk için bump.
+COLOR_TOKEN_EXPORT_VERSION: int = 1
+
+
+class ColorTokenExportItem(BaseModel):
+    """Export edilen tek token kaydı. Round-trip için upsert_many ile uyumlu."""
+
+    scope: ColorTokenScope
+    key: str = Field(min_length=1, max_length=64)
+    value: str = Field(min_length=1, max_length=32)
+    label: str = Field(min_length=1, max_length=120)
+    category: str = Field(min_length=1, max_length=64)
+    display_order: int = Field(ge=0)
+
+
+class ColorTokenExportResponse(BaseModel):
+    """GET /api/v1/design-tokens/export çıktısı — kullanıcı .json olarak saklar."""
+
+    version: int = COLOR_TOKEN_EXPORT_VERSION
+    scope: ColorTokenScope
+    exported_at: int = Field(ge=0)
+    tokens: list[ColorTokenExportItem] = Field(default_factory=list)
+
+
+class ColorTokenImportRequest(BaseModel):
+    """POST /api/v1/design-tokens/import — round-trip uyumlu yükleme.
+
+    `payload` export'taki `tokens` ile birebir aynı şema. Endpoint her item için:
+      - Governance whitelist (scope/key) doğrular,
+      - Value formatını doğrular (hex / numeric),
+      - Reddedileni 422 ile döndürür (atomic — partial import yok).
+    """
+
+    scope: ColorTokenScope
+    payload: list[ColorTokenExportItem] = Field(
+        ...,
+        description="Export çıktısının `tokens` alanı.",
+        min_length=1,
+    )
+
+
+class ColorTokenImportResponse(BaseModel):
+    """Import sonucu — snapshot zincirine eklenen pre-import + imported count."""
+
+    scope: ColorTokenScope
+    pre_import_snapshot_id: int = Field(
+        ge=1,
+        description="Import öncesi durumun yazıldığı snapshot id'si (undo için).",
+    )
+    imported_count: int = Field(ge=0, description="Upsert edilen token sayısı.")

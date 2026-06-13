@@ -161,4 +161,46 @@ export function restoreSnapshot(snapshotId: number): Promise<RestoreResponse> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Faz 5 — Export / Import (round-trip JSON)
+// ---------------------------------------------------------------------------
+
+export interface ExportItem {
+  scope: Scope;
+  key: string;
+  value: string;
+  label: string;
+  category: TokenCategory;
+  display_order: number;
+}
+
+export interface ExportResponse {
+  version: number;
+  scope: Scope;
+  exported_at: number;
+  tokens: ExportItem[];
+}
+
+export interface ImportResponse {
+  scope: Scope;
+  pre_import_snapshot_id: number;
+  imported_count: number;
+}
+
+export function exportScope(scope: Scope): Promise<ExportResponse> {
+  return authedFetch(
+    `/api/admin/design-tokens/export?scope=${encodeURIComponent(scope)}`,
+  );
+}
+
+export function importScope(
+  scope: Scope,
+  payload: ExportItem[],
+): Promise<ImportResponse> {
+  return authedFetch("/api/admin/design-tokens/import", {
+    method: "POST",
+    body: JSON.stringify({ scope, payload }),
+  });
+}
+
 export type { Token };

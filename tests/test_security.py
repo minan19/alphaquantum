@@ -84,6 +84,39 @@ class SecurityTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             validate_security_settings(insecure_prod)
 
+    def test_validate_security_settings_blocks_demo_users_in_prod(self) -> None:
+        """Faz 8 §4.1: AQ_ENABLE_DEMO_USERS=true prod'da BAŞLAMAMALI."""
+        prod_with_demo = Settings(
+            app_name="Alpha Quantum",
+            app_version="1.0.0",
+            environment="production",
+            log_level="INFO",
+            allow_all_cors=False,
+            cors_origins=[],
+            cors_allow_credentials=False,
+            database_path="alpha_quantum.db",
+            jwt_secret="secure-prod-secret-not-default",
+            access_token_expire_minutes=120,
+            enable_demo_users=True,  # ← prod'da true: yasaklı
+            auth_rate_limit_window_seconds=60,
+            auth_rate_limit_max_attempts=5,
+            auth_rate_limit_backend="memory",
+            auth_rate_limit_redis_url="redis://127.0.0.1:6379/0",
+            auth_rate_limit_fail_open=True,
+            auth_users="ops:ops-strong-pass:admin",
+            connector_worker_enabled=False,
+            connector_worker_poll_interval_seconds=15,
+            connector_worker_retry_backoff_seconds=60,
+            connector_worker_max_retries=3,
+            connector_worker_leader_lock_enabled=True,
+            connector_worker_lease_seconds=30,
+            connector_worker_heartbeat_seconds=10,
+        )
+
+        with self.assertRaises(RuntimeError) as ctx:
+            validate_security_settings(prod_with_demo)
+        self.assertIn("AQ_ENABLE_DEMO_USERS", str(ctx.exception))
+
     def test_validate_security_settings_blocks_missing_auth_users_in_prod(self) -> None:
         insecure_prod = Settings(
             app_name="Alpha Quantum",

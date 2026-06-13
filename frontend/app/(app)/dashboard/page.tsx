@@ -85,13 +85,32 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
+    // Faz 8 §4.3: cold-start race için 1 sessiz retry (250ms), sonra graceful
+    // empty state. Kullanıcıya 'API hatası (404)' yerine boş/yükleniyor UI.
     (async () => {
-      try {
+      const tryOnce = async () => {
         const result = await fetchLiveSignals();
         if (!cancelled) setData(result);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? `API hatası (${err.status})` : "Yüklenemedi");
+      };
+      try {
+        await tryOnce();
+      } catch (err1) {
+        if (cancelled) return;
+        await new Promise((r) => setTimeout(r, 250));
+        if (cancelled) return;
+        try {
+          await tryOnce();
+        } catch (err2) {
+          if (cancelled) return;
+          // Sessiz drop: data null kalır → UI fallback ("Bağlanılıyor…" / empty).
+          // Yalnız geliştirici için console.debug (kullanıcıya yansımaz).
+          if (typeof console !== "undefined") {
+            console.debug("[dashboard/live-signals] retry failed:", err2);
+          }
+          // ApiError 4xx ise üst görsel hatayı yine bastır — empty state daha iyi.
+          if (!(err2 instanceof ApiError)) {
+            setError("Yüklenemedi");
+          }
         }
       }
     })();

@@ -134,7 +134,7 @@ export function LogoImportWizard({
           <StepIndicator current={step} />
         </div>
         <CardDescription className="mt-1">
-          Logo'dan dışa aktardığın XML veya Excel dosyasını yükle.
+          Logo&apos;dan dışa aktardığın XML veya Excel dosyasını yükle.
           Önce preview göreceksin, sonra onayla.
         </CardDescription>
       </CardHeader>

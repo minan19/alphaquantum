@@ -121,7 +121,7 @@ export function SampleDataBanner({
                 Demo verisi aktif
               </p>
               <p className="text-[11px] text-aq-dust mt-0.5">
-                Tüm rakamlar örnektir. Kendi verilerini eklediğinde demo'yu
+                Tüm rakamlar örnektir. Kendi verilerini eklediğinde demo&apos;yu
                 temizleyebilirsin.
               </p>
             </>

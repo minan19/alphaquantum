@@ -286,7 +286,7 @@ function CalibrationBanner({
           {overview.whitelisted_patterns > 0 && (
             <>{overview.whitelisted_patterns} pattern öğrenildi · </>
           )}
-          Her review'ün doğruluğu yükseltir
+          Her review&apos;ün doğruluğu yükseltir
         </span>
       </div>
       {/* Precision bar */}

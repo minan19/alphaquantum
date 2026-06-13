@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeTokens } from "@/components/theme-tokens";
+import { FontLoader } from "@/components/font-loader";
 import { detectModuleFromPathname } from "@/lib/tokens";
 import { Toaster } from "sonner";
 
@@ -68,8 +69,13 @@ export default async function RootLayout({
           <body> içinde, globals.css'in <head> link'inden SONRA render edilir
           → kaynak sırası güvencesi. Asıl güvence specificity'dir:
           html[data-module] (0,1,1) > :root (0,1,0).
+
+          Faz 6: FontLoader, ThemeTokens'tan SONRA. Default font seçilmişse
+          --font-display zincirinin başına prepend eder; yüklenmezse zincir
+          var(--font-inter) → system-ui'a düşer (fallback bozulmaz).
         */}
         <ThemeTokens />
+        <FontLoader />
         <a href="#main" className="skip-link">İçeriğe geç</a>
         <ThemeProvider>
           <AuthProvider>

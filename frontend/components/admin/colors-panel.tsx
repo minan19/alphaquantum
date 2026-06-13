@@ -48,6 +48,7 @@ import {
 import { SnapshotHistoryDrawer } from "@/components/admin/snapshot-history-drawer";
 import { LivePreviewFrame } from "@/components/admin/live-preview-frame";
 import { ImportExportDialog } from "@/components/admin/import-export-dialog";
+import { TypographySection } from "@/components/admin/typography-section";
 
 interface PanelToken extends Token {
   /** Kaydedilmiş (DB'deki) değer — ↩ Geri Al için referans. */
@@ -511,6 +512,12 @@ export function AdminColorsPanel() {
           </section>
         ))}
       </div>
+
+      {/* Faz 6: Tipografi (dış font) bölümü — aktif scope'a göre */}
+      <TypographySection
+        scope={activeScope}
+        onChanged={() => setToast({ kind: "success", text: "Font değişikliği uygulandı" })}
+      />
 
       {/* Toast */}
       {toast && (

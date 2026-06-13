@@ -57,8 +57,15 @@
     --ring:         var(--aq-quantum);
     --radius:       0.65rem;
 
-    /* — Typography — */
-    --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    /* — Typography —
+       Faz 6: ham aile adıyla EZME yok. Zincir:
+         1) var(--font-inter)  — next/font hashlenmiş, build-time yüklü
+         2) 'Inter'            — kullanıcı sisteminde varsa
+         3) system-ui          — OS native UI fontu
+         4) sans-serif         — son durak
+       Dış font (Google/upload) eklenince FontLoader bu zinciri ÖNDEN yeni
+       aileyle uzatır; yüklenmezse zincir KIRILMADAN çerçeve fontuna düşer. */
+    --font-display: var(--font-inter), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --font-mono:    'JetBrains Mono', 'SF Mono', Menlo, monospace;
 
     color-scheme: dark;

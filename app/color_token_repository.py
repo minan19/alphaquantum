@@ -13,6 +13,7 @@ seed + okuma.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import time
 from pathlib import Path
@@ -281,3 +282,115 @@ class ColorTokenRepository:
             )
             self._conn.commit()
             return cur.rowcount
+
+    # ---- snapshots (Faz 5) --------------------------------------------------
+
+    # Scope başına saklanacak max snapshot sayısı (rotation).
+    SNAPSHOT_RETENTION: int = 20
+
+    def snapshot_payload(self, scope: str) -> list[dict[str, Any]]:
+        """Bir scope'un anlık tam token kümesini snapshot payload'una dönüştür.
+
+        Restore sırasında upsert_many'e direkt verilebilir; bu yüzden upsert'in
+        beklediği alanları (scope/key/value/label/category/display_order) içerir.
+        """
+        if scope not in VALID_SCOPES:
+            raise ValueError(f"Geçersiz scope: {scope!r}")
+        rows = self.list_tokens(scope=scope)
+        return [
+            {
+                "scope": str(r["scope"]),
+                "key": str(r["key"]),
+                "value": str(r["value"]),
+                "label": str(r["label"]),
+                "category": str(r["category"]),
+                "display_order": int(r["display_order"]),
+            }
+            for r in rows
+        ]
+
+    def create_snapshot(
+        self,
+        scope: str,
+        source: str,
+        label: str,
+        payload: list[dict[str, Any]],
+        created_by: str | None = None,
+    ) -> int:
+        """Anlık görüntü yaz + retention rotation.
+
+        source: 'pre_save' | 'pre_restore' | 'pre_reset' | 'manual'
+        Dönüş: yeni snapshot id.
+        """
+        if scope not in VALID_SCOPES:
+            raise ValueError(f"Geçersiz scope: {scope!r}")
+        if source not in {"pre_save", "pre_restore", "pre_reset", "manual"}:
+            raise ValueError(f"Geçersiz snapshot source: {source!r}")
+        now = int(time.time())
+        payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        with self._lock:
+            cur = self._conn.execute(
+                """
+                INSERT INTO color_token_snapshots
+                  (scope, source, label, payload_json, created_by, taken_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (scope, source, label, payload_json, created_by, now),
+            )
+            snapshot_id = int(cur.lastrowid or 0)
+            # Retention: bu scope için en eski fazlalıkları sil.
+            self._conn.execute(
+                """
+                DELETE FROM color_token_snapshots
+                WHERE scope = ?
+                  AND id NOT IN (
+                    SELECT id FROM color_token_snapshots
+                    WHERE scope = ?
+                    ORDER BY taken_at DESC, id DESC
+                    LIMIT ?
+                  )
+                """,
+                (scope, scope, self.SNAPSHOT_RETENTION),
+            )
+            self._conn.commit()
+            return snapshot_id
+
+    def list_snapshots(self, scope: str, limit: int = 20) -> list[dict[str, Any]]:
+        """Snapshot listesi (yeni→eski). payload_json dahil edilmez (liste hafif).
+
+        Tek snapshot detayı için `get_snapshot(id)` kullan.
+        """
+        if scope not in VALID_SCOPES:
+            raise ValueError(f"Geçersiz scope: {scope!r}")
+        with self._lock:
+            cur = self._conn.execute(
+                """
+                SELECT id, scope, source, label, created_by, taken_at
+                FROM color_token_snapshots
+                WHERE scope = ?
+                ORDER BY taken_at DESC, id DESC
+                LIMIT ?
+                """,
+                (scope, max(1, min(int(limit), 100))),
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+    def get_snapshot(self, snapshot_id: int) -> dict[str, Any] | None:
+        """Tek snapshot kaydı (payload_json parse edilmiş halde)."""
+        with self._lock:
+            row = self._conn.execute(
+                """
+                SELECT id, scope, source, label, payload_json, created_by, taken_at
+                FROM color_token_snapshots
+                WHERE id = ?
+                """,
+                (snapshot_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        data = dict(row)
+        try:
+            data["payload"] = json.loads(data.pop("payload_json"))
+        except (TypeError, ValueError):
+            data["payload"] = []
+        return data

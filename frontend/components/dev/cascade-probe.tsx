@@ -12,6 +12,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  CORE_ALLOWED_KEYS,
+  MODULE_ALLOWED_KEYS,
+  VALID_SCOPES,
+} from "@/lib/tokens";
+
+// --- Önizleme köprüsü için sanitize whitelistleri (CSS injection defansı) ---
+// SCOPE: yalnız Faz 1 governance scope'ları
+// KEY  : snake_case ASCII pattern + Faz 1 whitelist (core/module)
+// VALUE: hex (#RRGGBB) veya tam sayı (cta_text_weight 100-900)
+const ALLOWED_SCOPES = new Set<string>(VALID_SCOPES);
+const KEY_RE = /^[a-z][a-z0-9_]{0,40}$/;
+const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+const NUMERIC_KEYS = new Set(["cta_text_weight"]);
+
+type SafeDraft = { scope: string; key: string; value: string };
+
+/** Ham postMessage payload'undan yalnız allowlist eşleşen item'ları döndür. */
+function sanitizeDraftTokens(raw: unknown): SafeDraft[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SafeDraft[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const scope = (item as { scope?: unknown }).scope;
+    const key = (item as { key?: unknown }).key;
+    const value = (item as { value?: unknown }).value;
+    if (typeof scope !== "string" || !ALLOWED_SCOPES.has(scope)) continue;
+    if (typeof key !== "string" || !KEY_RE.test(key)) continue;
+    // Faz 1 whitelist: core scope'unda yalnız core keyleri; modül scope'unda
+    // yalnız modül keyleri (core key modül scope'unda asla render edilmez).
+    if (scope === "core") {
+      if (!CORE_ALLOWED_KEYS.has(key)) continue;
+    } else {
+      if (!MODULE_ALLOWED_KEYS.has(key)) continue;
+    }
+    // Value: hex VEYA (numeric key için) 100-900 arası integer.
+    let safeValue: string | null = null;
+    if (NUMERIC_KEYS.has(key)) {
+      const n = typeof value === "number" ? value : Number.parseInt(String(value), 10);
+      if (Number.isInteger(n) && n >= 100 && n <= 900) {
+        safeValue = String(n);
+      }
+    } else if (typeof value === "string" && HEX_RE.test(value)) {
+      safeValue = value.toUpperCase();
+    }
+    if (safeValue === null) continue;
+    out.push({ scope, key, value: safeValue });
+  }
+  return out;
+}
 
 interface Probe {
   cssVar: string;
@@ -57,10 +107,9 @@ export function CascadeProbe({ expectedModule }: { expectedModule: Module }) {
   const [computed, setComputed] = useState<Record<string, string>>({});
   const [docModule, setDocModule] = useState<string>("");
 
-  useEffect(() => {
+  function refreshComputed() {
     const html = document.documentElement;
     setDocModule(html.getAttribute("data-module") ?? "");
-
     const cs = window.getComputedStyle(html);
     const out: Record<string, string> = {};
     for (const probe of PROBES) {
@@ -68,6 +117,66 @@ export function CascadeProbe({ expectedModule }: { expectedModule: Module }) {
       out[probe.cssVar] = raw ? normalizeColor(raw) : "(unset)";
     }
     setComputed(out);
+  }
+
+  useEffect(() => {
+    refreshComputed();
+  }, []);
+
+  // Faz 5 — Live preview: parent panel postMessage ile draft token gönderir.
+  // Inline <style id="aq-draft-overlay"> bloğu ile en yüksek specificity'de
+  // override edilir (SSR base + module cascade + draft overlay).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.parent || window.parent === window) return;
+    function applyDraft(tokens: SafeDraft[]) {
+      // tokens BU NOKTADA sanitize edilmiş; key/scope/value pattern garantili.
+      const byScope: Record<string, string[]> = {};
+      for (const t of tokens) {
+        const cssVarName = `--${t.key.replace(/_/g, "-")}`;
+        let line = `${cssVarName}: ${t.value};`;
+        const hex = t.value.match(HEX_RE) ? t.value : null;
+        if (hex) {
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          line += `${cssVarName}-rgb: ${r} ${g} ${b};`;
+        }
+        (byScope[t.scope] ??= []).push(line);
+      }
+      const segments: string[] = [];
+      if (byScope.core) segments.push(`:root{${byScope.core.join("")}}`);
+      for (const mod of ["aq", "finos", "corpos"] as const) {
+        if (byScope[mod]) {
+          segments.push(`html[data-module='${mod}']{${byScope[mod].join("")}}`);
+        }
+      }
+      const css = segments.join("");
+      let el = document.getElementById("aq-draft-overlay") as HTMLStyleElement | null;
+      if (!el) {
+        el = document.createElement("style");
+        el.id = "aq-draft-overlay";
+        document.head.appendChild(el);
+      }
+      // textContent — innerHTML değil; <style> içine HTML parse edilmez.
+      el.textContent = css;
+      requestAnimationFrame(refreshComputed);
+    }
+    function onMessage(ev: MessageEvent) {
+      // KAPI 1 — origin guard: yalnız aynı origin'den gelen mesajlar.
+      if (ev.origin !== window.location.origin) return;
+      // KAPI 2 — kaynak guard: yalnız parent (panel) iframe içine yazar.
+      if (ev.source !== window.parent) return;
+      const data = ev.data as { type?: unknown; tokens?: unknown };
+      if (data?.type !== "aq:draft-tokens") return;
+      // KAPI 3 — payload sanitize: scope/key/value whitelist + format.
+      const safe = sanitizeDraftTokens(data.tokens);
+      if (safe.length === 0) return;
+      applyDraft(safe);
+    }
+    window.addEventListener("message", onMessage);
+    window.parent.postMessage({ type: "aq:preview-ready" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
   }, []);
 
   const moduleColors: Record<Module, { bg: string; border: string; label: string }> = {

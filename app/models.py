@@ -3234,3 +3234,72 @@ class ColorTokenImportResponse(BaseModel):
         description="Import öncesi durumun yazıldığı snapshot id'si (undo için).",
     )
     imported_count: int = Field(ge=0, description="Upsert edilen token sayısı.")
+
+
+# ---------------------------------------------------------------------------
+# Faz 6 — Custom Fonts (panel'den eklenen dış fontlar)
+# ---------------------------------------------------------------------------
+
+CustomFontSource = Literal["google", "upload"]
+
+
+class CustomFontSummary(BaseModel):
+    """Font listesinde tek satır — data_b64 taşımaz (UI hafif)."""
+
+    id: int = Field(ge=1)
+    scope: ColorTokenScope
+    family: str = Field(min_length=1, max_length=80)
+    source: CustomFontSource
+    css_url: str | None = None
+    format: str | None = None
+    weight: str | None = None
+    style: str | None = None
+    is_default: bool = False
+    created_at: int = Field(ge=0)
+
+
+class CustomFontListResponse(BaseModel):
+    """GET /api/v1/fonts (opsiyonel scope) çıktısı."""
+
+    scope_filter: ColorTokenScope | None = None
+    fonts: list[CustomFontSummary] = Field(default_factory=list)
+
+
+class CustomFontGoogleCreateRequest(BaseModel):
+    """POST /api/v1/fonts/google — Google Fonts kaynaklı ekleme."""
+
+    scope: ColorTokenScope
+    family: str = Field(min_length=1, max_length=80, description="Aile adı, ör. 'Playfair Display'")
+    css_url: str = Field(
+        min_length=1,
+        max_length=2048,
+        description="https://fonts.googleapis.com/... — yalnız izinli host.",
+    )
+    weight: str | None = Field(default=None, max_length=32)
+    style: str | None = Field(default=None, max_length=32)
+    make_default: bool = False
+
+
+class CustomFontCreateResponse(BaseModel):
+    """Font ekleme sonucu (google ve upload için ortak)."""
+
+    id: int = Field(ge=1)
+    scope: ColorTokenScope
+    family: str
+    source: CustomFontSource
+    is_default: bool
+
+
+class CustomFontDeleteResponse(BaseModel):
+    """Silme sonucu."""
+
+    id: int = Field(ge=1)
+    deleted: bool
+
+
+class CustomFontSetDefaultResponse(BaseModel):
+    """Varsayılan atama sonucu."""
+
+    id: int = Field(ge=1)
+    scope: ColorTokenScope
+    is_default: bool

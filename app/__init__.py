@@ -38,6 +38,7 @@ from app.routers.vendor_risk import router as vendor_risk_router
 from app.routers.scenario import router as scenario_router
 from app.routers.treasury import router as treasury_router
 from app.routers.design_tokens import router as design_tokens_router
+from app.routers.fonts import router as fonts_router
 from app.routers.copilot import router as copilot_router
 from app.routers.notifications import router as notifications_router
 from app.routers.onboarding import router as onboarding_router
@@ -381,6 +382,9 @@ def create_app() -> FastAPI:
         # wcag-report.json yoksa (test env'lerde olabilir) — DEFAULT_TOKENS fallback'i
         # frontend tarafında devreye girer. Sessizce devam.
         logger.warning("color_tokens_seed_skipped", extra={"reason": str(err)})
+    # Design Token Programı — Faz 6 (custom fonts)
+    from app.custom_font_repository import CustomFontRepository
+    app.state.custom_font_repo = CustomFontRepository(settings.database_path)
     app.state.notification_repository = NotificationRepository(settings.database_path)
     app.state.financial_instrument_repository = FinancialInstrumentRepository(
         settings.database_path
@@ -444,7 +448,10 @@ def create_app() -> FastAPI:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Cache-Control"] = "no-store"
+        # Cache-Control: yalnız endpoint zaten ayarlamamışsa no-store ata.
+        # CDN-cache'lenebilir asset uçları (Faz 6 fontlar) kendi 'immutable'
+        # değerini override edebilsin.
+        response.headers.setdefault("Cache-Control", "no-store")
         # G+5: Performance counter — in-memory metrics. /system/metrics ile export.
         get_performance_counter().record(
             path=request.url.path,
@@ -498,6 +505,7 @@ def create_app() -> FastAPI:
     app.include_router(scenario_router)
     app.include_router(treasury_router)
     app.include_router(design_tokens_router)
+    app.include_router(fonts_router)
     app.include_router(copilot_router)
     app.include_router(notifications_router)
     app.include_router(realtime_router)

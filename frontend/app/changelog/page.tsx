@@ -14,7 +14,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  CheckCircle2,
   Loader2,
   Shield,
   Sparkles,

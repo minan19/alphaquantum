@@ -11,7 +11,7 @@
  * edeceğini görür; "Onayla" tuşuna basana kadar DB'ye hiçbir şey
  * yazılmaz. Hatalar şeffaf rapor edilir (row index + error code).
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,

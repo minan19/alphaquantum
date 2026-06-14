@@ -261,7 +261,10 @@ function SearchView() {
     }
   }
 
-  useEffect(() => { void handleSearch(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    void handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Card variant="glass" className="p-6">

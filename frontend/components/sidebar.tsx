@@ -18,6 +18,9 @@ import {
   ChevronsRight,
   Command,
   HelpCircle,
+  ShoppingCart,
+  ClipboardCheck,
+  BookOpenText,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -44,14 +47,17 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "CorpOS",
     items: [
-      { href: "/customers",  label: "Müşteriler", icon: Users, module: "corpos" },
-      { href: "/companies",  label: "Şirketler",  icon: Building2, module: "corpos" },
+      { href: "/customers",   label: "Müşteriler",     icon: Users, module: "corpos" },
+      { href: "/companies",   label: "Şirketler",      icon: Building2, module: "corpos" },
+      { href: "/procurement", label: "Satın Alma",     icon: ShoppingCart, module: "corpos" },
+      { href: "/feasibility", label: "Fizibilite",     icon: ClipboardCheck, module: "corpos" },
     ],
   },
   {
     group: "FinOS",
     items: [
       { href: "/invoices",     label: "Faturalar",     icon: Receipt, module: "finos" },
+      { href: "/finance",      label: "Defter",        icon: BookOpenText, module: "finos" },
       { href: "/cashflow",     label: "Nakit Akışı",   icon: TrendingUp, module: "finos" },
       { href: "/treasury",     label: "Treasury",      icon: Landmark, module: "finos" },
       { href: "/notifications",label: "Bildirimler",   icon: Bell, module: "finos", badge: "yeni" },

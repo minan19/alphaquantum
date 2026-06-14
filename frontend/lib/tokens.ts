@@ -338,12 +338,12 @@ export function detectModuleFromPathname(pathname: string): ModuleScope {
   if (/^\/(tokens-cascade-aq)(\/|$)/.test(pathname)) return "aq";
 
   // FinOS modülünün gerçek route'ları
-  if (/^\/(cashflow|treasury|invoices|notifications)(\/|$)/.test(pathname)) {
+  if (/^\/(cashflow|treasury|invoices|notifications|finance)(\/|$)/.test(pathname)) {
     return "finos";
   }
 
   // CorpOS modülünün gerçek route'ları
-  if (/^\/(customers|companies)(\/|$)/.test(pathname)) {
+  if (/^\/(customers|companies|procurement|feasibility)(\/|$)/.test(pathname)) {
     return "corpos";
   }
 

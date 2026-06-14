@@ -52,15 +52,20 @@ export function listLedger(params?: {
   category?: string;
   limit?: number;
 }): Promise<LedgerListResponse> {
-  return apiRequest<LedgerListResponse>("/api/v1/finance-engine/ledger", { params });
+  // Backend response: { total, entries: [...] } → frontend `records`.
+  return apiRequest<{ total: number; entries: LedgerEntry[] }>(
+    "/api/v1/finance-engine/ledger",
+    { params },
+  ).then((r) => ({ total: r.total, records: r.entries }));
 }
 
 export function getLedgerEntry(id: number): Promise<LedgerEntry> {
   // Bireysel detay ucu yok — listeden filtre ile çekeriz.
-  return apiRequest<LedgerListResponse>("/api/v1/finance-engine/ledger", {
-    params: { limit: 1000 },
-  }).then((r) => {
-    const found = r.records.find((e) => e.id === id);
+  return apiRequest<{ total: number; entries: LedgerEntry[] }>(
+    "/api/v1/finance-engine/ledger",
+    { params: { limit: 1000 } },
+  ).then((r) => {
+    const found = r.entries.find((e) => e.id === id);
     if (!found) throw new Error(`Ledger entry ${id} bulunamadı`);
     return found;
   });

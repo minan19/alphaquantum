@@ -48,25 +48,26 @@ const COLUMNS: ColumnDef<ProcurementRequest>[] = [
     ),
   },
   {
-    id: "expected_amount",
-    label: "Beklenen Tutar",
-    sortKey: (r) => r.expected_amount ?? 0,
+    id: "budget_limit",
+    label: "Bütçe Limiti",
+    sortKey: (r) => r.budget_limit ?? 0,
     cell: (r) =>
-      r.expected_amount !== null && r.expected_amount !== undefined
-        ? `${r.currency ?? "₺"} ${r.expected_amount.toLocaleString("tr-TR")}`
+      r.budget_limit !== null && r.budget_limit !== undefined
+        ? `${r.currency ?? "₺"} ${r.budget_limit.toLocaleString("tr-TR")}`
         : null,
+    className: "font-mono tabular-nums",
   },
   {
-    id: "needed_by",
-    label: "İhtiyaç Tarihi",
-    sortKey: (r) => r.needed_by ?? "",
-    cell: (r) => r.needed_by ?? null,
+    id: "strategy",
+    label: "Strateji",
+    sortKey: (r) => r.strategy,
+    cell: (r) => <Badge tone="neutral">{r.strategy}</Badge>,
   },
   {
     id: "created_at",
     label: "Açılış",
     sortKey: (r) => r.created_at,
-    cell: (r) => r.created_at.slice(0, 10),
+    cell: (r) => new Date(r.created_at * 1000).toLocaleDateString("tr-TR"),
     defaultVisible: false,
   },
 ];

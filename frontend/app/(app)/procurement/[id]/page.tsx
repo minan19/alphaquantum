@@ -59,11 +59,10 @@ export default function ProcurementDetailPage({
             <CardDescription>Talep özeti</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 text-sm">
-            <Field label="Tutar (beklenen)" value={r.expected_amount !== null ? `${r.currency ?? "₺"} ${r.expected_amount.toLocaleString("tr-TR")}` : "—"} />
-            <Field label="İhtiyaç tarihi" value={r.needed_by ?? "—"} />
-            <Field label="Öncelik" value={r.priority ?? "—"} />
-            <Field label="Açılış" value={r.created_at.slice(0, 10)} />
-            {r.description && <Field label="Açıklama" value={r.description} className="col-span-2" />}
+            <Field label="Bütçe limiti" value={r.budget_limit !== null ? `${r.currency ?? "₺"} ${r.budget_limit.toLocaleString("tr-TR")}` : "—"} />
+            <Field label="Strateji" value={r.strategy} />
+            <Field label="İhale referansı" value={r.tender_reference ?? "—"} />
+            <Field label="Açılış" value={new Date(r.created_at * 1000).toLocaleDateString("tr-TR")} />
           </CardContent>
         </Card>
 

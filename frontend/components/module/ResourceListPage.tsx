@@ -50,7 +50,7 @@ export function ResourceListPage<T>({
   emptyMessage,
 }: ResourceListPageProps<T>) {
   const [query, setQuery] = useState("");
-  const records = resource.data?.records ?? [];
+  const records = useMemo(() => resource.data?.records ?? [], [resource.data?.records]);
 
   const filtered = useMemo(() => {
     if (!searchFields || !query.trim()) return records;

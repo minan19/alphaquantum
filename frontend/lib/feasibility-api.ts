@@ -30,9 +30,11 @@ export function listFeasibilityReports(params?: {
   decision?: string;
   limit?: number;
 }): Promise<FeasibilityReportListResponse> {
-  return apiRequest<FeasibilityReportListResponse>("/api/v1/feasibility/reports", {
-    params,
-  });
+  // Backend response: { total, items: [...] } → frontend `records`.
+  return apiRequest<{ total: number; items: FeasibilityReport[] }>(
+    "/api/v1/feasibility/reports",
+    { params },
+  ).then((r) => ({ total: r.total, records: r.items }));
 }
 
 export function getFeasibilityReport(id: number): Promise<FeasibilityReport> {

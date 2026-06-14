@@ -127,7 +127,7 @@ export default function UiGallery() {
           <h1 className="text-3xl font-bold">UI Gallery</h1>
           <p className="text-sm text-muted-foreground">
             M1 token-bağlı bileşenler. Modül + tema değiştir → her bileşen aynı
-            semantic token'larla otomatik cascade'lenir.
+            semantic token&apos;larla otomatik cascade&apos;lenir.
           </p>
           <div className="flex flex-wrap gap-2 pt-2">
             <div className="flex gap-1 rounded-md border border-border bg-card p-1">
@@ -211,7 +211,7 @@ export default function UiGallery() {
         {/* Overlays */}
         <Card>
           <CardHeader>
-            <CardTitle>Overlay'ler</CardTitle>
+            <CardTitle>Overlay&apos;ler</CardTitle>
             <CardDescription>Popover / Dropdown menu / Sheet / Toast</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-2">
@@ -247,7 +247,7 @@ export default function UiGallery() {
               <SheetContent>
                 <SheetHeader>
                   <SheetTitle>Yan panel</SheetTitle>
-                  <SheetDescription>Token-bağlı yüzey, modül cascade'i.</SheetDescription>
+                  <SheetDescription>Token-bağlı yüzey, modül cascade&apos;i.</SheetDescription>
                 </SheetHeader>
                 <p className="pt-4 text-sm text-muted-foreground">İçerik buraya gelir.</p>
               </SheetContent>

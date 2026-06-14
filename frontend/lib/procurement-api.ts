@@ -6,16 +6,15 @@ import { apiRequest } from "@/lib/api";
 
 export interface ProcurementRequest {
   id: number;
-  company: string | null;
+  company: string;
   title: string;
-  description: string | null;
+  strategy: string;
   status: string;
-  priority: string | null;
-  expected_amount: number | null;
+  budget_limit: number | null;
   currency: string | null;
-  needed_by: string | null;
-  created_at: string;
-  updated_at: string | null;
+  tender_reference: string | null;
+  created_at: number;
+  updated_at: number | null;
 }
 
 export interface ProcurementRequestListResponse {
@@ -49,9 +48,11 @@ export function listProcurementRequests(params?: {
   company?: string;
   limit?: number;
 }): Promise<ProcurementRequestListResponse> {
-  return apiRequest<ProcurementRequestListResponse>("/api/v1/procurement/requests", {
-    params,
-  });
+  // Backend response: { total, items: [...] } → frontend ResourceListPage `records`.
+  return apiRequest<{ total: number; items: ProcurementRequest[] }>(
+    "/api/v1/procurement/requests",
+    { params },
+  ).then((r) => ({ total: r.total, records: r.items }));
 }
 
 export function getProcurementRequest(id: number): Promise<ProcurementRequest> {

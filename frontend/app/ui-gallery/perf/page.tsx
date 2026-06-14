@@ -106,7 +106,7 @@ export default function PerfTestPage() {
           <h1 className="text-2xl font-bold">DataTable performans testi (M2.3)</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {size.toLocaleString("tr-TR")} satır · {filtered.length.toLocaleString("tr-TR")} filtreli.
-            Sıralama / sayfalama / filtre tepkisini ölçer. Konsol'da daha detaylı çıktılar.
+            Sıralama / sayfalama / filtre tepkisini ölçer. Konsol&apos;da daha detaylı çıktılar.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {[1000, 2500, 5000, 10000].map((n) => (

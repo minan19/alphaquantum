@@ -94,7 +94,7 @@ export default function DashboardPage() {
       };
       try {
         await tryOnce();
-      } catch (err1) {
+      } catch {
         if (cancelled) return;
         await new Promise((r) => setTimeout(r, 250));
         if (cancelled) return;

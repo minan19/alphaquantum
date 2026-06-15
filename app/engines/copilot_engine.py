@@ -196,7 +196,10 @@ class CopilotEngine:
     ) -> sqlite3.Row | None:
         conn = self._connect()
         try:
-            return conn.execute(sql, tuple(params)).fetchone()
+            row: sqlite3.Row | None = conn.execute(
+                sql, tuple(params),
+            ).fetchone()
+            return row
         finally:
             conn.close()
 
@@ -238,7 +241,8 @@ class _QueryPlan:
     def summary_fmt(self, count_or_total: Any, intent: CopilotIntent | None) -> str:
         if self._summary_fn is None:
             return ""
-        return self._summary_fn(count_or_total, intent)
+        result: str = self._summary_fn(count_or_total, intent)
+        return result
 
 
 def _where_with_scope(

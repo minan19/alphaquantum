@@ -201,22 +201,18 @@ export async function ThemeTokens() {
       */}
       <style
         id="aq-tokens-core"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: coreCss }}
       />
       <style
         id="aq-tokens-aq"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: aqCss }}
       />
       <style
         id="aq-tokens-finos"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: finosCss }}
       />
       <style
         id="aq-tokens-corpos"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: corposCss }}
       />
       {/*
@@ -228,22 +224,18 @@ export async function ThemeTokens() {
       */}
       <style
         id="aq-tokens-core-light"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: coreLightCss }}
       />
       <style
         id="aq-tokens-aq-light"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: moduleLightCss.aq }}
       />
       <style
         id="aq-tokens-finos-light"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: moduleLightCss.finos }}
       />
       <style
         id="aq-tokens-corpos-light"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: moduleLightCss.corpos }}
       />
       {/*
@@ -253,7 +245,6 @@ export async function ThemeTokens() {
       */}
       <style
         id="aq-tokens-alias-bridge"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: ALIAS_BRIDGE_CSS }}
       />
     </>

@@ -65,6 +65,10 @@ class CopilotResponse:
     summary_text: str = ""
     explanation: str = ""        # Bu sonuca nasıl ulaşıldı
     sql_template_used: str | None = None
+    # M3: onay kapısı — render edilmiş tam SQL + paramlar kullanıcıya gösterilir.
+    sql: str | None = None
+    params: list[Any] = field(default_factory=list)
+    executed: bool = False
 
 
 # ── Offline keyword-based parser ──────────────────────────────────────

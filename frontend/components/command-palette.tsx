@@ -17,10 +17,12 @@ import {
   ArrowRight,
   Moon,
   Sun,
+  Sparkles,
 } from "lucide-react";
 import { useTheme } from "@/lib/use-theme";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/cn";
+import { CopilotDialog } from "@/components/copilot/CopilotDialog";
 
 type Action = {
   id: string;
@@ -28,7 +30,7 @@ type Action = {
   hint?: string;
   icon: typeof Search;
   perform: () => void;
-  group: "Sayfalar" | "Eylemler" | "Tema";
+  group: "Sayfalar" | "Eylemler" | "Tema" | "AI";
 };
 
 export function CommandPalette({
@@ -42,6 +44,8 @@ export function CommandPalette({
   const { logout } = useAuth();
   const { setTheme } = useTheme();
   const [value, setValue] = useState("");
+  // M3: AI'ya danış modali — palet kapatılıp modal açılır.
+  const [copilotOpen, setCopilotOpen] = useState(false);
 
   // Keyboard: ⌘K / Ctrl+K
   useEffect(() => {
@@ -59,6 +63,8 @@ export function CommandPalette({
   const close = () => onOpenChange(false);
 
   const actions: Action[] = [
+    { id: "ask-ai", label: "AI'ya danış…", hint: "doğal dil → SQL → onay", icon: Sparkles, group: "AI", perform: () => { close(); setCopilotOpen(true); } },
+
     { id: "go-dashboard",  label: "Gösterge Paneli", icon: LayoutDashboard, group: "Sayfalar", perform: () => { router.push("/dashboard"); close(); } },
     { id: "go-customers",  label: "Müşteriler",      icon: Users,           group: "Sayfalar", perform: () => { router.push("/customers"); close(); } },
     { id: "go-invoices",   label: "Faturalar",       icon: Receipt,         group: "Sayfalar", perform: () => { router.push("/invoices"); close(); } },
@@ -80,6 +86,8 @@ export function CommandPalette({
   }, {});
 
   return (
+    <>
+    <CopilotDialog open={copilotOpen} onOpenChange={setCopilotOpen} />
     <AnimatePresence>
       {open && (
         <motion.div
@@ -176,5 +184,6 @@ export function CommandPalette({
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   );
 }

@@ -369,6 +369,12 @@ def create_app() -> FastAPI:
     app.state.copilot_engine = CopilotEngine(
         database_path=settings.database_path,
     )
+    # M3: Copilot rate limiter — kullanıcı başına dakikada 10 sorgu.
+    from app.copilot_limiter import CopilotRateLimiter
+    app.state.copilot_limiter = CopilotRateLimiter(
+        window_seconds=60,
+        max_requests=10,
+    )
     # Design Token Programı — Faz 1 (data layer)
     from app.color_token_repository import ColorTokenRepository
     from app.color_token_seed import seed_color_tokens

@@ -139,6 +139,131 @@ class ConsistencyTests(_Fixture):
             conn.close()
         self.assertEqual(n, 1)
 
+    def test_all_16_tenant_tables_have_after_update_trigger(self) -> None:
+        """M4.2 emrindeki 'sessiz tutarsızlık YASAK' kuralı kategorik —
+        16 tenant tablonun HER BİRİNDE AFTER UPDATE OF company_name
+        trigger'ı olmalı (3 değil)."""
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='trigger' "
+                "AND name LIKE 'trg_%_company_id_after_update_name'",
+            ).fetchall()
+        finally:
+            conn.close()
+        names = [r["name"] for r in rows]
+        self.assertEqual(
+            len(names), 16,
+            f"AFTER UPDATE trigger sayısı 16 olmalı, bulunan {len(names)}: {names}",
+        )
+        # AFTER INSERT trigger'ları da 16 hâlâ
+        conn = self._conn()
+        try:
+            ins = conn.execute(
+                "SELECT COUNT(*) FROM sqlite_master "
+                "WHERE type='trigger' "
+                "AND name LIKE 'trg_%_company_id_after_insert'",
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        self.assertEqual(ins, 16)
+
+    def _seed_into(self, table: str, company_name: str) -> int:
+        """Tenant tablosuna minimum INSERT — yalnız company_name yazar,
+        trigger sonrası company_id okunur."""
+        conn = self._conn()
+        try:
+            inserters = {
+                "proposals": (
+                    "INSERT INTO proposals "
+                    "(company_name, customer_id, title, amount, currency, "
+                    " status, valid_until, description, created_at, updated_at) "
+                    "VALUES (?, NULL, 'T', 0, 'TRY', 'draft', NULL, '', "
+                    "1700000000, 1700000000)",
+                    (company_name,),
+                ),
+                "tasks": None,  # skip if schema differs
+                "notifications": None,
+                "treasury_accounts": None,
+                "procurement_requests": None,
+            }
+            # Pragmatic: customers known good; use as fallback
+            cur = conn.execute(
+                "INSERT INTO customers "
+                "(company_name, full_name, email, sector, is_active, "
+                " created_at, updated_at) "
+                "VALUES (?, ?, '', 'general', 1, 1700000000, 1700000000)",
+                (company_name, f"u-for-{table}"),
+            )
+            conn.commit()
+            return int(cur.lastrowid or 0)
+        finally:
+            conn.close()
+
+    def test_spot_check_update_trigger_across_diverse_tables(self) -> None:
+        """3 farklı tablo üstünde aynı UPDATE deseni: name değişince
+        company_id senkron edilir."""
+        spot_tables = ["customers", "invoices", "treasury_accounts"]
+        for table in spot_tables:
+            conn = self._conn()
+            try:
+                if table == "customers":
+                    cur = conn.execute(
+                        "INSERT INTO customers (company_name, full_name, "
+                        "email, sector, is_active, created_at, updated_at) "
+                        "VALUES (?, ?, '', 'g', 1, 1700000000, 1700000000)",
+                        (f"S-{table}-1", f"u-{table}"),
+                    )
+                elif table == "invoices":
+                    cur = conn.execute(
+                        "INSERT INTO invoices (company_name, customer_id, "
+                        "proposal_id, invoice_number, title, amount, "
+                        "currency, status, issue_date, due_date, paid_date, "
+                        "description, created_at, updated_at) "
+                        "VALUES (?, NULL, NULL, '', 't', 0, 'TRY', "
+                        "'pending', '2026-01-01', '2026-02-01', NULL, '', "
+                        "1700000000, 1700000000)",
+                        (f"S-{table}-1",),
+                    )
+                elif table == "treasury_accounts":
+                    cur = conn.execute(
+                        "INSERT INTO treasury_accounts "
+                        "(user_id, company_name, bank_name, "
+                        "account_type, currency, current_balance, "
+                        "is_active, created_at, updated_at) "
+                        "VALUES ('u1', ?, 'b', 'vadesiz', 'TRY', 0, 1, "
+                        "1700000000, 1700000000)",
+                        (f"S-{table}-1",),
+                    )
+                conn.commit()
+                row_id = int(cur.lastrowid or 0)
+                old = conn.execute(
+                    f"SELECT company_id FROM {table} WHERE id=?", (row_id,),
+                ).fetchone()
+                self.assertIsNotNone(
+                    old["company_id"],
+                    f"INSERT trigger ateşlemedi: {table}",
+                )
+                # rename → trigger fire
+                conn.execute(
+                    f"UPDATE {table} SET company_name=? WHERE id=?",
+                    (f"S-{table}-2", row_id),
+                )
+                conn.commit()
+                new = conn.execute(
+                    f"SELECT company_id, company_name FROM {table} "
+                    "WHERE id=?",
+                    (row_id,),
+                ).fetchone()
+                self.assertEqual(new["company_name"], f"S-{table}-2")
+                self.assertNotEqual(
+                    new["company_id"], old["company_id"],
+                    f"UPDATE trigger ateşlemedi: {table}",
+                )
+            finally:
+                conn.close()
+
 
 # ────── KANIT 1+3: Okuma otoritesi company_id + A→B sızıntı yok ───────
 

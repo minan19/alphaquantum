@@ -143,9 +143,81 @@ BEGIN
     UPDATE treasury_accounts SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
 END;
 
--- ── AFTER UPDATE OF company_name trigger'ları ─────────────────────────
--- Davranış: company_name değişirse company_id de registry'den yeniden türetilir.
--- Tutarsızlık olamaz: name otorite gibi davranır, id senkronize edilir.
+-- ── AFTER UPDATE OF company_name trigger'ları (16 tenant tablo) ───────
+-- Davranış: company_name değişirse company_id registry'den yeniden türetilir.
+-- KATEGORİK kural — 16 tabloda eksiksiz: "sessiz tutarsızlık YASAK".
+
+CREATE TRIGGER IF NOT EXISTS trg_finance_ledger_entries_company_id_after_update_name
+AFTER UPDATE OF company_name ON finance_ledger_entries
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE finance_ledger_entries SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_procurement_requests_company_id_after_update_name
+AFTER UPDATE OF company_name ON procurement_requests
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE procurement_requests SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_international_projects_company_id_after_update_name
+AFTER UPDATE OF company_name ON international_projects
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE international_projects SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_holding_companies_company_id_after_update_name
+AFTER UPDATE OF company_name ON holding_companies
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE holding_companies SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_integration_connectors_company_id_after_update_name
+AFTER UPDATE OF company_name ON integration_connectors
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE integration_connectors SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_finance_recurring_entries_company_id_after_update_name
+AFTER UPDATE OF company_name ON finance_recurring_entries
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE finance_recurring_entries SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_finance_budgets_company_id_after_update_name
+AFTER UPDATE OF company_name ON finance_budgets
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE finance_budgets SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_scheduled_reports_company_id_after_update_name
+AFTER UPDATE OF company_name ON scheduled_reports
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE scheduled_reports SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
 
 CREATE TRIGGER IF NOT EXISTS trg_customers_company_id_after_update_name
 AFTER UPDATE OF company_name ON customers
@@ -154,6 +226,24 @@ WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
 BEGIN
     INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
     UPDATE customers SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_proposals_company_id_after_update_name
+AFTER UPDATE OF company_name ON proposals
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE proposals SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_tasks_company_id_after_update_name
+AFTER UPDATE OF company_name ON tasks
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE tasks SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_invoices_company_id_after_update_name
@@ -165,11 +255,38 @@ BEGIN
     UPDATE invoices SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_finance_ledger_entries_company_id_after_update_name
-AFTER UPDATE OF company_name ON finance_ledger_entries
+CREATE TRIGGER IF NOT EXISTS trg_notifications_company_id_after_update_name
+AFTER UPDATE OF company_name ON notifications
 WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
   AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
 BEGIN
     INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
-    UPDATE finance_ledger_entries SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+    UPDATE notifications SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_financial_instruments_company_id_after_update_name
+AFTER UPDATE OF company_name ON financial_instruments
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE financial_instruments SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_delivery_log_company_id_after_update_name
+AFTER UPDATE OF company_name ON delivery_log
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE delivery_log SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_treasury_accounts_company_id_after_update_name
+AFTER UPDATE OF company_name ON treasury_accounts
+WHEN NEW.company_name IS NOT NULL AND NEW.company_name != ''
+  AND (OLD.company_name IS NULL OR NEW.company_name != OLD.company_name)
+BEGIN
+    INSERT OR IGNORE INTO companies (name, balance) VALUES (NEW.company_name, 0);
+    UPDATE treasury_accounts SET company_id = (SELECT id FROM companies WHERE name = NEW.company_name) WHERE id = NEW.id;
 END;

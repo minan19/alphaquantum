@@ -1,14 +1,18 @@
-"""AC1 + M3: CopilotEngine — intent → whitelisted SQL → safe query.
+"""AC1 + M3 + M4.2: CopilotEngine — intent → whitelisted SQL → safe query.
 
-M3 eklemeleri:
-- Tenant izolasyonu: tüm SELECT'lere `WHERE company_name IN (...)`
-  filtresi sunucu tarafında enjekte edilir. `company_scopes=["*"]`
-  → holding/admin (filtre yok). Aksi → liste.
-- Onay kapısı: `execute=False` (preview) → SQL + params döner, çalıştırılmaz.
-  `execute=True` → preview + çalıştırma.
+Tenant otoritesi M4.2'de **company_id**'ye taşındı (M3'te company_name idi).
+Engine `user.company_scopes` name listesini sunucuda registry'den id listesine
+çevirir ve `WHERE company_id IN (...)` enjekte eder. Yazma yolları DB
+trigger'ları ile çift-yazma; copilot SELECT-only olduğu için yazma yok.
+
+Katmanlar:
+- Tenant izolasyonu: `WHERE company_id IN (...)` (M4.2; M3'teki `company_name`
+  yerine). Scope'lar registry üstünden çözülür → bilinmeyen isim hiçbir
+  kayıt eşleştirmez (boş scope ile aynı davranış).
+- Onay kapısı: `execute=False` → SQL + params döner, çalıştırılmaz.
 - Read-only assert: çalıştırma öncesi `sql_guard.assert_select_only`.
-- Anomaly + balance scope: anomaly_signals tablosu `company_name` taşımaz;
-  scope'lu kullanıcı için reddedilir.
+- Anomaly scope: anomaly_signals tablosu `company_id`/`company_name`
+  taşımaz; scope'lu kullanıcı için reddedilir.
 """
 from __future__ import annotations
 
@@ -31,18 +35,17 @@ def _is_wildcard(scopes: list[str]) -> bool:
     return _WILDCARD in scopes
 
 
-def _scope_clause(scopes: list[str]) -> tuple[str, list[Any]]:
-    """`WHERE company_name IN (?, ?, ...)` parçası (clause, params).
+def _scope_clause(company_ids: list[int]) -> tuple[str, list[Any]]:
+    """`WHERE company_id IN (?, ?, ...)` parçası (clause, params).
 
-    Wildcard ise boş döner (filtre yok). Boş liste ise hiçbir kayıt
-    eşleşmez (`company_name IN ()` sözdizimi yok — `1=0` döner).
+    M4.2 otoritesi: id ile filtre. Boş liste → hiçbir kayıt eşleşmez
+    (`company_id IN ()` sözdizimi yok — `1=0` döner). Wildcard kontrolü
+    çağrı yerinde yapılır; bu fonksiyona wildcard geçmez.
     """
-    if _is_wildcard(scopes):
-        return "", []
-    if not scopes:
+    if not company_ids:
         return "1=0", []
-    placeholders = ",".join("?" for _ in scopes)
-    return f"company_name IN ({placeholders})", list(scopes)
+    placeholders = ",".join("?" for _ in company_ids)
+    return f"company_id IN ({placeholders})", list(company_ids)
 
 
 class CopilotEngine:
@@ -71,20 +74,46 @@ class CopilotEngine:
     ) -> CopilotResponse:
         """Doğal dil sorgu → intent → SQL → (opsiyonel) çalıştırma.
 
-        company_scopes: kullanıcının yetkili olduğu şirketler. `None`
-        veya `["*"]` → wildcard. Sunucu enjekte eder; client'tan kabul
-        edilmez. execute=False → onay öncesi preview (SQL gösterilir,
-        çalıştırılmaz).
+        company_scopes: kullanıcının yetkili olduğu şirket **isimleri**.
+        Engine sunucuda registry'den `company_id`'ye çevirir (M4.2 otoritesi).
+        `None` veya `["*"]` → wildcard (filtre yok). Aksi → id'lere çözüm.
+        Client'tan kabul edilmez. execute=False → onay öncesi preview.
         """
         scopes = company_scopes if company_scopes is not None else [_WILDCARD]
         intent = self._parser.parse(query)
-        return self._dispatch(intent, scopes, execute=execute)
+        is_wild = _is_wildcard(scopes)
+        # M4.2: name → id sunucuda çözülür. Bilinmeyen isim sessizce
+        # düşer (kayıt eşleşmez) — sızıntı imkansız.
+        company_ids: list[int] = (
+            [] if is_wild else self._resolve_company_ids(scopes)
+        )
+        return self._dispatch(
+            intent, company_ids, is_wildcard=is_wild, execute=execute,
+        )
+
+    def _resolve_company_ids(self, scope_names: list[str]) -> list[int]:
+        """Scope name listesini companies registry üstünden id listesine
+        çevirir. Bilinmeyen isim atlanır (None döndürmez)."""
+        names = [n for n in scope_names if n and n != _WILDCARD]
+        if not names:
+            return []
+        placeholders = ",".join("?" for _ in names)
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                f"SELECT id FROM companies WHERE name IN ({placeholders})",
+                tuple(names),
+            ).fetchall()
+            return [int(r["id"]) for r in rows]
+        finally:
+            conn.close()
 
     def _dispatch(
         self,
         intent: CopilotIntent,
-        scopes: list[str],
+        company_ids: list[int],
         *,
+        is_wildcard: bool,
         execute: bool,
     ) -> CopilotResponse:
         if intent.intent == "unknown":
@@ -107,7 +136,7 @@ class CopilotEngine:
                 executed=False,
             )
 
-        plan = builder(intent, scopes)
+        plan = builder(intent, company_ids, is_wildcard)
         if plan.rejected_reason is not None:
             return CopilotResponse(
                 intent=intent,
@@ -248,12 +277,13 @@ class _QueryPlan:
 def _where_with_scope(
     extra_clauses: list[str],
     extra_params: list[Any],
-    scopes: list[str],
+    company_ids: list[int],
+    is_wildcard: bool,
 ) -> tuple[str, list[Any]]:
     clauses = list(extra_clauses)
     params = list(extra_params)
-    scope_clause, scope_params = _scope_clause(scopes)
-    if scope_clause:
+    if not is_wildcard:
+        scope_clause, scope_params = _scope_clause(company_ids)
         clauses.append(scope_clause)
         params.extend(scope_params)
     if not clauses:
@@ -262,7 +292,7 @@ def _where_with_scope(
 
 
 def _build_count_invoices(
-    intent: CopilotIntent, scopes: list[str],
+    intent: CopilotIntent, company_ids: list[int], is_wildcard: bool,
 ) -> _QueryPlan:
     extra_clauses: list[str] = []
     extra_params: list[Any] = []
@@ -278,7 +308,7 @@ def _build_count_invoices(
             "AND c.full_name LIKE '%' || ? || '%')",
         )
         extra_params.append(intent.entity_name)
-    where, params = _where_with_scope(extra_clauses, extra_params, scopes)
+    where, params = _where_with_scope(extra_clauses, extra_params, company_ids, is_wildcard)
     sql = f"SELECT COUNT(*) AS n FROM invoices{where}"
 
     def summary(n: Any, intent_: CopilotIntent | None) -> str:
@@ -293,7 +323,7 @@ def _build_count_invoices(
 
 
 def _build_list_invoices(
-    intent: CopilotIntent, scopes: list[str],
+    intent: CopilotIntent, company_ids: list[int], is_wildcard: bool,
 ) -> _QueryPlan:
     extra_clauses: list[str] = []
     extra_params: list[Any] = []
@@ -309,7 +339,7 @@ def _build_list_invoices(
             "AND c.full_name LIKE '%' || ? || '%')",
         )
         extra_params.append(intent.entity_name)
-    where, params = _where_with_scope(extra_clauses, extra_params, scopes)
+    where, params = _where_with_scope(extra_clauses, extra_params, company_ids, is_wildcard)
     sql = (
         "SELECT id, invoice_number, title, amount, currency, "
         "status, issue_date, due_date "
@@ -323,7 +353,7 @@ def _build_list_invoices(
 
 
 def _build_sum_amount(
-    intent: CopilotIntent, scopes: list[str],
+    intent: CopilotIntent, company_ids: list[int], is_wildcard: bool,
 ) -> _QueryPlan:
     extra_clauses: list[str] = []
     extra_params: list[Any] = []
@@ -339,7 +369,7 @@ def _build_sum_amount(
     if intent.entity_name:
         extra_clauses.append("counterparty_company LIKE '%' || ? || '%'")
         extra_params.append(intent.entity_name)
-    where, params = _where_with_scope(extra_clauses, extra_params, scopes)
+    where, params = _where_with_scope(extra_clauses, extra_params, company_ids, is_wildcard)
     sql = f"SELECT SUM(amount) AS total FROM finance_ledger_entries{where}"
 
     def summary(total: Any, intent_: CopilotIntent | None) -> str:
@@ -356,10 +386,10 @@ def _build_sum_amount(
 
 
 def _build_list_customers(
-    intent: CopilotIntent, scopes: list[str],
+    intent: CopilotIntent, company_ids: list[int], is_wildcard: bool,
 ) -> _QueryPlan:
     extra_clauses = ["is_active = 1"]
-    where, params = _where_with_scope(extra_clauses, [], scopes)
+    where, params = _where_with_scope(extra_clauses, [], company_ids, is_wildcard)
     sql = (
         "SELECT id, full_name, email, sector "
         f"FROM customers{where} ORDER BY full_name LIMIT 50"
@@ -372,12 +402,12 @@ def _build_list_customers(
 
 
 def _build_list_anomalies(
-    intent: CopilotIntent, scopes: list[str],
+    intent: CopilotIntent, company_ids: list[int], is_wildcard: bool,
 ) -> _QueryPlan:
     # anomaly_signals tablosunda `company_name` yok (`holding_id` var).
     # Scope'lu kullanıcılar için güvenli izolasyon haritası kurulana kadar
     # reddedilir. Wildcard scope (holding/admin) erişebilir.
-    if not _is_wildcard(scopes):
+    if not is_wildcard:
         return _QueryPlan(
             rejected_reason=(
                 "Anomaly sinyalleri için holding/admin scope gerekiyor."
@@ -400,9 +430,9 @@ def _build_list_anomalies(
 
 
 def _build_balance(
-    intent: CopilotIntent, scopes: list[str],
+    intent: CopilotIntent, company_ids: list[int], is_wildcard: bool,
 ) -> _QueryPlan:
-    where, params = _where_with_scope([], [], scopes)
+    where, params = _where_with_scope([], [], company_ids, is_wildcard)
     sql = (
         "SELECT "
         "SUM(CASE WHEN entry_type = 'income' THEN amount ELSE 0 END) "
@@ -415,10 +445,10 @@ def _build_balance(
 
 
 def _build_vendor_count(
-    intent: CopilotIntent, scopes: list[str],
+    intent: CopilotIntent, company_ids: list[int], is_wildcard: bool,
 ) -> _QueryPlan:
     extra_clauses = ["is_active = 1", "sector LIKE '%tedarik%'"]
-    where, params = _where_with_scope(extra_clauses, [], scopes)
+    where, params = _where_with_scope(extra_clauses, [], company_ids, is_wildcard)
     sql = f"SELECT COUNT(*) AS n FROM customers{where}"
 
     def summary(n: Any, _intent: CopilotIntent | None) -> str:

@@ -194,11 +194,16 @@ class ConsentGateTests(_EngineFixture):
         )
         self.assertFalse(response.executed)
         self.assertEqual(response.results, [])
-        # SQL + params kullanıcıya gösterilmeli
+        # SQL + params kullanıcıya gösterilmeli — M4.2 sonrası filtre
+        # company_id üstünden (sunucuda name → id çözümü).
         self.assertIsNotNone(response.sql)
         assert response.sql is not None
         self.assertIn("SELECT", response.sql.upper())
-        self.assertIn("CompanyA", response.params)
+        self.assertIn("company_id IN", response.sql)
+        self.assertTrue(
+            all(isinstance(p, int) for p in response.params),
+            f"params id listesi olmalı: {response.params}",
+        )
 
     def test_confirm_true_executes(self) -> None:
         response = self.engine.ask(

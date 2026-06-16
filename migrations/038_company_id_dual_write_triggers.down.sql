@@ -1,0 +1,25 @@
+-- M4.2 DOWN — çift-yazma trigger'larını düşür.
+-- VERİ KAYBI YOK: company_name kolonu ve verisi dokunulmaz; M4.1'e dönülür.
+
+-- AFTER INSERT trigger'ları
+DROP TRIGGER IF EXISTS trg_finance_ledger_entries_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_procurement_requests_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_international_projects_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_holding_companies_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_integration_connectors_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_finance_recurring_entries_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_finance_budgets_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_scheduled_reports_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_customers_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_proposals_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_tasks_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_invoices_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_notifications_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_financial_instruments_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_delivery_log_company_id_after_insert;
+DROP TRIGGER IF EXISTS trg_treasury_accounts_company_id_after_insert;
+
+-- AFTER UPDATE OF company_name trigger'ları
+DROP TRIGGER IF EXISTS trg_customers_company_id_after_update_name;
+DROP TRIGGER IF EXISTS trg_invoices_company_id_after_update_name;
+DROP TRIGGER IF EXISTS trg_finance_ledger_entries_company_id_after_update_name;
